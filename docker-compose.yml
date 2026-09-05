@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: quantix_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: quantix_user
+      POSTGRES_PASSWORD: quantix_password
+      POSTGRES_DB: quantix_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Opcional: pgAdmin para visualizar la base de datos fácilmente durante el desarrollo
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: quantix_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@quantix.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
