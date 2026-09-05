@@ -36,13 +36,14 @@ async def health_check():
     """
     return {"status": "ok", "service": settings.PROJECT_NAME, "version": settings.VERSION}
 
-from app.api import pos, auth, caja, inventario, ws
+from app.api import pos, auth, caja, inventario, ws, analitica
 
 # Integración de routers HTTP
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["Auth"])
 app.include_router(pos.router, prefix=f"{settings.API_V1_STR}/pos", tags=["POS"])
 app.include_router(caja.router, prefix=f"{settings.API_V1_STR}/caja", tags=["Caja & Arqueos"])
 app.include_router(inventario.router, prefix=f"{settings.API_V1_STR}/inventario", tags=["Inventario & Compras"])
+app.include_router(analitica.router, prefix=f"{settings.API_V1_STR}/dashboard", tags=["Business Intelligence"])
 
 # Integración de WebSockets (Sin prefijo de API v1 para aislar los protocolos)
 app.include_router(ws.router, prefix="/ws/notificaciones", tags=["WebSockets"])
