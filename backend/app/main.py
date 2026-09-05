@@ -1,11 +1,23 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
+
 from app.core.config import settings
+from app.etl.scheduler import start_scheduler
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Acciones al iniciar el servidor
+    scheduler = start_scheduler()
+    yield
+    # Acciones al apagar el servidor
+    scheduler.shutdown()
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    description="API Core Transaccional y Analítica"
+    description="API Core Transaccional y Analítica",
+    lifespan=lifespan
 )
 
 # Configuración estricta de CORS (Módulo 010)
