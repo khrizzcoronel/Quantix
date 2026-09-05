@@ -10,10 +10,17 @@ from app.schemas.pos import ProductoBuscado, CheckoutRequest, CheckoutResponse
 from app.models.inventario import Producto, LoteInventario
 from app.models.ventas import Venta, DetalleVenta, PagoVenta
 
+from app.api.deps import get_current_user
+from app.models.usuarios import Usuario
+
 router = APIRouter()
 
 @router.get("/productos/{sku}", response_model=ProductoBuscado)
-async def buscar_producto(sku: str, db: AsyncSession = Depends(get_db)):
+async def buscar_producto(
+    sku: str, 
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
     """
     Busca un producto por SKU o código de barras (< 200ms) y devuelve su stock disponible actual.
     """
@@ -46,7 +53,11 @@ async def buscar_producto(sku: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/checkout", response_model=CheckoutResponse)
-async def procesar_checkout(req: CheckoutRequest, db: AsyncSession = Depends(get_db)):
+async def procesar_checkout(
+    req: CheckoutRequest, 
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
     """
     Procesa la venta aplicando la regla de inventario estricta FEFO (First Expired, First Out)
     con bloqueo pesimista de concurrencia.

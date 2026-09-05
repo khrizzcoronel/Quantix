@@ -24,8 +24,8 @@ async def health_check():
     """
     return {"status": "ok", "service": settings.PROJECT_NAME, "version": settings.VERSION}
 
-from app.api import pos
+from app.api import pos, auth
 
-# Aquí incluiremos los routers más adelante
-# app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["Auth"])
+# Integración de routers
+app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["Auth"])
 app.include_router(pos.router, prefix=f"{settings.API_V1_STR}/pos", tags=["POS"])
