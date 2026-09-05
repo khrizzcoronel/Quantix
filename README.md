@@ -134,6 +134,9 @@ El proyecto se rige por **Spec-Driven Development (SDD)**. Cada módulo funciona
 | [`007-pagos-seguridad`](specs/007-pagos-seguridad/) | Pasarelas modernas, contactless, webhooks firmados HMAC y claves de idempotencia | Operativo | ✅ Spec Lista | [Spec](specs/007-pagos-seguridad/spec.md) • [Plan](specs/007-pagos-seguridad/plan.md) • [OpenAPI](specs/007-pagos-seguridad/contracts/api.yaml) |
 | [`008-offline-sync`](specs/008-offline-sync/) | Modo degradado en corte de red, SQLite local y sincronización por lotes con resolución | Operativo | ✅ Spec Lista | [Spec](specs/008-offline-sync/spec.md) • [Plan](specs/008-offline-sync/plan.md) • [OpenAPI](specs/008-offline-sync/contracts/api.yaml) |
 | [`009-etl-medallion`](specs/009-etl-medallion/) | Pipeline ETL Bronze → Silver → Gold con DuckDB, APScheduler y registro de ejecuciones | Transversal | ✅ Spec Lista | [Spec](specs/009-etl-medallion/spec.md) • [Plan](specs/009-etl-medallion/plan.md) • [OpenAPI](specs/009-etl-medallion/contracts/api.yaml) |
+| [`010-auth-usuarios`](specs/010-auth-usuarios/) | Autenticación JWT, RBAC, protección estricta de rutas y configuración de CORS | Base | ✅ Spec Lista | [Spec](specs/010-auth-usuarios/spec.md) • [Plan](specs/010-auth-usuarios/plan.md) |
+| [`011-tableros-bi`](specs/011-tableros-bi/) | Consultas a la Capa Gold (DuckDB) usando distribuciones Z/T para predicciones y dashboards | Estratégico | ✅ Spec Lista | [Spec](specs/011-tableros-bi/spec.md) |
+| [`012-notificaciones`](specs/012-notificaciones/) | Envío de correos SMTP y eventos WebSockets en tiempo real | Transversal | ✅ Spec Lista | [Spec](specs/012-notificaciones/spec.md) |
 
 ---
 
