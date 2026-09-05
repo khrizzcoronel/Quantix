@@ -45,6 +45,22 @@ class SesionCaja(Base):
     estado: Mapped[EstadoSesionCaja] = mapped_column(SAEnum(EstadoSesionCaja), default=EstadoSesionCaja.ABIERTA, nullable=False)
 
     usuario: Mapped["Usuario"] = relationship("Usuario", back_populates="sesiones_caja")
+    arqueos: Mapped[list["ArqueoCaja"]] = relationship("ArqueoCaja", back_populates="sesion", cascade="all, delete-orphan")
+
+class ArqueoCaja(Base):
+    __tablename__ = 'arqueo_caja'
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    sesion_caja_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('sesion_caja.id'), nullable=False)
+    fecha_arqueo: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    
+    total_teorico: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
+    total_fisico_declarado: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
+    diferencia: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
+    estado: Mapped[str] = mapped_column(String(50), nullable=False) # OK, SOBRANTE, FALTANTE
+    
+    sesion: Mapped["SesionCaja"] = relationship("SesionCaja", back_populates="arqueos")
+
 
 class AuditoriaEvento(Base):
     __tablename__ = 'auditoria_evento'
