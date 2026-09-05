@@ -133,6 +133,7 @@ El proyecto se rige por **Spec-Driven Development (SDD)**. Cada módulo funciona
 | [`006-caja-mermas-fraude`](specs/006-caja-mermas-fraude/) | Arqueo ciego obligatorio, control de discrepancias y log inmutable append-only | Operativo / Táctico | ✅ Spec Lista | [Spec](specs/006-caja-mermas-fraude/spec.md) • [Plan](specs/006-caja-mermas-fraude/plan.md) • [OpenAPI](specs/006-caja-mermas-fraude/contracts/api.yaml) |
 | [`007-pagos-seguridad`](specs/007-pagos-seguridad/) | Pasarelas modernas, contactless, webhooks firmados HMAC y claves de idempotencia | Operativo | ✅ Spec Lista | [Spec](specs/007-pagos-seguridad/spec.md) • [Plan](specs/007-pagos-seguridad/plan.md) • [OpenAPI](specs/007-pagos-seguridad/contracts/api.yaml) |
 | [`008-offline-sync`](specs/008-offline-sync/) | Modo degradado en corte de red, SQLite local y sincronización por lotes con resolución | Operativo | ✅ Spec Lista | [Spec](specs/008-offline-sync/spec.md) • [Plan](specs/008-offline-sync/plan.md) • [OpenAPI](specs/008-offline-sync/contracts/api.yaml) |
+| [`009-etl-medallion`](specs/009-etl-medallion/) | Pipeline ETL Bronze → Silver → Gold con DuckDB, APScheduler y registro de ejecuciones | Transversal | ✅ Spec Lista | [Spec](specs/009-etl-medallion/spec.md) • [Plan](specs/009-etl-medallion/plan.md) • [OpenAPI](specs/009-etl-medallion/contracts/api.yaml) |
 
 ---
 
@@ -195,8 +196,10 @@ Para un entendimiento integral del sistema, consulta los documentos de referenci
 1. 📄 **[Estrategia Comercial](docs/negocio/estrategia_negocios.md):** Fundamento económico de rentabilidad, tráfico y fidelización.
 2. 🏛️ **[Análisis Organizacional y Modelo de Anthony](docs/negocio/analisis_organizacional.md):** Desglose por capas directiva, táctica y operativa.
 3. 💾 **[Diseño y Modelos de Datos (OLTP/OLAP)](docs/arquitectura/diseno_arquitectura_datos.md):** Diccionario de datos, ERD relacional y esquema dimensional.
-4. 📋 **[Especificación de Requisitos de Software (SRS)](docs/requisitos/especificacion_requisitos.md):** Catálogo formal de requerimientos funcionales y no funcionales (MoSCoW).
-5. ⚖️ **[Constitución del Proyecto](.specify/memory/constitution.md):** Principios inmutables de ingeniería y desarrollo orientado a especificaciones.
+4. 🥉🥈🥇 **[Arquitectura ETL Medallion (Bronze/Silver/Gold)](docs/arquitectura/etl_medallion_architecture.md):** Diseño del pipeline, orquestación con APScheduler y registro de ejecuciones en `control.etl_control_log`.
+5. 🧪 **[Estándar de Testing](docs/arquitectura/estandar_testing.md):** Normas obligatorias de pruebas unitarias, de integración y ETL. Política de datos reales en tests.
+6. 📋 **[Especificación de Requisitos de Software (SRS)](docs/requisitos/especificacion_requisitos.md):** Catálogo formal de requerimientos funcionales y no funcionales (MoSCoW).
+7. ⚖️ **[Constitución del Proyecto](.specify/memory/constitution.md):** Principios inmutables de ingeniería v2.0.0 — incluye Artículo V de datos reales y Artículo III de arquitectura Medallion.
 
 ---
 

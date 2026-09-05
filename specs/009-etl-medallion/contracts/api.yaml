@@ -1,0 +1,138 @@
+openapi: 3.0.3
+info:
+  title: Quantix - API de Monitoreo ETL Medallion (Módulo 009)
+  version: 1.0.0
+  description: Endpoint de monitoreo del estado del pipeline ETL Bronze/Silver/Gold.
+paths:
+  /api/v1/admin/etl/estado:
+    get:
+      summary: Consultar estado de las últimas ejecuciones del pipeline ETL
+      description: Retorna las últimas N ejecuciones del control_log, ordenadas por inicio DESC.
+      parameters:
+        - name: limite
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+        - name: capa
+          in: query
+          schema:
+            type: string
+            enum: [BRONZE, SILVER, GOLD]
+          required: false
+        - name: estado
+          in: query
+          schema:
+            type: string
+            enum: [RUNNING, SUCCESS, FAILED, PARTIAL]
+          required: false
+      responses:
+        '200':
+          description: Listado de ejecuciones del pipeline
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ultima_actualizacion_exitosa:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  total_fallos_ultimas_24h:
+                    type: integer
+                  ejecuciones:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EtlRunLog'
+
+  /api/v1/admin/etl/rechazos:
+    get:
+      summary: Consultar registros rechazados por la capa Silver
+      parameters:
+        - name: tabla_origen
+          in: query
+          schema:
+            type: string
+        - name: desde
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Registros en silver.rejection_log
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RejectionRecord'
+
+  /api/v1/admin/etl/ejecutar-ahora:
+    post:
+      summary: Disparar manualmente el micro-batch ETL (solo para admins)
+      description: Ejecuta el pipeline completo de forma síncrona para pruebas. No disponible en producción.
+      responses:
+        '202':
+          description: Pipeline iniciado en background
+        '403':
+          description: Solo permitido en entorno de desarrollo
+
+components:
+  schemas:
+    EtlRunLog:
+      type: object
+      properties:
+        id:
+          type: string
+        pipeline_name:
+          type: string
+        capa:
+          type: string
+        tabla_destino:
+          type: string
+        inicio:
+          type: string
+          format: date-time
+        fin:
+          type: string
+          format: date-time
+          nullable: true
+        duracion_segundos:
+          type: number
+          nullable: true
+        estado:
+          type: string
+        filas_leidas:
+          type: integer
+        filas_insertadas:
+          type: integer
+        filas_rechazadas:
+          type: integer
+        watermark_fin:
+          type: string
+          format: date-time
+          nullable: true
+        error_mensaje:
+          type: string
+          nullable: true
+
+    RejectionRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        tabla_origen:
+          type: string
+        record_id:
+          type: string
+        motivo:
+          type: string
+        campo_fallido:
+          type: string
+        valor_fallido:
+          type: string
+        registrado_en:
+          type: string
+          format: date-time
