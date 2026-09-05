@@ -1,0 +1,71 @@
+openapi: 3.0.3
+info:
+  title: Quantix API - Autenticación
+  version: 1.0.0
+  description: Endpoints para autenticación, generación de JWT y autorización de supervisores.
+paths:
+  /api/v1/auth/login:
+    post:
+      summary: Inicio de sesión de usuarios
+      description: Valida credenciales y retorna un token JWT (Bearer).
+      tags:
+        - Autenticación
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  description: Email del usuario.
+                password:
+                  type: string
+                  description: Contraseña o PIN del usuario.
+              required:
+                - username
+                - password
+      responses:
+        '200':
+          description: Login exitoso. Devuelve el token.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  token_type:
+                    type: string
+                    example: bearer
+        '401':
+          description: Credenciales inválidas.
+  /api/v1/auth/supervisor-override:
+    post:
+      summary: Autorización rápida de supervisor
+      description: Permite a un supervisor autorizar una acción crítica ingresando sus credenciales sin afectar la sesión del cajero actual.
+      tags:
+        - Autenticación
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+              required:
+                - email
+                - password
+      responses:
+        '200':
+          description: Autorización de supervisor exitosa.
+        '401':
+          description: Credenciales inválidas.
+        '403':
+          description: El usuario no tiene rol de SUPERVISOR.

@@ -33,7 +33,7 @@ flowchart LR
 
     subgraph Capa_OLAP ["Capa Analítica (OLAP / Dimensional)"]
         direction TB
-        DWH[("Data Warehouse / ClickHouse / DuckDB
+        DWH[("Data Warehouse / DuckDB
         • Modelo Dimensional (Kimball)
         • Esquema de Estrella / Constelación
         • Optimizado para lectura/agregación")]

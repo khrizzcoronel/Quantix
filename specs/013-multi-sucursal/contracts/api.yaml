@@ -1,0 +1,56 @@
+openapi: 3.0.0
+info:
+  title: Quantix Admin API - Multi-Sucursal
+  version: 1.0.0
+paths:
+  /api/v1/admin/sucursales:
+    get:
+      summary: Lista todas las sucursales
+      responses:
+        '200':
+          description: Lista de sucursales
+    post:
+      summary: Crea una nueva sucursal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nombre:
+                  type: string
+                direccion:
+                  type: string
+      responses:
+        '201':
+          description: Sucursal creada
+  /api/v1/admin/terminales:
+    get:
+      summary: Lista terminales de caja
+      parameters:
+        - in: query
+          name: sucursal_id
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lista de terminales
+    post:
+      summary: Crea una terminal de caja
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sucursal_id:
+                  type: string
+                  format: uuid
+                nombre:
+                  type: string
+      responses:
+        '201':
+          description: Terminal creada

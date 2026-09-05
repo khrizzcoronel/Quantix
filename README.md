@@ -137,6 +137,7 @@ El proyecto se rige por **Spec-Driven Development (SDD)**. Cada módulo funciona
 | [`010-auth-usuarios`](specs/010-auth-usuarios/) | Autenticación JWT, RBAC, protección estricta de rutas y configuración de CORS | Base | ✅ Spec Lista | [Spec](specs/010-auth-usuarios/spec.md) • [Plan](specs/010-auth-usuarios/plan.md) |
 | [`011-tableros-bi`](specs/011-tableros-bi/) | Consultas a la Capa Gold (DuckDB) usando distribuciones Z/T para predicciones y dashboards | Estratégico | ✅ Spec Lista | [Spec](specs/011-tableros-bi/spec.md) |
 | [`012-notificaciones`](specs/012-notificaciones/) | Envío de correos SMTP y eventos WebSockets en tiempo real | Transversal | ✅ Spec Lista | [Spec](specs/012-notificaciones/spec.md) |
+| [`013-multi-sucursal`](specs/013-multi-sucursal/) | Gestión de múltiples tiendas, terminales de caja e inventario segmentado | Escalabilidad | ✅ Spec Lista | [Spec](specs/013-multi-sucursal/spec.md) |
 
 ---
 

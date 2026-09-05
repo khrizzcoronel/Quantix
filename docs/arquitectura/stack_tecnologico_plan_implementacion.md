@@ -67,7 +67,10 @@ Quantix/
 │   │   │   ├── pos.py           # Endpoints de venta y cobro rápido
 │   │   │   ├── inventario.py    # Lotes, entradas y alertas FEFO
 │   │   │   ├── caja.py          # Sesiones y arqueo ciego
-│   │   │   └── analitica.py     # Endpoints BI que leen de DuckDB
+│   │   │   ├── analitica.py     # Endpoints BI que leen de DuckDB
+│   │   │   ├── auth.py          # (Nuevo) Endpoints de login y roles
+│   │   │   ├── dashboard.py     # (Nuevo) Endpoints Z/T distribuciones
+│   │   │   └── ws.py            # (Nuevo) WebSockets para notificaciones
 │   │   ├── etl/
 │   │   │   ├── pipeline.py      # Transformación OLTP -> DuckDB
 │   │   │   └── scheduler.py     # Tarea programada con APScheduler

@@ -1,0 +1,21 @@
+openapi: 3.0.3
+info:
+  title: API de Notificaciones
+  version: 1.0.0
+paths:
+  /api/v1/ws/notificaciones/{usuario_id}:
+    get:
+      summary: Conexión WebSocket para notificaciones en tiempo real
+      description: |
+        Establece una conexión WebSocket persistente para recibir eventos del sistema en tiempo real.
+        El protocolo debe ser `ws://` o `wss://`.
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Identificador del usuario que se conecta
+      responses:
+        '101':
+          description: Switching Protocols. Conexión WebSocket establecida.

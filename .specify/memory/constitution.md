@@ -52,6 +52,9 @@ Todo módulo y contrato debe responder y clasificarse explícitamente en uno de 
 Para garantizar la velocidad de implementación (sprint de 48 horas) y minimizar fallos de compilación en agentes de IA:
 
 * **Backend:** Python 3.11+ / FastAPI / Pydantic v2 / SQLAlchemy 2.0.
+  * **Seguridad y Auth:** `passlib` (Argon2id/bcrypt), `PyJWT` para roles y tokens.
+  * **Notificaciones:** `smtplib` nativo para emails, FastAPI WebSockets.
+  * **Estadística BI:** `scipy` / `pandas` (para distribuciones Z/T inferenciales).
 * **Base de Datos Operativa (OLTP):** PostgreSQL 16 (vía Docker Compose).
 * **Base de Datos Analítica (OLAP):** DuckDB (archivo columnar embebido `quantix_analytics.duckdb`).
   * Esquemas internos: `bronze`, `silver`, `gold`, `control`.

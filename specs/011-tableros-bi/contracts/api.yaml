@@ -1,0 +1,62 @@
+openapi: 3.0.3
+info:
+  title: Quantix BI Dashboards API
+  version: 1.0.0
+  description: Endpoints para los tableros operativo, táctico y estratégico de Quantix.
+paths:
+  /api/v1/dashboard/operativo:
+    get:
+      summary: Métricas del dashboard operativo en tiempo real.
+      description: Devuelve las ventas del turno activo, tickets en proceso y stock vivo. Consulta directamente PostgreSQL (OLTP).
+      responses:
+        '200':
+          description: Datos operativos actuales.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ventas_hoy:
+                    type: number
+                  tickets_activos:
+                    type: integer
+  /api/v1/dashboard/tactico:
+    get:
+      summary: Métricas del dashboard táctico.
+      description: Agregaciones a corto/mediano plazo. Mermas, caducidades FEFO, descuadres de caja. Consulta a DuckDB (Capa Gold).
+      responses:
+        '200':
+          description: Datos tácticos agregados.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mermas_semana:
+                    type: number
+                  caducidades_proximas:
+                    type: integer
+  /api/v1/dashboard/estrategico:
+    get:
+      summary: Métricas del dashboard estratégico y proyecciones.
+      description: Analítica profunda e inferencia estadística usando distribuciones Z y T de Student. Consulta a DuckDB (Capa Gold).
+      responses:
+        '200':
+          description: Datos estratégicos y predicciones estadísticas.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  proyecciones_demanda:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        producto_id:
+                          type: string
+                        stock_seguridad:
+                          type: number
+                        distribucion_usada:
+                          type: string
+                          enum: [Z, T-Student]
