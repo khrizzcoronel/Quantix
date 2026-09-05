@@ -1,0 +1,182 @@
+openapi: 3.0.3
+info:
+  title: Quantix - API de Promociones Inteligentes (Módulo 005)
+  version: 1.0.0
+  description: Endpoints CRUD para reglas de combo, consulta de reglas activas y verificación de margen de ticket.
+
+paths:
+  /api/v1/admin/promociones/reglas/:
+    get:
+      summary: Listar todas las reglas de promoción
+      parameters:
+        - name: activo
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Filtrar por estado activo/inactivo
+        - name: vigente
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Filtrar por vigencia en la fecha actual
+      responses:
+        '200':
+          description: Lista de reglas de promoción
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReglaPromocionResponse'
+
+    post:
+      summary: Crear nueva regla de promoción
+      description: Acceso restringido a roles Supervisor y Director.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReglaPromocionCreateRequest'
+      responses:
+        '201':
+          description: Regla creada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReglaPromocionResponse'
+        '403':
+          description: Acceso denegado — se requiere rol Supervisor o Director
+
+  /api/v1/admin/promociones/reglas/{id}:
+    patch:
+      summary: Actualizar parcialmente una regla de promoción
+      description: Acceso restringido a roles Supervisor y Director.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReglaPromocionUpdateRequest'
+      responses:
+        '200':
+          description: Regla actualizada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReglaPromocionResponse'
+        '404':
+          description: Regla no encontrada
+
+    delete:
+      summary: Eliminar una regla de promoción
+      description: Eliminación lógica (activo = FALSE). Acceso restringido a rol Director.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Regla desactivada exitosamente
+        '403':
+          description: Acceso denegado — se requiere rol Director
+
+components:
+  schemas:
+    ReglaPromocionCreateRequest:
+      type: object
+      required:
+        - nombre
+        - producto_trigger_id
+        - producto_objetivo_id
+        - descuento_valor
+        - descuento_tipo
+        - valido_desde
+      properties:
+        nombre:
+          type: string
+          example: "Combo Leche + Cereal 15% OFF"
+        producto_trigger_id:
+          type: string
+          format: uuid
+        producto_objetivo_id:
+          type: string
+          format: uuid
+        descuento_valor:
+          type: number
+          example: 15.0
+        descuento_tipo:
+          type: string
+          enum: [PORCENTAJE, MONTO_FIJO]
+        valido_desde:
+          type: string
+          format: date
+        valido_hasta:
+          type: string
+          format: date
+          nullable: true
+
+    ReglaPromocionUpdateRequest:
+      type: object
+      properties:
+        nombre:
+          type: string
+        descuento_valor:
+          type: number
+        descuento_tipo:
+          type: string
+          enum: [PORCENTAJE, MONTO_FIJO]
+        activo:
+          type: boolean
+        valido_hasta:
+          type: string
+          format: date
+          nullable: true
+
+    ReglaPromocionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nombre:
+          type: string
+        producto_trigger_id:
+          type: string
+          format: uuid
+        producto_trigger_nombre:
+          type: string
+        producto_objetivo_id:
+          type: string
+          format: uuid
+        producto_objetivo_nombre:
+          type: string
+        descuento_valor:
+          type: number
+        descuento_tipo:
+          type: string
+          enum: [PORCENTAJE, MONTO_FIJO]
+        activo:
+          type: boolean
+        valido_desde:
+          type: string
+          format: date
+        valido_hasta:
+          type: string
+          format: date
+          nullable: true
+        creado_en:
+          type: string
+          format: date-time

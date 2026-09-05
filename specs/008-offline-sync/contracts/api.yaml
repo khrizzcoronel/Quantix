@@ -1,0 +1,115 @@
+openapi: 3.0.3
+info:
+  title: Quantix - API de Sincronización Offline (Módulo 008)
+  version: 1.0.0
+  description: Endpoints para heartbeat de red y sincronización por lotes de ventas offline.
+paths:
+  /api/v1/health:
+    get:
+      summary: Health check ultra-rápido para comprobación de conectividad
+      responses:
+        '200':
+          description: Servidor en línea
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /api/v1/sync/ventas-offline:
+    post:
+      summary: Sincronizar lote de ventas generadas durante desconexión
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - ventas
+              properties:
+                ventas:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/VentaOfflineSyncItem'
+      responses:
+        '200':
+          description: Lote procesado con reporte de resultados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncResultadoResponse'
+
+  /api/v1/sync/conflictos:
+    get:
+      summary: Listar ventas offline que tuvieron conflicto de stock
+      responses:
+        '200':
+          description: Lista de incidencias para revisión de supervisión
+
+components:
+  schemas:
+    ItemOffline:
+      type: object
+      required:
+        - producto_id
+        - cantidad
+        - precio_unitario
+      properties:
+        producto_id:
+          type: string
+        cantidad:
+          type: integer
+        precio_unitario:
+          type: number
+
+    VentaOfflineSyncItem:
+      type: object
+      required:
+        - id_local
+        - fecha_hora
+        - subtotal
+        - total_pagar
+        - items
+      properties:
+        id_local:
+          type: string
+        fecha_hora:
+          type: string
+          format: date-time
+        subtotal:
+          type: number
+        total_pagar:
+          type: number
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemOffline'
+
+    SyncResultadoResponse:
+      type: object
+      properties:
+        procesadas:
+          type: integer
+        exitosas:
+          type: integer
+        conflictos:
+          type: integer
+        detalles:
+          type: array
+          items:
+            type: object
+            properties:
+              id_local:
+                type: string
+              estado:
+                type: string
+                enum: [SINCRONIZADA, PENDIENTE_REVISION]
+              mensaje:
+                type: string

@@ -1,0 +1,129 @@
+openapi: 3.0.3
+info:
+  title: Quantix - API de Precios y Márgenes (Módulo 003)
+  version: 1.0.0
+  description: Endpoints para clasificación estratégica de productos, alerta de erosión de margen y visualización de la matriz margen-rotación.
+
+paths:
+  /api/v1/productos/{id}/clasificacion:
+    patch:
+      summary: Actualizar clasificación estratégica de un producto
+      description: Solo accesible por usuarios con rol Director. Registra el cambio en AUDITORIA_EVENTO.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClasificacionUpdateRequest'
+      responses:
+        '200':
+          description: Clasificación actualizada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductoClasificacionResponse'
+        '403':
+          description: Acceso denegado — se requiere rol Director
+        '404':
+          description: Producto no encontrado
+
+  /api/v1/admin/productos/en-riesgo-margen:
+    get:
+      summary: Listar productos cuyo costo de reposición supera el margen mínimo configurado
+      responses:
+        '200':
+          description: Lista de productos en riesgo de margen negativo
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductoEnRiesgoMargenResponse'
+
+  /api/v1/bi/matriz-margen-rotacion:
+    get:
+      summary: Obtener datos para la matriz de 4 cuadrantes margen-rotación
+      description: Devuelve un punto por producto con su margen bruto promedio y velocidad de venta diaria para alimentar el ScatterChart del dashboard EIS.
+      responses:
+        '200':
+          description: Datos de dispersión para la matriz
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MatrizPuntoResponse'
+
+components:
+  schemas:
+    ClasificacionUpdateRequest:
+      type: object
+      required:
+        - tipo_estrategico
+      properties:
+        tipo_estrategico:
+          type: string
+          enum: [GANCHO, NICHO, REGULAR]
+
+    ProductoClasificacionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nombre:
+          type: string
+        tipo_estrategico:
+          type: string
+          enum: [GANCHO, NICHO, REGULAR]
+        actualizado_en:
+          type: string
+          format: date-time
+
+    ProductoEnRiesgoMargenResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sku:
+          type: string
+        nombre:
+          type: string
+        tipo_estrategico:
+          type: string
+          enum: [GANCHO, NICHO, REGULAR]
+        precio_venta:
+          type: number
+        costo_reposicion:
+          type: number
+        margen_minimo_pct:
+          type: number
+        margen_actual_pct:
+          type: number
+          description: (precio_venta - costo_reposicion) / precio_venta * 100
+
+    MatrizPuntoResponse:
+      type: object
+      properties:
+        producto_id:
+          type: string
+          format: uuid
+        nombre:
+          type: string
+        tipo_estrategico:
+          type: string
+          enum: [GANCHO, NICHO, REGULAR]
+        velocidad_venta_diaria:
+          type: number
+          description: Unidades vendidas por día (promedio últimos 30 días, excluyendo roturas)
+        margen_bruto_pct:
+          type: number
+          description: Margen bruto promedio de las ventas del periodo

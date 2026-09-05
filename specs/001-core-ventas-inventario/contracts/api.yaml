@@ -1,0 +1,150 @@
+openapi: 3.0.3
+info:
+  title: Quantix - API de Ventas e Inventario (Módulo 001)
+  version: 1.0.0
+  description: Endpoints operativos para búsqueda en POS, checkout con descarga FEFO y gestión de lotes.
+paths:
+  /api/v1/pos/buscar-producto:
+    get:
+      summary: Buscar producto por código de barras o nombre
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Código de barras, SKU o nombre del producto
+      responses:
+        '200':
+          description: Lista de productos coincidentes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductoResponse'
+
+  /api/v1/pos/checkout:
+    post:
+      summary: Procesar venta con asignación automática FEFO
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+      responses:
+        '201':
+          description: Venta completada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VentaResponse'
+        '409':
+          description: Conflicto de stock insuficiente
+
+  /api/v1/inventario/lotes:
+    post:
+      summary: Registrar entrada de lote con fecha de vencimiento
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoteCreateRequest'
+      responses:
+        '201':
+          description: Lote registrado exitosamente
+
+components:
+  schemas:
+    ProductoResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        codigo_barras:
+          type: string
+        sku:
+          type: string
+        nombre:
+          type: string
+        tipo_estrategico:
+          type: string
+          enum: [GANCHO, NICHO, REGULAR]
+        precio_venta:
+          type: number
+          format: double
+        stock_total_disponible:
+          type: integer
+
+    CheckoutItem:
+      type: object
+      required:
+        - producto_id
+        - cantidad
+      properties:
+        producto_id:
+          type: string
+          format: uuid
+        cantidad:
+          type: integer
+          minimum: 1
+
+    CheckoutRequest:
+      type: object
+      required:
+        - items
+      properties:
+        cliente_id:
+          type: string
+          format: uuid
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CheckoutItem'
+
+    VentaResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        folio_ticket:
+          type: string
+        fecha_hora:
+          type: string
+          format: date-time
+        subtotal:
+          type: number
+        total_pagar:
+          type: number
+        costo_total_venta:
+          type: number
+        margen_total_ganancia:
+          type: number
+
+    LoteCreateRequest:
+      type: object
+      required:
+        - producto_id
+        - numero_lote
+        - fecha_vencimiento
+        - costo_unitario_compra
+        - cantidad_inicial
+      properties:
+        producto_id:
+          type: string
+          format: uuid
+        numero_lote:
+          type: string
+        fecha_vencimiento:
+          type: string
+          format: date
+        costo_unitario_compra:
+          type: number
+        cantidad_inicial:
+          type: integer
+          minimum: 1

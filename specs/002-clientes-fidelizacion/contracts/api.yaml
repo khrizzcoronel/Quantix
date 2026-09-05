@@ -1,0 +1,210 @@
+openapi: 3.0.3
+info:
+  title: Quantix - API de Clientes y Fidelización (Módulo 002)
+  version: 1.0.0
+  description: Endpoints para captura de clientes en POS, historial, canje de cupones y lista de clientes en riesgo de fuga.
+
+paths:
+  /api/v1/clientes/buscar:
+    get:
+      summary: Buscar cliente por número de teléfono
+      parameters:
+        - name: telefono
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Número de teléfono exacto del cliente
+      responses:
+        '200':
+          description: Cliente encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClienteResponse'
+        '404':
+          description: Cliente no encontrado
+
+  /api/v1/clientes/:
+    post:
+      summary: Alta rápida de cliente nuevo desde POS
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClienteCreateRequest'
+      responses:
+        '201':
+          description: Cliente registrado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClienteResponse'
+        '409':
+          description: El número de teléfono ya está registrado
+
+  /api/v1/clientes/{id}/historial:
+    get:
+      summary: Obtener historial de compras de un cliente
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lista de compras del cliente
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VentaResumenResponse'
+        '404':
+          description: Cliente no encontrado
+
+  /api/v1/pos/canjear-cupon:
+    post:
+      summary: Validar y aplicar cupón de descuento al carrito activo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CanjearCuponRequest'
+      responses:
+        '200':
+          description: Cupón aplicado exitosamente; devuelve nuevo total del carrito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CanjearCuponResponse'
+        '404':
+          description: Código de cupón no encontrado
+        '409':
+          description: Cupón expirado, ya canjeado o anulado
+
+  /api/v1/admin/clientes/en-riesgo:
+    get:
+      summary: Lista de clientes CAMPEON o LEAL que superaron su ciclo de compra
+      description: Filtra clientes con segmento CAMPEON o LEAL cuyo dias_sin_comprar excede ciclo_intercompra_dias * multiplicador_rfm (parámetro de CONFIGURACION).
+      responses:
+        '200':
+          description: Lista de clientes en riesgo de fuga
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ClienteEnRiesgoResponse'
+
+components:
+  schemas:
+    ClienteCreateRequest:
+      type: object
+      required:
+        - telefono
+        - nombre
+      properties:
+        telefono:
+          type: string
+          example: "5512345678"
+        nombre:
+          type: string
+          example: "María García"
+        email:
+          type: string
+          format: email
+          nullable: true
+        fecha_nacimiento:
+          type: string
+          format: date
+          nullable: true
+
+    ClienteResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        telefono:
+          type: string
+        nombre:
+          type: string
+        email:
+          type: string
+          nullable: true
+        segmento_rfm:
+          type: string
+          enum: [CAMPEON, LEAL, EN_RIESGO, DORMIDO]
+          nullable: true
+        ciclo_intercompra_dias:
+          type: number
+          nullable: true
+        ltv_estimado:
+          type: number
+          nullable: true
+        creado_en:
+          type: string
+          format: date-time
+
+    VentaResumenResponse:
+      type: object
+      properties:
+        venta_id:
+          type: string
+          format: uuid
+        folio_ticket:
+          type: string
+        fecha_hora:
+          type: string
+          format: date-time
+        total_pagar:
+          type: number
+
+    CanjearCuponRequest:
+      type: object
+      required:
+        - codigo_cupon
+        - venta_id
+      properties:
+        codigo_cupon:
+          type: string
+          example: "CUMPLE-20261010-XY9Z"
+        venta_id:
+          type: string
+          format: uuid
+
+    CanjearCuponResponse:
+      type: object
+      properties:
+        cupon_id:
+          type: string
+          format: uuid
+        descuento_aplicado:
+          type: number
+        nuevo_total_pagar:
+          type: number
+
+    ClienteEnRiesgoResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nombre:
+          type: string
+        telefono:
+          type: string
+        segmento_rfm:
+          type: string
+        dias_sin_comprar:
+          type: integer
+        ciclo_intercompra_dias:
+          type: number
+        dias_excedidos:
+          type: number
+          description: dias_sin_comprar - (ciclo_intercompra_dias * multiplicador)

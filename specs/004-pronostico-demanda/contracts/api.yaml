@@ -1,0 +1,87 @@
+openapi: 3.0.3
+info:
+  title: Quantix - API de Pronóstico de Demanda (Módulo 004)
+  version: 1.0.0
+  description: Endpoints para sugerencias de reposición automáticas y detección de sobrestock basados en velocidad de venta diaria y punto de reorden.
+
+paths:
+  /api/v1/admin/inventario/sugerencias-reposicion:
+    get:
+      summary: Listar productos que requieren reposición
+      description: Devuelve los SKUs cuyo stock disponible total es menor o igual al punto de reorden calculado, ordenados por urgencia (menor ratio stock/punto_reorden primero).
+      responses:
+        '200':
+          description: Lista de sugerencias de reposición
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SugerenciaReposicionResponse'
+
+  /api/v1/admin/inventario/sobrestock:
+    get:
+      summary: Listar productos con sobrestock proyectado
+      description: Devuelve productos cuyo dias_inventario_proyectados supera el umbral configurado en la clave inventario_dias_sobrestock de CONFIGURACION (default 90 días).
+      responses:
+        '200':
+          description: Lista de productos en sobrestock
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SobrestockResponse'
+
+components:
+  schemas:
+    SugerenciaReposicionResponse:
+      type: object
+      properties:
+        producto_id:
+          type: string
+          format: uuid
+        sku:
+          type: string
+        nombre:
+          type: string
+        tipo_estrategico:
+          type: string
+          enum: [GANCHO, NICHO, REGULAR]
+        stock_disponible_total:
+          type: integer
+        punto_reorden:
+          type: number
+        cantidad_sugerida_compra:
+          type: integer
+          description: punto_reorden - stock_disponible_total (redondeado al múltiplo de empaque del proveedor)
+        velocidad_venta_diaria:
+          type: number
+        lead_time_dias:
+          type: integer
+        proveedor_id:
+          type: string
+          format: uuid
+        proveedor_nombre:
+          type: string
+
+    SobrestockResponse:
+      type: object
+      properties:
+        producto_id:
+          type: string
+          format: uuid
+        sku:
+          type: string
+        nombre:
+          type: string
+        stock_disponible_total:
+          type: integer
+        velocidad_venta_diaria:
+          type: number
+        dias_inventario_proyectados:
+          type: number
+          description: stock_disponible_total / velocidad_venta_diaria
+        umbral_sobrestock_dias:
+          type: integer
+          description: Valor actual de inventario_dias_sobrestock en CONFIGURACION

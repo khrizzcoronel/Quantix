@@ -1,0 +1,120 @@
+openapi: 3.0.3
+info:
+  title: Quantix - API de Pagos y Seguridad (Módulo 007)
+  version: 1.0.0
+  description: Integración de pasarelas de pago multimodal, webhooks de confirmación y seguridad PCI.
+paths:
+  /api/v1/pagos/iniciar:
+    post:
+      summary: Iniciar procesamiento de pago con pasarela o terminal
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Clave única de idempotencia (folio_ticket + metodo_pago)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IniciarPagoRequest'
+      responses:
+        '200':
+          description: Pago procesado o iniciado para confirmación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagoResponse'
+        '409':
+          description: Pago duplicado o conflicto de idempotencia
+
+  /api/v1/pagos/webhook:
+    post:
+      summary: Webhook para recibir confirmaciones asíncronas de la pasarela
+      parameters:
+        - name: X-Signature
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Firma criptográfica HMAC de la pasarela
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Webhook procesado exitosamente
+        '400':
+          description: Firma inválida o payload corrupto
+
+  /api/v1/pagos/{id}/estado:
+    get:
+      summary: Consultar estado actual de una transacción de pago
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Estado del pago
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagoResponse'
+
+components:
+  schemas:
+    IniciarPagoRequest:
+      type: object
+      required:
+        - venta_id
+        - metodo_pago
+        - monto
+      properties:
+        venta_id:
+          type: string
+          format: uuid
+        metodo_pago:
+          type: string
+          enum: [EFECTIVO, TARJETA_DEBITO, TARJETA_CREDITO, QR_TRANSFERENCIA]
+        monto:
+          type: number
+          format: double
+        token_pasarela:
+          type: string
+          nullable: true
+          description: Token temporal devuelto por SDK del datáfono/pasarela
+
+    PagoResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        venta_id:
+          type: string
+          format: uuid
+        metodo_pago:
+          type: string
+        monto:
+          type: number
+        estado_pago:
+          type: string
+          enum: [PENDIENTE_CONFIRMACION, CONFIRMADO, RECHAZADO, REEMBOLSADO]
+        referencia_transaccion:
+          type: string
+        autorizacion_bancaria:
+          type: string
+        ultimos_4_digitos:
+          type: string
+        fecha_hora:
+          type: string
+          format: date-time
