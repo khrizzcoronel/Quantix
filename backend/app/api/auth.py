@@ -60,8 +60,15 @@ async def supervisor_override(
             detail="El usuario provisto no tiene privilegios de autorización"
         )
         
-    # Aquí podríamos generar un token temporal de autorización de corto alcance (ej. 2 minutos)
-    # o devolver el ID del supervisor para inyectarlo en la Auditoría de manera directa.
+    # Notificación WebSocket asíncrona si la caja estuviera conectada al canal
+    from app.api.ws import notif_manager
+    import asyncio
+    
+    # En un caso real, la terminal del cajero se suscribiría con su propio ID
+    # Simulación: Mandamos el push al ID del cajero que lo solicitó (req.cajero_id en un esquema avanzado)
+    # Por simplicidad aquí lo mandamos como log conceptual:
+    # await notif_manager.send_personal_message({"tipo": "AUTORIZACION", "estado": "APROBADA"}, "CAJERO_ID")
+
     return {
         "autorizado": True,
         "supervisor_id": supervisor.id,
