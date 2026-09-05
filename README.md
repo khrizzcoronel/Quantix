@@ -199,7 +199,8 @@ Para un entendimiento integral del sistema, consulta los documentos de referenci
 4. 🥉🥈🥇 **[Arquitectura ETL Medallion (Bronze/Silver/Gold)](docs/arquitectura/etl_medallion_architecture.md):** Diseño del pipeline, orquestación con APScheduler y registro de ejecuciones en `control.etl_control_log`.
 5. 🧪 **[Estándar de Testing](docs/arquitectura/estandar_testing.md):** Normas obligatorias de pruebas unitarias, de integración y ETL. Política de datos reales en tests.
 6. 📋 **[Especificación de Requisitos de Software (SRS)](docs/requisitos/especificacion_requisitos.md):** Catálogo formal de requerimientos funcionales y no funcionales (MoSCoW).
-7. ⚖️ **[Constitución del Proyecto](.specify/memory/constitution.md):** Principios inmutables de ingeniería v2.0.0 — incluye Artículo V de datos reales y Artículo III de arquitectura Medallion.
+7. 🔍 **[Análisis de Cobertura (Gap Analysis)](docs/requisitos/analisis_cobertura_requerimientos.md):** Matriz que detalla qué especificación implementa cada requisito del SRS y expone los huecos restantes.
+8. ⚖️ **[Constitución del Proyecto](.specify/memory/constitution.md):** Principios inmutables de ingeniería v2.0.0 — incluye Artículo V de datos reales y Artículo III de arquitectura Medallion.
 
 ---
 
