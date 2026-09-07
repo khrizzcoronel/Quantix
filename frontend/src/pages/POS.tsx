@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { usePOSStore } from '../store/posStore';
-import { Search, Trash2, Plus, Minus, CreditCard, Banknote, ShoppingCart, AlertCircle } from 'lucide-react';
-import api from '../services/api';
+import { Search, Trash2, Plus, Minus, CreditCard, Banknote, ShoppingCart } from 'lucide-react';
 
 // Datos estáticos simulados para la UI inicial (Luego se consumirán del backend)
 const MOCK_PRODUCTS = [
@@ -39,6 +38,7 @@ export default function POS() {
           cantidad: item.cantidad
         }))
       };
+      console.log('Payload de venta listo para FEFO:', payload);
       
       // Simulación de llamada real al API (Reemplazar con llamada a 'api.post' cuando la BD esté arriba)
       // await api.post('/pos/checkout', payload);
