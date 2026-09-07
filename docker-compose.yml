@@ -1,30 +1,103 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:16-alpine
     container_name: quantix_postgres
-    restart: always
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: quantix_user
-      POSTGRES_PASSWORD: quantix_password
-      POSTGRES_DB: quantix_db
+      POSTGRES_USER: ${POSTGRES_USER:-quantix_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-quantix_password}
+      POSTGRES_DB: ${POSTGRES_DB:-quantix_db}
     ports:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-quantix_user} -d ${POSTGRES_DB:-quantix_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - quantix_network
 
-  # Opcional: pgAdmin para visualizar la base de datos fácilmente durante el desarrollo
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: quantix_backend
+    restart: unless-stopped
+    environment:
+      POSTGRES_SERVER: db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-quantix_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-quantix_password}
+      POSTGRES_DB: ${POSTGRES_DB:-quantix_db}
+      SECRET_KEY: ${SECRET_KEY:-09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7}
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 720
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-alertas@quantix.local}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-secret}
+      AUTO_SEED: "true"
+    volumes:
+      - ./backend:/app
+      - duckdb_data:/app/data
+      - ./pytest.ini:/app/pytest.ini:ro
+      - ./tests:/app/tests:ro
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - quantix_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: quantix_frontend
+    restart: unless-stopped
+    environment:
+      - VITE_API_URL=http://localhost:8000/api/v1
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    networks:
+      - quantix_network
+
   pgadmin:
     image: dpage/pgadmin4
     container_name: quantix_pgadmin
+    restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@quantix.local
+      PGADMIN_DEFAULT_EMAIL: admin@quantix.com
       PGADMIN_DEFAULT_PASSWORD: admin
     ports:
       - "5050:80"
     depends_on:
       - db
+    networks:
+      - quantix_network
 
 volumes:
   postgres_data:
+    name: quantix_postgres_data
+  duckdb_data:
+    name: quantix_duckdb_data
+
+networks:
+  quantix_network:
+    name: quantix_network
+    driver: bridge

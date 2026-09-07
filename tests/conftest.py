@@ -27,7 +27,14 @@ from app.main import app
 from app.db.oltp import get_db
 
 # Base de datos aislada de pruebas (Artículo T-II)
-TEST_DATABASE_URL = "postgresql+asyncpg://quantix_user:quantix_password@127.0.0.1:5433/quantix_test"
+TEST_DB_HOST = os.getenv("POSTGRES_SERVER", "127.0.0.1")
+TEST_DB_PORT = os.getenv("POSTGRES_PORT", "5433" if TEST_DB_HOST in ["127.0.0.1", "localhost"] else "5432")
+TEST_DB_USER = os.getenv("POSTGRES_USER", "quantix_user")
+TEST_DB_PASSWORD = os.getenv("POSTGRES_PASSWORD", "quantix_password")
+TEST_DATABASE_URL = os.getenv(
+    "TEST_DATABASE_URL",
+    f"postgresql+asyncpg://{TEST_DB_USER}:{TEST_DB_PASSWORD}@{TEST_DB_HOST}:{TEST_DB_PORT}/quantix_test"
+)
 
 test_engine = create_async_engine(TEST_DATABASE_URL, echo=False)
 TestSessionLocal = async_sessionmaker(bind=test_engine, expire_on_commit=False)

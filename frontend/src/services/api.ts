@@ -1,8 +1,7 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
-// URL base del backend (En producción debería venir de import.meta.env.VITE_API_URL)
-const API_URL = 'http://localhost:8000/api/v1';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 const api = axios.create({
   baseURL: API_URL,
