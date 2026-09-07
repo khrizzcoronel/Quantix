@@ -51,6 +51,24 @@ async def seed_data():
             activo=True
         )
         db.add(cajero)
+
+        supervisor = Usuario(
+            nombre="Supervisor Turno",
+            email="supervisor@quantix.local",
+            password_hash=get_password_hash("Super123!"),
+            rol=RolUsuario.SUPERVISOR,
+            activo=True
+        )
+        db.add(supervisor)
+
+        bodeguero = Usuario(
+            nombre="Encargado Bodega",
+            email="bodeguero@quantix.local",
+            password_hash=get_password_hash("Bodega123!"),
+            rol=RolUsuario.BODEGUERO,
+            activo=True
+        )
+        db.add(bodeguero)
         
         # 2. Categorías
         cat_bebidas = Categoria(nombre="Bebidas", descripcion="Bebidas frías y jugos")

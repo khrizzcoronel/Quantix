@@ -125,23 +125,41 @@ export default function Login() {
               <Users className="w-3.5 h-3.5" />
               Cuentas demo para probar roles:
             </span>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2.5">
               <button
                 type="button"
                 onClick={() => handleQuickFill('admin@quantix.local', 'Admin123!')}
-                className="p-2 text-left rounded-lg bg-purple-50 hover:bg-purple-100 border border-purple-200 transition-colors"
+                className="p-2.5 text-left rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 transition-colors"
               >
                 <span className="block text-xs font-bold text-purple-900">DIRECTOR</span>
-                <span className="block text-[10px] text-purple-600">Acceso a BI & Táctico</span>
+                <span className="block text-[10px] text-purple-600">Acceso Total / BI</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleQuickFill('supervisor@quantix.local', 'Super123!')}
+                className="p-2.5 text-left rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-colors"
+              >
+                <span className="block text-xs font-bold text-amber-900">SUPERVISOR</span>
+                <span className="block text-[10px] text-amber-600">Auditoría & Mermas</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleQuickFill('bodeguero@quantix.local', 'Bodega123!')}
+                className="p-2.5 text-left rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors"
+              >
+                <span className="block text-xs font-bold text-blue-900">BODEGUERO</span>
+                <span className="block text-[10px] text-blue-600">Inventario & Lotes</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => handleQuickFill('cajero@quantix.local', 'Caja123!')}
-                className="p-2 text-left rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors"
+                className="p-2.5 text-left rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors"
               >
                 <span className="block text-xs font-bold text-emerald-900">CAJERO</span>
-                <span className="block text-[10px] text-emerald-600">Solo Caja & Arqueo</span>
+                <span className="block text-[10px] text-emerald-600">Caja & Arqueo Ciego</span>
               </button>
             </div>
           </div>

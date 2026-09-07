@@ -71,10 +71,12 @@ npm run dev
 
 Al ejecutar `app.seed`, el sistema se pobló con los siguientes usuarios de prueba:
 
-| Rol | Correo (Usuario) | Contraseña | Vistas Permitidas |
+| Rol | Correo (Usuario) | Contraseña | Vista Inicial / Acceso |
 | :--- | :--- | :--- | :--- |
-| **Director** | `admin@quantix.local` | `Admin123!` | POS, Dashboard BI, Reportes |
-| **Cajero** | `cajero@quantix.local` | `Caja123!` | Solo POS |
+| **Director** | `admin@quantix.local` | `Admin123!` | `/dashboard` (BI Estratégico, Monitor Táctico, Inventario, POS) |
+| **Supervisor** | `supervisor@quantix.local` | `Super123!` | `/tactico` (Semáforo Arqueos, Alertas FEFO, Auditoría, POS) |
+| **Bodeguero** | `bodeguero@quantix.local` | `Bodega123!` | `/inventario` (Catálogo, Recepción de Mercancía y Lotes) |
+| **Cajero** | `cajero@quantix.local` | `Caja123!` | `/pos` (Caja Registradora, Apertura y Arqueo Ciego) |
 
 ---
 
