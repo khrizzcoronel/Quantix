@@ -51,14 +51,14 @@ class MedallionETL:
         con.execute("""
             CREATE OR REPLACE TABLE bronze.venta AS 
             SELECT *, CURRENT_TIMESTAMP AS _extraction_ts 
-            FROM pg.venta;
+            FROM pg.ventas;
         """)
         
         # Extraemos Detalles de Venta
         con.execute("""
             CREATE OR REPLACE TABLE bronze.detalle_venta AS 
             SELECT *, CURRENT_TIMESTAMP AS _extraction_ts 
-            FROM pg.detalle_venta;
+            FROM pg.detalles_venta;
         """)
         
         # Extraemos Productos

@@ -33,7 +33,16 @@ async def login_access_token(
         )
         
     access_token = create_access_token(subject=user.id, rol=user.rol.name)
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "nombre": user.nombre,
+            "rol": user.rol.name
+        }
+    }
 
 
 @router.post("/supervisor-override")

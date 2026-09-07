@@ -28,17 +28,22 @@ export default function Login() {
     setIsLoading(true);
     
     try {
-      await login(email, password);
-      // Obtener el rol recién almacenado
-      const currentUser = useAuthStore.getState().user;
-      if (currentUser?.rol === 'DIRECTOR') {
-        navigate('/dashboard');
-      } else if (currentUser?.rol === 'SUPERVISOR') {
-        navigate('/tactico');
-      } else if (currentUser?.rol === 'BODEGUERO') {
-        navigate('/inventario');
-      } else {
-        navigate('/pos');
+      const loggedUser = await login(email, password);
+      
+      switch (loggedUser?.rol) {
+        case 'DIRECTOR':
+          navigate('/dashboard', { replace: true });
+          break;
+        case 'SUPERVISOR':
+          navigate('/tactico', { replace: true });
+          break;
+        case 'BODEGUERO':
+          navigate('/inventario', { replace: true });
+          break;
+        case 'CAJERO':
+        default:
+          navigate('/pos', { replace: true });
+          break;
       }
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Credenciales inválidas o error de conexión con el backend');
