@@ -73,7 +73,7 @@ class Venta(Base):
     __tablename__ = "ventas"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    sesion_caja_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("sesiones_caja.id"))
+    sesion_caja_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("sesion_caja.id"))
     cliente_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("clientes.id"), nullable=True)
     folio_ticket: Mapped[str] = mapped_column(String(50), unique=True, index=True)
     fecha_hora: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -94,8 +94,8 @@ class DetalleVenta(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     venta_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("ventas.id"))
-    producto_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("productos.id"))
-    lote_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("lotes.id"))
+    producto_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("producto.id"))
+    lote_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("lote_inventario.id"))
     cantidad: Mapped[Decimal] = mapped_column(Numeric(10, 3))
     costo_unitario_lote: Mapped[Decimal] = mapped_column(Numeric(10, 2))
     precio_unitario_venta: Mapped[Decimal] = mapped_column(Numeric(10, 2))
