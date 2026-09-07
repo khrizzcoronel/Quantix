@@ -1,7 +1,7 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Store, BarChart3, LogOut, UserCircle, 
-  ShieldCheck, Package
+  ShieldCheck, Package, Settings
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 
@@ -26,6 +26,13 @@ export default function Layout() {
       icon: BarChart3,
       roles: ['DIRECTOR'],
       badge: 'Estratégico'
+    },
+    {
+      to: '/configuracion',
+      label: 'Ajustes del Sistema',
+      icon: Settings,
+      roles: ['DIRECTOR'],
+      badge: 'Control Global'
     },
     {
       to: '/tactico',

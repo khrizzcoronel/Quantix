@@ -140,7 +140,7 @@ async def arqueo_ciego(
             detalle_json={
                 "fisico": total_fisico, 
                 "teorico": total_teorico, 
-                "desglose_declarado": req.conteo_declarado.model_dump()
+                "desglose_declarado": req.conteo_declarado.model_dump(mode="json")
             }
         )
         db.add(auditoria)

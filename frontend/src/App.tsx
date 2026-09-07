@@ -4,6 +4,7 @@ import POS from './pages/POS';
 import Dashboard from './pages/Dashboard';
 import Tactico from './pages/Tactico';
 import Inventario from './pages/Inventario';
+import Configuracion from './pages/Configuracion';
 import Login from './pages/Login';
 import { useAuthStore } from './store/authStore';
 
@@ -52,6 +53,7 @@ function App() {
           <Route path="tactico" element={<Tactico />} />
           <Route path="inventario" element={<Inventario />} />
           <Route path="dashboard" element={<Dashboard />} />
+          <Route path="configuracion" element={<Configuracion />} />
         </Route>
       </Routes>
     </BrowserRouter>

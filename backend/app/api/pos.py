@@ -7,7 +7,7 @@ import datetime
 
 from app.db.oltp import get_db
 from app.schemas.pos import ProductoBuscado, CheckoutRequest, CheckoutResponse
-from app.models.inventario import Producto, LoteInventario
+from app.models.inventario import Producto, LoteInventario, EstadoLote
 from app.models.ventas import Venta, DetalleVenta, PagoVenta
 
 from app.api.deps import get_current_user
@@ -79,7 +79,7 @@ async def procesar_checkout(
             # Buscar lotes activos ordenados por vencimiento más próximo (FEFO) con bloqueo FOR UPDATE
             lotes_query = select(LoteInventario).where(
                 LoteInventario.producto_id == item.producto_id,
-                LoteInventario.estado == 'ACTIVO',
+                LoteInventario.estado == EstadoLote.ACTIVO,
                 LoteInventario.cantidad_disponible > 0
             ).order_by(LoteInventario.fecha_vencimiento.asc()).with_for_update()
             
@@ -90,17 +90,19 @@ async def procesar_checkout(
                 if cantidad_restante_por_descargar == 0:
                     break
                     
-                cantidad_a_tomar = min(lote.cantidad_disponible, cantidad_restante_por_descargar)
-                lote.cantidad_disponible -= cantidad_a_tomar
-                cantidad_restante_por_descargar -= cantidad_a_tomar
+                disp = float(lote.cantidad_disponible)
+                cantidad_a_tomar = min(disp, float(cantidad_restante_por_descargar))
+                lote.cantidad_disponible = float(lote.cantidad_disponible) - cantidad_a_tomar
+                cantidad_restante_por_descargar -= int(cantidad_a_tomar)
                 
                 # Si el lote se vació, cambiar su estado
-                if lote.cantidad_disponible == 0:
-                    lote.estado = 'AGOTADO'
+                if float(lote.cantidad_disponible) <= 0:
+                    lote.cantidad_disponible = 0
+                    lote.estado = EstadoLote.AGOTADO
                     
                 # Precio unitario actual del producto, pero costo congelado del lote
-                subtotal_linea = float(producto.precio_venta) * cantidad_a_tomar
-                margen_linea = subtotal_linea - (float(lote.costo_unitario) * cantidad_a_tomar)
+                subtotal_linea = float(producto.precio_venta) * float(cantidad_a_tomar)
+                margen_linea = subtotal_linea - (float(lote.costo_unitario) * float(cantidad_a_tomar))
                 total_bruto += subtotal_linea
                 
                 detalles_venta.append(DetalleVenta(
