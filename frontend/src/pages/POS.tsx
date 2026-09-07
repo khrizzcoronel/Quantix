@@ -139,7 +139,7 @@ export default function POS() {
             </span>
             <span className="text-gray-300">|</span>
             <span className="text-xs text-gray-500">
-              Fondo inicial: <strong>${sesionActiva?.fondo_inicial?.toFixed(2) || '500.00'}</strong>
+              Fondo inicial: <strong>${Number(sesionActiva?.fondo_inicial || 0).toFixed(2)}</strong>
             </span>
           </div>
 

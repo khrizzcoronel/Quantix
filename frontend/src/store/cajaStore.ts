@@ -41,7 +41,13 @@ export const useCajaStore = create<CajaState>()(
             fondo_inicial: fondoInicial,
             terminal_id: terminalId,
           });
-          set({ sesionActiva: response.data, estaAbierta: true });
+          set({ 
+            sesionActiva: {
+              ...response.data,
+              fondo_inicial: Number(response.data.fondo_inicial)
+            }, 
+            estaAbierta: true 
+          });
         } catch (error: any) {
           // Si el backend responde que ya tiene una abierta o si estamos en modo offline
           if (error.response?.data?.detail?.includes('ya tiene una sesión')) {
@@ -52,7 +58,7 @@ export const useCajaStore = create<CajaState>()(
                 usuario_id: 'user-actual',
                 terminal_id: terminalId,
                 fecha_apertura: new Date().toISOString(),
-                fondo_inicial: fondoInicial,
+                fondo_inicial: Number(fondoInicial),
                 estado: 'ABIERTA',
               },
               estaAbierta: true,
@@ -68,7 +74,12 @@ export const useCajaStore = create<CajaState>()(
           const response = await api.post('/caja/arqueo-ciego', {
             conteo_declarado: conteo,
           });
-          const resultado: ResultadoArqueo = response.data;
+          const resultado: ResultadoArqueo = {
+            ...response.data,
+            total_teorico: Number(response.data.total_teorico),
+            total_fisico_declarado: Number(response.data.total_fisico_declarado),
+            diferencia: Number(response.data.diferencia),
+          };
           set({ sesionActiva: null, estaAbierta: false });
           return resultado;
         } catch (error: any) {

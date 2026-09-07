@@ -172,16 +172,16 @@ export default function ArqueoCiegoModal({ isOpen, onClose }: Props) {
             <div className="bg-gray-50 p-4 rounded-xl space-y-2 text-sm border border-gray-200 mb-6 text-left">
               <div className="flex justify-between">
                 <span className="text-gray-500">Total Teórico Esperado:</span>
-                <span className="font-semibold text-gray-800">${resultado.total_teorico.toFixed(2)}</span>
+                <span className="font-semibold text-gray-800">${Number(resultado.total_teorico || 0).toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Total Físico Declarado:</span>
-                <span className="font-semibold text-gray-800">${resultado.total_fisico_declarado.toFixed(2)}</span>
+                <span className="font-semibold text-gray-800">${Number(resultado.total_fisico_declarado || 0).toFixed(2)}</span>
               </div>
               <div className="flex justify-between pt-2 border-t border-gray-200 font-bold">
                 <span>Diferencia:</span>
-                <span className={resultado.diferencia === 0 ? 'text-green-600' : resultado.diferencia > 0 ? 'text-amber-600' : 'text-red-600'}>
-                  {resultado.diferencia > 0 ? `+$${resultado.diferencia.toFixed(2)}` : `-$${Math.abs(resultado.diferencia).toFixed(2)}`}
+                <span className={Number(resultado.diferencia || 0) === 0 ? 'text-green-600' : Number(resultado.diferencia || 0) > 0 ? 'text-amber-600' : 'text-red-600'}>
+                  {Number(resultado.diferencia || 0) > 0 ? `+$${Number(resultado.diferencia || 0).toFixed(2)}` : `-$${Math.abs(Number(resultado.diferencia || 0)).toFixed(2)}`}
                 </span>
               </div>
             </div>
