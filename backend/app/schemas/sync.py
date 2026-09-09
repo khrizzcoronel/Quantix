@@ -16,6 +16,7 @@ class VentaOfflinePayload(BaseModel):
     id_local: str = Field(..., min_length=1, max_length=64, description="UUID o identificador local de la venta")
     terminal_id: str = Field(..., min_length=1, max_length=50)
     sesion_caja_id: UUID
+    sucursal_id: Optional[UUID] = None
     fecha_local: datetime
     items: List[ItemVentaOffline] = Field(..., min_length=1)
     total_local: Optional[Decimal] = None

@@ -206,6 +206,11 @@ async def sincronizar_ventas_offline(
                     continue
 
                 # Verificar disponibilidad con bloqueo pesimista en orden FEFO
+                sucursal_id_sync = (
+                    venta_in.sucursal_id
+                    or (sesion.sucursal_id if sesion else None)
+                    or current_user.sucursal_id
+                )
                 items_validados = []
                 for item in venta_in.items:
                     prod = await db.get(Producto, item.producto_id)
@@ -223,9 +228,10 @@ async def sincronizar_ventas_offline(
                             LoteInventario.cantidad_disponible > 0,
                             LoteInventario.fecha_vencimiento >= hoy,
                         )
-                        .order_by(LoteInventario.fecha_vencimiento.asc())
-                        .with_for_update()
                     )
+                    if sucursal_id_sync:
+                        lotes_stmt = lotes_stmt.where(LoteInventario.sucursal_id == sucursal_id_sync)
+                    lotes_stmt = lotes_stmt.order_by(LoteInventario.fecha_vencimiento.asc()).with_for_update()
                     lotes_res = await db.execute(lotes_stmt)
                     lotes_disponibles = list(lotes_res.scalars().all())
 
@@ -244,8 +250,11 @@ async def sincronizar_ventas_offline(
                                 LoteInventario.cantidad_disponible > 0,
                                 LoteInventario.id.not_in(ids_ya_incluidos) if ids_ya_incluidos else True,
                             )
-                            .order_by(LoteInventario.fecha_vencimiento.asc().nulls_last())
-                            .with_for_update()
+                        )
+                        if sucursal_id_sync:
+                            lotes_extra_stmt = lotes_extra_stmt.where(LoteInventario.sucursal_id == sucursal_id_sync)
+                        lotes_extra_stmt = (
+                            lotes_extra_stmt.order_by(LoteInventario.fecha_vencimiento.asc().nulls_last()).with_for_update()
                         )
                         lotes_extra_res = await db.execute(lotes_extra_stmt)
                         lotes_extra = lotes_extra_res.scalars().all()
@@ -347,6 +356,7 @@ async def sincronizar_ventas_offline(
 
                 nueva_venta = Venta(
                     sesion_caja_id=venta_in.sesion_caja_id,
+                    sucursal_id=sucursal_id_sync,
                     cliente_id=None,
                     folio_ticket=nuevo_folio,
                     idempotency_key=venta_in.id_local,

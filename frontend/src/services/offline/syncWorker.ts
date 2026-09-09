@@ -98,6 +98,7 @@ export async function procesarColaSync(): Promise<void> {
     const payloadVentas = pendientes.map((item) => ({
       id_local: item.venta.id_local,
       sesion_caja_id: item.venta.sesion_caja_id,
+      sucursal_id: item.venta.sucursal_id || null,
       terminal_id: item.venta.terminal_id,
       usuario_id: item.venta.usuario_id || null,
       fecha_hora: item.venta.fecha_hora,

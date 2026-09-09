@@ -44,6 +44,7 @@ def clean_database():
         "proveedor",
         "configuracion",
         "etl_log",
+        "plantillas_reporte",
         "usuario",
         "sucursal",
     ]

@@ -25,7 +25,7 @@ interface CajaState {
   sesionActiva: SesionCajaActiva | null;
   estaAbierta: boolean;
   recuperarSesionActiva: () => Promise<void>;
-  abrirCaja: (fondoInicial: number, terminalId: string) => Promise<void>;
+  abrirCaja: (fondoInicial: number, terminalId: string, sucursalId?: string) => Promise<void>;
   realizarArqueoCiego: (conteo: { efectivo: number; tarjeta: number; transferencia: number; otros: number }) => Promise<ResultadoArqueo>;
   cerrarSesionLocal: () => void;
 }
@@ -51,11 +51,12 @@ export const useCajaStore = create<CajaState>()(
         });
       },
 
-      abrirCaja: async (fondoInicial: number, terminalId: string) => {
+      abrirCaja: async (fondoInicial: number, terminalId: string, sucursalId?: string) => {
         try {
           const response = await api.post('/caja/abrir', {
             fondo_inicial: fondoInicial,
             terminal_id: terminalId,
+            sucursal_id: sucursalId || undefined,
           });
           set({ 
             sesionActiva: {

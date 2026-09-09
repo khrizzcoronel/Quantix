@@ -308,12 +308,12 @@ export default function Analisis({ initialUser, initialSucursales, initialSucurs
     void cargarSucursales();
   }, [cargarSucursales]);
 
-  // Si no es director, forzar sucursal actual fija
+  // Sincronizar sucursal seleccionada con la sucursal activa seleccionada en el header
   useEffect(() => {
-    if (!isDirector && sucursalActual) {
+    if (sucursalActual) {
       setSucursalSeleccionadaId(sucursalActual.id);
     }
-  }, [isDirector, sucursalActual]);
+  }, [sucursalActual?.id]);
 
   // Tab Activo: Tab 1 (Estadístico) vs Tab 2 (Constructor)
   const [activeTab, setActiveTab] = useState<'ESTADISTICO' | 'CONSTRUCTOR'>('ESTADISTICO');

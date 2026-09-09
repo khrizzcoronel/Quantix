@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from datetime import datetime, timezone
@@ -51,11 +51,16 @@ async def abrir_caja(
             detail="El usuario ya tiene una sesión de caja abierta"
         )
         
+    sucursal_id_sesion = req.sucursal_id or current_user.sucursal_id
+    if not sucursal_id_sesion:
+        sucursal_id_sesion = UUID("00000000-0000-0000-0000-000000000001")
+
     nueva_sesion = SesionCaja(
         usuario_id=current_user.id,
         terminal_id=req.terminal_id,
         fondo_inicial=req.fondo_inicial,
-        estado=EstadoSesionCaja.ABIERTA
+        estado=EstadoSesionCaja.ABIERTA,
+        sucursal_id=sucursal_id_sesion
     )
     db.add(nueva_sesion)
     
@@ -309,6 +314,7 @@ async def arqueo_ciego(
 
 @router.get("/sesiones", response_model=List[SesionDetalleResponse])
 async def listar_sesiones(
+    sucursal_id: Optional[UUID] = Query(None, description="Filtrar por sucursal"),
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(RoleChecker(['SUPERVISOR', 'DIRECTOR']))
 ):
@@ -319,8 +325,11 @@ async def listar_sesiones(
         select(SesionCaja, Usuario.nombre.label("usuario_nombre"), ArqueoCaja)
         .join(Usuario, SesionCaja.usuario_id == Usuario.id)
         .outerjoin(ArqueoCaja, ArqueoCaja.sesion_caja_id == SesionCaja.id)
-        .order_by(SesionCaja.fecha_apertura.desc())
     )
+    if sucursal_id:
+        query = query.where(SesionCaja.sucursal_id == sucursal_id)
+
+    query = query.order_by(SesionCaja.fecha_apertura.desc())
     result = await db.execute(query)
     rows = result.all()
 
@@ -336,6 +345,7 @@ async def listar_sesiones(
                 fecha_cierre=ses.fecha_cierre,
                 fondo_inicial=ses.fondo_inicial,
                 estado=ses.estado.value if hasattr(ses.estado, 'value') else str(ses.estado),
+                sucursal_id=ses.sucursal_id,
                 total_teorico=arq.total_teorico if arq else None,
                 total_fisico=arq.total_fisico_declarado if arq else None,
                 diferencia=arq.diferencia if arq else None,
@@ -493,6 +503,7 @@ async def obtener_corte_z(
 
 @router.get("/estadisticas-historicas", response_model=EstadisticasHistoricasCajasResponse)
 async def obtener_estadisticas_historicas(
+    sucursal_id: Optional[UUID] = Query(None, description="Filtrar por sucursal"),
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(RoleChecker(['CAJERO', 'SUPERVISOR', 'DIRECTOR']))
 ):
@@ -506,8 +517,11 @@ async def obtener_estadisticas_historicas(
         select(SesionCaja, Usuario, ArqueoCaja)
         .join(Usuario, SesionCaja.usuario_id == Usuario.id)
         .outerjoin(ArqueoCaja, ArqueoCaja.sesion_caja_id == SesionCaja.id)
-        .order_by(SesionCaja.fecha_apertura.desc())
     )
+    if sucursal_id:
+        query_sesiones = query_sesiones.where(SesionCaja.sucursal_id == sucursal_id)
+
+    query_sesiones = query_sesiones.order_by(SesionCaja.fecha_apertura.desc())
     result_ses = await db.execute(query_sesiones)
     filas = result_ses.all()
 
@@ -519,8 +533,11 @@ async def obtener_estadisticas_historicas(
             func.coalesce(func.sum(Venta.total_pagar), 0).label("monto_ventas")
         )
         .where(Venta.estado.in_(['COMPLETADA', 'PAGADO']))
-        .group_by(Venta.sesion_caja_id)
     )
+    if sucursal_id:
+        query_ventas = query_ventas.where(Venta.sucursal_id == sucursal_id)
+
+    query_ventas = query_ventas.group_by(Venta.sesion_caja_id)
     result_v = await db.execute(query_ventas)
     ventas_map = {row[0]: {"tickets": row[1], "monto": Decimal(str(row[2]))} for row in result_v.all()}
 

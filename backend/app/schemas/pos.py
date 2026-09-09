@@ -26,6 +26,7 @@ class PagoCheckout(BaseModel):
 
 class CheckoutRequest(BaseModel):
     sesion_caja_id: UUID
+    sucursal_id: Optional[UUID] = None
     cliente_id: Optional[UUID] = None
     items: Optional[List[ItemCarrito]] = None
     productos_solicitados: Optional[List[dict]] = None
@@ -76,6 +77,7 @@ class PagoVentaItemResponse(BaseModel):
 class VentaResumenResponse(BaseModel):
     id: UUID
     sesion_caja_id: UUID
+    sucursal_id: Optional[UUID] = None
     cliente_id: Optional[UUID] = None
     cliente_cedula: Optional[str] = None
     cliente_nombre: Optional[str] = None
@@ -95,6 +97,7 @@ class VentaResumenResponse(BaseModel):
 class VentaDetalleResponse(BaseModel):
     id: UUID
     sesion_caja_id: UUID
+    sucursal_id: Optional[UUID] = None
     cliente_id: Optional[UUID] = None
     cliente_cedula: Optional[str] = None
     cliente_nombre: Optional[str] = None

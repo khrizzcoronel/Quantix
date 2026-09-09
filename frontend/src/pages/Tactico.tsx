@@ -10,6 +10,7 @@ import api from '../services/api';
 import { useWebSocket, type EventoActividad } from '../hooks/useWebSocket';
 import { exportToCSV, formatDate } from '../utils/exportUtils';
 import CorteXModal from '../components/CorteXModal';
+import { useSucursalStore } from '../store/sucursalStore';
 
 interface AlertaLote {
   id: string;
@@ -75,6 +76,7 @@ interface EstadisticaCajero {
 }
 
 export default function Tactico() {
+  const { sucursalActual } = useSucursalStore();
   const [renderedAt] = useState(() => Date.now());
   const [activeTab, setActiveTab] = useState<'ARQUEOS' | 'FEFO' | 'AUDITORIA' | 'DESEMPENO'>('ARQUEOS');
   const [loading, setLoading] = useState(false);
@@ -271,11 +273,13 @@ export default function Tactico() {
     setLoading(true);
     setErrorDatos(null);
     try {
+      const sucursalId = sucursalActual?.id;
+      const paramsSucursal = sucursalId ? { sucursal_id: sucursalId } : {};
       const [resSesiones, resLotes, resAuditoria, resStats] = await Promise.allSettled([
-        api.get('/caja/sesiones'),
-        api.get('/inventario/alertas-caducidad?dias_alerta=30'),
+        api.get('/caja/sesiones', { params: paramsSucursal }),
+        api.get('/inventario/alertas-caducidad', { params: { dias_alerta: 30, ...(sucursalId ? { sucursal_id: sucursalId } : {}) } }),
         api.get('/caja/auditoria'),
-        api.get('/caja/estadisticas-historicas')
+        api.get('/caja/estadisticas-historicas', { params: paramsSucursal })
       ]);
 
       if (resSesiones.status === 'fulfilled') {
@@ -313,7 +317,7 @@ export default function Tactico() {
 
   useEffect(() => {
     queueMicrotask(() => void cargarDatos());
-  }, []);
+  }, [sucursalActual?.id]);
 
   const handleSupervisorOverride = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -363,6 +367,10 @@ export default function Tactico() {
           <div className="flex items-center gap-2">
             <span className="px-3 py-1 bg-secondary-fixed text-on-secondary-fixed-variant rounded-full font-label-caps text-[10px] font-bold uppercase tracking-wider">
               Nivel Táctico • Supervisión de Piso
+            </span>
+            <span className="px-2.5 py-0.5 bg-surface-container-high text-on-surface-variant rounded-full font-label-caps text-[10px] font-medium flex items-center gap-1">
+              <span className="material-symbols-outlined text-xs text-primary">store</span>
+              {sucursalActual?.nombre || 'Matriz Centro'}
             </span>
           </div>
           <h2 className="font-headline-xl text-2xl md:text-3xl font-bold text-on-surface tracking-tight mt-2">

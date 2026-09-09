@@ -56,6 +56,8 @@ def run_seed():
         # =========================================================================
         logger.info("1. Creando Sucursales...")
         matriz_id = uuid.UUID("00000000-0000-0000-0000-000000000001")
+        norte_id = uuid.UUID("01ec96ea-a7c9-4656-823b-48ce8eb7739a")
+        sur_id = uuid.UUID("72cdafc3-3658-40bd-b79f-3d684cc0733d")
         sucursales_data = [
             Sucursal(
                 id=matriz_id,
@@ -67,7 +69,7 @@ def run_seed():
                 activo=True
             ),
             Sucursal(
-                id=uuid.uuid4(),
+                id=norte_id,
                 codigo="SUC-002",
                 nombre="Quantix Sucursal Norte",
                 direccion="Av. Carlos Izaguirre 890, Los Olivos",
@@ -76,7 +78,7 @@ def run_seed():
                 activo=True
             ),
             Sucursal(
-                id=uuid.uuid4(),
+                id=sur_id,
                 codigo="SUC-003",
                 nombre="Quantix Sucursal Sur",
                 direccion="Av. Benavides 2150, Miraflores",
@@ -313,15 +315,14 @@ def run_seed():
         logger.info(f"   ✓ {len(ordenes)} órdenes de compra y sus detalles registrados.")
 
         # =========================================================================
-        # 7. LOTES FEFO (35 lotes para los 25 productos)
+        # 7. LOTES FEFO (Distribuidos en Matriz, Norte y Sur)
         # =========================================================================
         logger.info("7. Creando Lotes de Inventario FEFO...")
         lotes = []
         hoy_fecha = date.today()
 
-        # Asignar al menos 1 lote por producto
+        # Matriz Centro: 25 lotes normales activos (1 por cada producto)
         for idx, prod in enumerate(productos):
-            # Lote normal activo
             dias_vence = 45 + (idx * 5)
             lote = LoteInventario(
                 producto_id=prod.id,
@@ -337,7 +338,7 @@ def run_seed():
             )
             lotes.append(lote)
 
-        # 5 Lotes Críticos FEFO (Vencimiento menor a 15 días para probar alertas)
+        # 5 Lotes Críticos FEFO en Matriz (< 15 días)
         prods_criticos = [prod_map["QTX-001"], prod_map["QTX-005"], prod_map["QTX-009"], prod_map["QTX-010"], prod_map["QTX-020"]]
         dias_criticos = [3, 7, 10, 12, 14]
         for p, d in zip(prods_criticos, dias_criticos):
@@ -355,7 +356,7 @@ def run_seed():
             )
             lotes.append(lote_crit)
 
-        # 3 Lotes Caducados (Historial / Merma)
+        # 3 Lotes Caducados en Matriz
         prods_caducados = [prod_map["QTX-005"], prod_map["QTX-010"], prod_map["QTX-006"]]
         for p in prods_caducados:
             lote_cad = LoteInventario(
@@ -372,26 +373,97 @@ def run_seed():
             )
             lotes.append(lote_cad)
 
-        # 2 Lotes adicionales en Sucursal Norte
-        suc_norte = sucursales_data[1]
-        for p in [prod_map["QTX-001"], prod_map["QTX-003"]]:
+        # Sucursal Norte: 18 lotes activos + 3 críticos + 1 caducado
+        for idx in range(18):
+            prod = productos[idx]
+            dias_v = 40 + (idx * 4)
             lote_norte = LoteInventario(
-                producto_id=p.id,
-                orden_compra_id=ordenes[2].id,
-                codigo_lote=f"LOT-{p.sku}-NORTE",
+                producto_id=prod.id,
+                orden_compra_id=ordenes[idx % len(ordenes)].id,
+                codigo_lote=f"LOT-{prod.sku}-NORTE",
                 cantidad_inicial=Decimal("50.00"),
-                cantidad_disponible=Decimal("45.00"),
-                costo_unitario=p.costo_base,
-                fecha_ingreso=ahora - timedelta(days=10),
-                fecha_vencimiento=hoy_fecha + timedelta(days=90),
+                cantidad_disponible=Decimal("42.00"),
+                costo_unitario=prod.costo_base,
+                fecha_ingreso=ahora - timedelta(days=12),
+                fecha_vencimiento=hoy_fecha + timedelta(days=dias_v),
                 estado=EstadoLote.ACTIVO,
-                sucursal_id=suc_norte.id
+                sucursal_id=norte_id
             )
             lotes.append(lote_norte)
 
+        for p, d in zip([prod_map["QTX-002"], prod_map["QTX-004"], prod_map["QTX-011"]], [5, 9, 13]):
+            lotes.append(LoteInventario(
+                producto_id=p.id,
+                orden_compra_id=ordenes[2].id,
+                codigo_lote=f"LOT-{p.sku}-NOR-CRIT{d}D",
+                cantidad_inicial=Decimal("25.00"),
+                cantidad_disponible=Decimal("15.00"),
+                costo_unitario=p.costo_base,
+                fecha_ingreso=ahora - timedelta(days=25),
+                fecha_vencimiento=hoy_fecha + timedelta(days=d),
+                estado=EstadoLote.ACTIVO,
+                sucursal_id=norte_id
+            ))
+        lotes.append(LoteInventario(
+            producto_id=prod_map["QTX-003"].id,
+            orden_compra_id=ordenes[3].id,
+            codigo_lote="LOT-QTX003-NOR-CAD",
+            cantidad_inicial=Decimal("15.00"),
+            cantidad_disponible=Decimal("0.00"),
+            costo_unitario=prod_map["QTX-003"].costo_base,
+            fecha_ingreso=ahora - timedelta(days=50),
+            fecha_vencimiento=hoy_fecha - timedelta(days=3),
+            estado=EstadoLote.CADUCADO,
+            sucursal_id=norte_id
+        ))
+
+        # Sucursal Sur: 16 lotes activos + 2 críticos + 1 caducado
+        for idx in range(5, 21):
+            prod = productos[idx]
+            dias_v = 35 + (idx * 3)
+            lote_sur = LoteInventario(
+                producto_id=prod.id,
+                orden_compra_id=ordenes[idx % len(ordenes)].id,
+                codigo_lote=f"LOT-{prod.sku}-SUR",
+                cantidad_inicial=Decimal("40.00"),
+                cantidad_disponible=Decimal("34.00"),
+                costo_unitario=prod.costo_base,
+                fecha_ingreso=ahora - timedelta(days=15),
+                fecha_vencimiento=hoy_fecha + timedelta(days=dias_v),
+                estado=EstadoLote.ACTIVO,
+                sucursal_id=sur_id
+            )
+            lotes.append(lote_sur)
+
+        for p, d in zip([prod_map["QTX-007"], prod_map["QTX-012"]], [4, 8]):
+            lotes.append(LoteInventario(
+                producto_id=p.id,
+                orden_compra_id=ordenes[4].id,
+                codigo_lote=f"LOT-{p.sku}-SUR-CRIT{d}D",
+                cantidad_inicial=Decimal("20.00"),
+                cantidad_disponible=Decimal("12.00"),
+                costo_unitario=p.costo_base,
+                fecha_ingreso=ahora - timedelta(days=28),
+                fecha_vencimiento=hoy_fecha + timedelta(days=d),
+                estado=EstadoLote.ACTIVO,
+                sucursal_id=sur_id
+            ))
+        lotes.append(LoteInventario(
+            producto_id=prod_map["QTX-008"].id,
+            orden_compra_id=ordenes[5].id,
+            codigo_lote="LOT-QTX008-SUR-CAD",
+            cantidad_inicial=Decimal("12.00"),
+            cantidad_disponible=Decimal("0.00"),
+            costo_unitario=prod_map["QTX-008"].costo_base,
+            fecha_ingreso=ahora - timedelta(days=45),
+            fecha_vencimiento=hoy_fecha - timedelta(days=6),
+            estado=EstadoLote.CADUCADO,
+            sucursal_id=sur_id
+        ))
+
         session.add_all(lotes)
         session.flush()
-        logger.info(f"   ✓ {len(lotes)} lotes FEFO creados (incluyendo 5 críticos <15d y 3 caducados).")
+        logger.info(f"   ✓ {len(lotes)} lotes FEFO creados en Matriz, Norte y Sur.")
 
         # =========================================================================
         # 8. CLIENTES CRM (25)
@@ -443,14 +515,15 @@ def run_seed():
         logger.info(f"   ✓ {len(clientes)} clientes CRM creados con cédula y puntos.")
 
         # =========================================================================
-        # 9. SESIONES DE CAJA (20)
+        # 9. SESIONES DE CAJA (Distribuidas en Matriz, Norte y Sur)
         # =========================================================================
         logger.info("9. Creando Sesiones de Caja...")
         sesiones_caja = []
-        # 19 sesiones pasadas cerradas
-        for i in range(19):
+
+        # Matriz: 10 sesiones cerradas + 1 abierta de hoy
+        for i in range(10):
             cajero_sel = cajeros_list[i % len(cajeros_list)]
-            dias_atras = 25 - i
+            dias_atras = 22 - (i * 2)
             f_aper = ahora - timedelta(days=dias_atras, hours=8)
             f_cier = f_aper + timedelta(hours=8)
             ses = SesionCaja(
@@ -464,7 +537,7 @@ def run_seed():
             )
             sesiones_caja.append(ses)
 
-        # 1 sesión ABIERTA activa de hoy para el cajero principal
+        # 1 sesión ABIERTA activa de hoy para el cajero principal en Matriz
         sesion_activa = SesionCaja(
             usuario_id=u_cajero.id,
             terminal_id="POS-MATRIZ-01",
@@ -475,30 +548,62 @@ def run_seed():
             sucursal_id=matriz_id
         )
         sesiones_caja.append(sesion_activa)
+
+        # Sucursal Norte: 6 sesiones cerradas
+        for i in range(6):
+            cajero_sel = cajeros_list[(i + 2) % len(cajeros_list)]
+            dias_atras = 18 - (i * 3)
+            f_aper = ahora - timedelta(days=dias_atras, hours=8)
+            f_cier = f_aper + timedelta(hours=8)
+            ses = SesionCaja(
+                usuario_id=cajero_sel.id,
+                terminal_id=f"POS-NORTE-{(i % 2) + 1:02d}",
+                fecha_apertura=f_aper,
+                fecha_cierre=f_cier,
+                fondo_inicial=120.00,
+                estado=EstadoSesionCaja.CERRADA,
+                sucursal_id=norte_id
+            )
+            sesiones_caja.append(ses)
+
+        # Sucursal Sur: 4 sesiones cerradas
+        for i in range(4):
+            cajero_sel = cajeros_list[(i + 4) % len(cajeros_list)]
+            dias_atras = 16 - (i * 4)
+            f_aper = ahora - timedelta(days=dias_atras, hours=8)
+            f_cier = f_aper + timedelta(hours=8)
+            ses = SesionCaja(
+                usuario_id=cajero_sel.id,
+                terminal_id=f"POS-SUR-{(i % 2) + 1:02d}",
+                fecha_apertura=f_aper,
+                fecha_cierre=f_cier,
+                fondo_inicial=100.00,
+                estado=EstadoSesionCaja.CERRADA,
+                sucursal_id=sur_id
+            )
+            sesiones_caja.append(ses)
+
         session.add_all(sesiones_caja)
         session.flush()
-        logger.info(f"   ✓ {len(sesiones_caja)} sesiones de caja (19 cerradas, 1 abierta para hoy).")
+        logger.info(f"   ✓ {len(sesiones_caja)} sesiones de caja (Matriz: 11, Norte: 6, Sur: 4).")
 
         # =========================================================================
-        # 10. ARQUEOS DE CAJA (20)
+        # 10. ARQUEOS DE CAJA (Para sesiones cerradas de todas las sucursales)
         # =========================================================================
         logger.info("10. Creando Arqueos de Caja...")
+        sesiones_cerradas = [s for s in sesiones_caja if s.estado == EstadoSesionCaja.CERRADA]
         arqueos = []
-        for i in range(19):
-            ses = sesiones_caja[i]
-            teorico = 850.00 + (i * 35.50)
-            if i % 7 == 0:
-                # Sobrante
+        for idx, ses in enumerate(sesiones_cerradas):
+            teorico = 750.00 + (idx * 30.00)
+            if idx % 7 == 0:
                 fisico = teorico + 12.00
                 dif = 12.00
                 est_arq = "SOBRANTE"
-            elif i % 5 == 0:
-                # Faltante
+            elif idx % 5 == 0:
                 fisico = teorico - 8.50
                 dif = -8.50
                 est_arq = "FALTANTE"
             else:
-                # Cuadrado perfecto
                 fisico = teorico
                 dif = 0.00
                 est_arq = "OK"
@@ -515,8 +620,8 @@ def run_seed():
 
         # Arqueo de prueba parcial
         arq_extra = ArqueoCaja(
-            sesion_caja_id=sesiones_caja[0].id,
-            fecha_arqueo=sesiones_caja[0].fecha_apertura + timedelta(hours=4),
+            sesion_caja_id=sesiones_cerradas[0].id,
+            fecha_arqueo=sesiones_cerradas[0].fecha_apertura + timedelta(hours=4),
             total_teorico=420.00,
             total_fisico_declarado=420.00,
             diferencia=0.00,
@@ -525,7 +630,7 @@ def run_seed():
         arqueos.append(arq_extra)
         session.add_all(arqueos)
         session.flush()
-        logger.info(f"   ✓ {len(arqueos)} arqueos registrados (OK, Sobrantes y Faltantes).")
+        logger.info(f"   ✓ {len(arqueos)} arqueos registrados (OK, Sobrantes y Faltantes en las 3 sucursales).")
 
         # =========================================================================
         # 11. MOVIMIENTOS DE CAJA (20)
@@ -565,98 +670,124 @@ def run_seed():
         logger.info(f"   ✓ {len(movimientos)} movimientos de caja registrados.")
 
         # =========================================================================
-        # 12. VENTAS HISTÓRICAS (25 ventas completas con detalles y pagos)
+        # 12. VENTAS HISTÓRICAS (55 ventas distribuidas en Matriz, Norte y Sur)
         # =========================================================================
-        logger.info("12. Creando Ventas Históricas con FEFO y Pagos...")
+        logger.info("12. Creando Ventas Históricas con FEFO y Pagos en todas las sucursales...")
         ventas = []
         detalles_venta = []
         pagos_venta = []
 
-        # Usar lotes disponibles activos
-        lotes_activos = [l for l in lotes if l.estado == EstadoLote.ACTIVO and l.sucursal_id == matriz_id]
+        config_ventas_sucursales = [
+            {
+                "sucursal_id": matriz_id,
+                "codigo_pref": "MAT",
+                "cantidad": 25,
+                "sesiones": [s for s in sesiones_caja if s.sucursal_id == matriz_id],
+                "lotes": [l for l in lotes if l.estado == EstadoLote.ACTIVO and l.sucursal_id == matriz_id]
+            },
+            {
+                "sucursal_id": norte_id,
+                "codigo_pref": "NOR",
+                "cantidad": 18,
+                "sesiones": [s for s in sesiones_caja if s.sucursal_id == norte_id],
+                "lotes": [l for l in lotes if l.estado == EstadoLote.ACTIVO and l.sucursal_id == norte_id]
+            },
+            {
+                "sucursal_id": sur_id,
+                "codigo_pref": "SUR",
+                "cantidad": 12,
+                "sesiones": [s for s in sesiones_caja if s.sucursal_id == sur_id],
+                "lotes": [l for l in lotes if l.estado == EstadoLote.ACTIVO and l.sucursal_id == sur_id]
+            }
+        ]
 
-        for i in range(25):
-            # Asignar a una sesión cerrada, o las últimas a la sesión activa
-            ses = sesiones_caja[i % len(sesiones_caja)]
-            fecha_v = ses.fecha_apertura + timedelta(minutes=30 + (i * 12))
-            folio = f"TKT-202602-{1001 + i}"
+        ticket_correlativo = 1001
+        for cfg in config_ventas_sucursales:
+            suc_id = cfg["sucursal_id"]
+            suc_ses = cfg["sesiones"]
+            suc_lot = cfg["lotes"]
+            suc_pref = cfg["codigo_pref"]
+            cant_v = cfg["cantidad"]
 
-            # 20 ventas con cliente, 5 anónimas
-            cli = clientes[i % len(clientes)] if i < 20 else None
+            for i in range(cant_v):
+                ses = suc_ses[i % len(suc_ses)]
+                fecha_v = ses.fecha_apertura + timedelta(minutes=25 + (i * 14))
+                folio = f"TKT-{suc_pref}-202602-{ticket_correlativo}"
+                ticket_correlativo += 1
 
-            # Seleccionar entre 2 y 4 productos
-            n_items = 2 + (i % 3)
-            items_seleccionados = []
-            subtotal_venta = Decimal("0.00")
+                cli = clientes[(i + (0 if suc_pref == "MAT" else (5 if suc_pref == "NOR" else 10))) % len(clientes)] if i % 4 != 3 else None
 
-            for j in range(n_items):
-                lote_item = lotes_activos[(i + j * 3) % len(lotes_activos)]
-                prod_item = next(p for p in productos if p.id == lote_item.producto_id)
-                cant_item = Decimal("2.00") if not prod_item.requiere_pesaje else Decimal("1.450")
-                subtot_item = (cant_item * prod_item.precio_venta).quantize(Decimal("0.01"))
-                costo_total_item = (cant_item * lote_item.costo_unitario).quantize(Decimal("0.01"))
-                margen_item = (subtot_item - costo_total_item).quantize(Decimal("0.01"))
+                n_items = 2 + (i % 3)
+                items_seleccionados = []
+                subtotal_venta = Decimal("0.00")
 
-                items_seleccionados.append({
-                    "prod": prod_item,
-                    "lote": lote_item,
-                    "cant": cant_item,
-                    "costo_u": lote_item.costo_unitario,
-                    "precio_u": prod_item.precio_venta,
-                    "subtotal": subtot_item,
-                    "margen": margen_item
-                })
-                subtotal_venta += subtot_item
+                for j in range(n_items):
+                    lote_item = suc_lot[(i + j * 2) % len(suc_lot)]
+                    prod_item = next(p for p in productos if p.id == lote_item.producto_id)
+                    cant_item = Decimal("2.00") if not prod_item.requiere_pesaje else Decimal("1.450")
+                    subtot_item = (cant_item * prod_item.precio_venta).quantize(Decimal("0.01"))
+                    costo_total_item = (cant_item * lote_item.costo_unitario).quantize(Decimal("0.01"))
+                    margen_item = (subtot_item - costo_total_item).quantize(Decimal("0.01"))
 
-            descuento = Decimal("2.50") if (i % 4 == 0 and cli is not None) else Decimal("0.00")
-            impuestos = (subtotal_venta * Decimal("0.18")).quantize(Decimal("0.01"))
-            total_pagar = (subtotal_venta - descuento).quantize(Decimal("0.01"))
+                    items_seleccionados.append({
+                        "prod": prod_item,
+                        "lote": lote_item,
+                        "cant": cant_item,
+                        "costo_u": lote_item.costo_unitario,
+                        "precio_u": prod_item.precio_venta,
+                        "subtotal": subtot_item,
+                        "margen": margen_item
+                    })
+                    subtotal_venta += subtot_item
 
-            v = Venta(
-                sesion_caja_id=ses.id,
-                cliente_id=cli.id if cli else None,
-                sucursal_id=matriz_id,
-                folio_ticket=folio,
-                idempotency_key=f"IDEMP-SEED-2026-{i+1:04d}",
-                fecha_hora=fecha_v,
-                total_bruto=subtotal_venta,
-                total_descuento=descuento,
-                total_impuestos=impuestos,
-                total_pagar=total_pagar,
-                estado=EstadoVenta.COMPLETADA
-            )
-            ventas.append(v)
+                descuento = Decimal("2.50") if (i % 4 == 0 and cli is not None) else Decimal("0.00")
+                impuestos = (subtotal_venta * Decimal("0.18")).quantize(Decimal("0.01"))
+                total_pagar = (subtotal_venta - descuento).quantize(Decimal("0.01"))
 
-            for itm in items_seleccionados:
-                dv = DetalleVenta(
-                    venta=v,
-                    producto_id=itm["prod"].id,
-                    lote_id=itm["lote"].id,
-                    cantidad=itm["cant"],
-                    costo_unitario_lote=itm["costo_u"],
-                    precio_unitario_venta=itm["precio_u"],
-                    subtotal=itm["subtotal"],
-                    margen_ganancia=itm["margen"]
+                v = Venta(
+                    sesion_caja_id=ses.id,
+                    cliente_id=cli.id if cli else None,
+                    sucursal_id=suc_id,
+                    folio_ticket=folio,
+                    idempotency_key=f"IDEMP-SEED-{suc_pref}-{i+1:04d}",
+                    fecha_hora=fecha_v,
+                    total_bruto=subtotal_venta,
+                    total_descuento=descuento,
+                    total_impuestos=impuestos,
+                    total_pagar=total_pagar,
+                    estado=EstadoVenta.COMPLETADA
                 )
-                detalles_venta.append(dv)
+                ventas.append(v)
 
-            # Pagos
-            metodos = [MetodoPago.EFECTIVO, MetodoPago.TARJETA, MetodoPago.QR, MetodoPago.EFECTIVO]
-            met_sel = metodos[i % len(metodos)]
-            pago = PagoVenta(
-                venta=v,
-                metodo_pago=met_sel,
-                monto=total_pagar,
-                referencia_pasarela=f"TXN-VISA-{88000+i}" if met_sel == MetodoPago.TARJETA else (f"YAPE-OP-{44000+i}" if met_sel == MetodoPago.QR else None)
-            )
-            pagos_venta.append(pago)
+                for itm in items_seleccionados:
+                    dv = DetalleVenta(
+                        venta=v,
+                        producto_id=itm["prod"].id,
+                        lote_id=itm["lote"].id,
+                        cantidad=itm["cant"],
+                        costo_unitario_lote=itm["costo_u"],
+                        precio_unitario_venta=itm["precio_u"],
+                        subtotal=itm["subtotal"],
+                        margen_ganancia=itm["margen"]
+                    )
+                    detalles_venta.append(dv)
+
+                metodos = [MetodoPago.EFECTIVO, MetodoPago.TARJETA, MetodoPago.QR, MetodoPago.EFECTIVO]
+                met_sel = metodos[i % len(metodos)]
+                pago = PagoVenta(
+                    venta=v,
+                    metodo_pago=met_sel,
+                    monto=total_pagar,
+                    referencia_pasarela=f"TXN-{suc_pref}-{88000+i}" if met_sel == MetodoPago.TARJETA else (f"YAPE-{suc_pref}-{44000+i}" if met_sel == MetodoPago.QR else None)
+                )
+                pagos_venta.append(pago)
 
         session.add_all(ventas)
         session.flush()
         session.add_all(detalles_venta)
         session.add_all(pagos_venta)
         session.flush()
-        logger.info(f"   ✓ {len(ventas)} ventas, {len(detalles_venta)} detalles y {len(pagos_venta)} pagos registrados.")
+        logger.info(f"   ✓ {len(ventas)} ventas, {len(detalles_venta)} detalles y {len(pagos_venta)} pagos registrados (Matriz: 25, Norte: 18, Sur: 12).")
 
         # =========================================================================
         # 13. CUPONES (22)

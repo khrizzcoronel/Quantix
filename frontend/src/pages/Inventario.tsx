@@ -206,13 +206,13 @@ export default function Inventario() {
     try {
       setLoading(true);
       const [resProd, resLot, resProv, resCat, resOC, resSug, resFefo, resTr] = await Promise.all([
-        api.get('/inventario/productos', { params: { activo_only: !mostrarInactivos } }),
-        api.get('/inventario/lotes'),
+        api.get('/inventario/productos', { params: { activo_only: !mostrarInactivos, sucursal_id: sucursalActual?.id } }),
+        api.get('/inventario/lotes', { params: { sucursal_id: sucursalActual?.id } }),
         api.get('/inventario/proveedores', { params: { activo_only: !mostrarInactivos } }),
         api.get('/inventario/categorias', { params: { activo_only: !mostrarInactivos } }),
         api.get('/inventario/ordenes-compra', { params: { estado: filtroEstadoOrden || undefined, proveedor_id: filtroProveedorOrden || undefined } }),
-        api.get('/inventario/ordenes-compra/sugerencias'),
-        api.get('/inventario/alertas-caducidad', { params: { dias_alerta: 15 } }),
+        api.get('/inventario/ordenes-compra/sugerencias', { params: { sucursal_id: sucursalActual?.id } }),
+        api.get('/inventario/alertas-caducidad', { params: { dias_alerta: 15, sucursal_id: sucursalActual?.id } }),
         api.get('/transferencias')
       ]);
       setProductos(resProd.data);
@@ -228,7 +228,7 @@ export default function Inventario() {
     } finally {
       setLoading(false);
     }
-  }, [filtroEstadoOrden, filtroProveedorOrden, mostrarInactivos, showToast]);
+  }, [filtroEstadoOrden, filtroProveedorOrden, mostrarInactivos, showToast, sucursalActual?.id]);
 
   const cargarTransferencias = useCallback(async () => {
     try {
@@ -323,7 +323,7 @@ export default function Inventario() {
     });
 
     try {
-      const res = await api.get('/inventario/lotes', { params: { producto_id: prod.id } });
+      const res = await api.get('/inventario/lotes', { params: { producto_id: prod.id, sucursal_id: sucursalActual?.id } });
       setDetalleItem({
         tipo: 'producto',
         data: prod,
@@ -474,6 +474,7 @@ export default function Inventario() {
         cantidad: parseFloat(formLote.cantidad),
         costo_unitario: parseFloat(formLote.costo_unitario),
         fecha_vencimiento: formLote.fecha_vencimiento || null,
+        sucursal_id: sucursalActual?.id,
         notas: formLote.notas
       });
       showToast('success', `Lote ${formLote.codigo_lote} ingresado. FEFO activo.`);
@@ -878,6 +879,10 @@ export default function Inventario() {
             }`}>
               <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
               {isBodeguero ? 'Modo Bodeguero' : 'Almacén Central'}
+            </span>
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-label-caps text-[11px] bg-surface-container-high text-on-surface-variant font-medium">
+              <span className="material-symbols-outlined text-xs text-primary">store</span>
+              {sucursalActual?.nombre || 'Matriz Centro'}
             </span>
             {loading && <span className="material-symbols-outlined text-base animate-spin text-primary ml-1">progress_activity</span>}
           </div>

@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 import duckdb
 import pandas as pd
 import numpy as np
 from scipy import stats
-from typing import List
+from typing import List, Optional
+from uuid import UUID
 
 from app.api.deps import RoleChecker, get_current_user
 from app.models.usuarios import Usuario
@@ -26,6 +27,7 @@ def get_duckdb_path() -> str:
 
 @router.get("/estrategico", response_model=DashboardEstrategicoResponse)
 async def dashboard_estrategico(
+    sucursal_id: Optional[UUID] = Query(None),
     current_user: Usuario = Depends(estrategico_roles)
 ):
     """
@@ -50,32 +52,42 @@ async def dashboard_estrategico(
                 predicciones_top_productos=[]
             )
 
+    # Determinar filtro de sucursal si aplica
+    filtro_sucursal_id = sucursal_id
+    if current_user.rol == "SUPERVISOR" and current_user.sucursal_id:
+        filtro_sucursal_id = current_user.sucursal_id
+
+    where_sucursal = f" AND f.sucursal_id = '{filtro_sucursal_id}'" if filtro_sucursal_id else ""
+    where_sucursal_solo = f" WHERE f.sucursal_id = '{filtro_sucursal_id}'" if filtro_sucursal_id else ""
+
     try:
         # Conexión read-only ultrarrápida a DuckDB
         with duckdb.connect(db_path, read_only=True) as con:
             
             # 1. Indicadores Base: Ingresos del mes actual
-            df_mes = con.execute("""
+            df_mes = con.execute(f"""
                 SELECT 
                     SUM(subtotal) as ingresos,
-                    SUM(margen_ganancia) / SUM(subtotal) as margen_pct
+                    SUM(margen_ganancia) / NULLIF(SUM(subtotal), 0) as margen_pct
                 FROM gold.fact_ventas f
                 JOIN gold.dim_tiempo t ON f.fecha_id = t.fecha_id
                 WHERE t.anio = EXTRACT(YEAR FROM CURRENT_DATE) 
                   AND t.mes = EXTRACT(MONTH FROM CURRENT_DATE)
+                  {where_sucursal}
             """).df()
             
             ingresos_mes = float(df_mes['ingresos'][0]) if not pd.isna(df_mes['ingresos'][0]) else 0.0
             margen_mes = float(df_mes['margen_pct'][0]) if not pd.isna(df_mes['margen_pct'][0]) else 0.0
 
             # 2. Tendencia últimos 7 días
-            df_tendencia = con.execute("""
+            df_tendencia = con.execute(f"""
                 SELECT 
                     t.fecha_id,
                     SUM(subtotal) as total_ventas,
                     SUM(margen_ganancia) as margen_ganancia
                 FROM gold.fact_ventas f
                 JOIN gold.dim_tiempo t ON f.fecha_id = t.fecha_id
+                {where_sucursal_solo}
                 GROUP BY t.fecha_id
                 ORDER BY t.fecha_id DESC
                 LIMIT 7
@@ -91,7 +103,7 @@ async def dashboard_estrategico(
                 
             # 3. Predicciones Z/T de Demanda Diaria (Intervalos de Confianza al 95%)
             # Extraemos la serie de tiempo diaria por producto de los últimos 90 días
-            df_series = con.execute("""
+            df_series = con.execute(f"""
                 SELECT 
                     p.producto_id,
                     p.nombre,
@@ -100,6 +112,7 @@ async def dashboard_estrategico(
                 FROM gold.fact_ventas f
                 JOIN gold.dim_producto p ON f.producto_id = p.producto_id
                 JOIN gold.dim_tiempo t ON f.fecha_id = t.fecha_id
+                {where_sucursal_solo}
                 GROUP BY p.producto_id, p.nombre, t.fecha_id
             """).df()
             

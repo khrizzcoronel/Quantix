@@ -3,6 +3,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { BrainCircuit, Eye, X, RefreshCw, AlertTriangle } from 'lucide-react';
 import api from '../services/api';
 import KpiCard from '../components/ui/KpiCard';
+import { useSucursalStore } from '../store/sucursalStore';
 
 interface MetricaDiaria { fecha: string; total_ventas: number; margen_ganancia: number }
 interface ProyeccionDemanda {
@@ -27,6 +28,7 @@ const getApiError = (error: unknown): string => {
 };
 
 export default function Dashboard() {
+  const { sucursalActual } = useSucursalStore();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +38,9 @@ export default function Dashboard() {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.get('/dashboard/estrategico');
+      const response = await api.get('/dashboard/estrategico', {
+        params: { sucursal_id: sucursalActual?.id }
+      });
       setData(response.data);
     } catch (requestError: unknown) {
       setData(null);
@@ -48,7 +52,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     queueMicrotask(() => void cargarDashboard());
-  }, []);
+  }, [sucursalActual?.id]);
 
   const tendencia = useMemo(() => (data?.tendencia_ultimos_7_dias || []).map((item) => ({
     fecha: item.fecha,
@@ -76,6 +80,12 @@ export default function Dashboard() {
                 DuckDB Gold v1.1
               </span>
             </div>
+            {sucursalActual && (
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-surface-container-low border border-surface-container-high/60 rounded-full text-xs font-semibold text-on-surface">
+                <span className="material-symbols-outlined text-[16px] text-primary">store</span>
+                <span>{sucursalActual.nombre}</span>
+              </div>
+            )}
           </div>
           <h2 className="font-headline-xl text-3xl font-bold text-on-surface tracking-tight mt-2">
             Visión Ejecutiva & Rentabilidad

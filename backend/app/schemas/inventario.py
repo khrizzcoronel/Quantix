@@ -119,6 +119,7 @@ class IngresoLoteDirectoRequest(BaseModel):
     costo_unitario: Decimal = Field(..., ge=0)
     fecha_vencimiento: Optional[date] = None
     proveedor_id: Optional[UUID] = None
+    sucursal_id: Optional[UUID] = None
     notas: Optional[str] = None
 
 class LoteUpdate(BaseModel):
@@ -143,6 +144,7 @@ class LoteResponse(BaseModel):
     fecha_ingreso: Optional[datetime] = None
     fecha_vencimiento: Optional[date] = None
     estado: str
+    sucursal_id: Optional[UUID] = None
     model_config = ConfigDict(from_attributes=True)
 
 # =============================================================================

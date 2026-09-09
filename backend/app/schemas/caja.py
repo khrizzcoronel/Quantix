@@ -7,6 +7,7 @@ from datetime import datetime
 class AperturaCajaRequest(BaseModel):
     fondo_inicial: Decimal = Field(..., ge=0, description="Efectivo base en caja al iniciar turno")
     terminal_id: str = Field(..., description="ID de la terminal física donde se opera")
+    sucursal_id: Optional[UUID] = Field(default=None, description="ID de la sucursal donde se abre el turno")
 
 class ConteoFisico(BaseModel):
     efectivo: Decimal = Field(0, ge=0)
@@ -28,6 +29,7 @@ class SesionCajaResponse(BaseModel):
     fecha_apertura: datetime
     fondo_inicial: Decimal
     estado: str
+    sucursal_id: Optional[UUID] = None
 
     class Config:
         from_attributes = True
@@ -50,6 +52,7 @@ class SesionDetalleResponse(BaseModel):
     fecha_cierre: Optional[datetime] = None
     fondo_inicial: Decimal
     estado: str
+    sucursal_id: Optional[UUID] = None
     total_teorico: Optional[Decimal] = None
     total_fisico: Optional[Decimal] = None
     diferencia: Optional[Decimal] = None

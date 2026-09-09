@@ -42,6 +42,7 @@ export type EstadoVentaOffline =
 export interface VentaOffline {
   id_local: string; // UUID v4 estable
   sesion_caja_id: string;
+  sucursal_id?: string | null;
   terminal_id: string;
   usuario_id?: string | null;
   cajero_nombre?: string;

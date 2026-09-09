@@ -14,6 +14,7 @@ import {
 
 export interface VentaOfflineInput {
   sesion_caja_id: string;
+  sucursal_id?: string | null;
   terminal_id: string;
   usuario_id?: string | null;
   cajero_nombre?: string;
@@ -46,6 +47,7 @@ export async function guardarVentaOffline(input: VentaOfflineInput): Promise<Ven
   const venta: VentaOffline = {
     id_local,
     sesion_caja_id: input.sesion_caja_id,
+    sucursal_id: input.sucursal_id || null,
     terminal_id: input.terminal_id,
     usuario_id: input.usuario_id || null,
     cajero_nombre: input.cajero_nombre || 'Cajero en Turno',

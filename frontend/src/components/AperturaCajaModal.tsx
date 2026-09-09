@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCajaStore } from '../store/cajaStore';
 import { useAuthStore } from '../store/authStore';
+import { useSucursalStore } from '../store/sucursalStore';
 import { 
   Banknote, Monitor, Loader2, AlertCircle, 
   CheckCircle2, Search, ChevronDown, UserCircle, Lock, X
@@ -29,6 +30,7 @@ const TERMINALES_DEFAULT: TerminalOption[] = [
 export default function AperturaCajaModal({ onSuccess, onClose }: Props) {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
+  const sucursalActual = useSucursalStore((state) => state.sucursalActual);
   const isCajero = user?.rol === 'CAJERO';
 
   const handleCancelOrClose = () => {
@@ -93,7 +95,7 @@ export default function AperturaCajaModal({ onSuccess, onClose }: Props) {
     }
 
     try {
-      await abrirCaja(monto, terminalId);
+      await abrirCaja(monto, terminalId, sucursalActual?.id);
       // Recordar terminal en el equipo
       localStorage.setItem('quantix_terminal_asignada', terminalId);
       if (onSuccess) onSuccess();
@@ -133,7 +135,7 @@ export default function AperturaCajaModal({ onSuccess, onClose }: Props) {
           </button>
         </div>
 
-        {/* Identidad del Operador Autenticado */}
+        {/* Identidad del Operador Autenticado y Sucursal */}
         <div className="mb-4 p-3.5 bg-surface-container-low rounded-2xl border border-surface-container-high/60 flex items-center justify-between">
           <div className="flex items-center gap-2.5 min-w-0">
             <UserCircle className="w-6 h-6 text-on-surface-variant shrink-0" />
@@ -146,9 +148,15 @@ export default function AperturaCajaModal({ onSuccess, onClose }: Props) {
               </span>
             </div>
           </div>
-          <span className="px-2.5 py-0.5 bg-primary-fixed/30 text-on-primary-fixed-variant font-label-caps text-[10px] font-bold rounded-full uppercase tracking-wider shrink-0">
-            {user?.rol || 'CAJERO'}
-          </span>
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <span className="px-2.5 py-0.5 bg-primary-fixed/30 text-on-primary-fixed-variant font-label-caps text-[10px] font-bold rounded-full uppercase tracking-wider">
+              {user?.rol || 'CAJERO'}
+            </span>
+            <span className="text-[10px] font-semibold text-primary flex items-center gap-1">
+              <span className="material-symbols-outlined text-[13px]">store</span>
+              {sucursalActual?.nombre || 'Matriz'}
+            </span>
+          </div>
         </div>
 
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3 mb-4 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2">

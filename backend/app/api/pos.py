@@ -46,6 +46,7 @@ def redondear_moneda(valor: Decimal) -> Decimal:
 @router.get("/productos/{sku}", response_model=ProductoBuscado)
 async def buscar_producto(
     sku: str, 
+    sucursal_id: Optional[UUID] = Query(None, description="Filtrar stock por sucursal"),
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
@@ -66,6 +67,9 @@ async def buscar_producto(
         LoteInventario.producto_id == producto.id,
         LoteInventario.estado == 'ACTIVO'
     )
+    if sucursal_id:
+        stock_query = stock_query.where(LoteInventario.sucursal_id == sucursal_id)
+
     stock_result = await db.execute(stock_query)
     stock_total = stock_result.scalar() or 0
     
@@ -141,6 +145,8 @@ async def procesar_checkout(
         raise HTTPException(status_code=400, detail="El carrito de compra no puede estar vacío")
     
     try:
+        sucursal_id_venta = req.sucursal_id or getattr(sesion, 'sucursal_id', None) or getattr(current_user, 'sucursal_id', None)
+
         # 1. Procesar cada ítem aplicando FEFO
         for item in items_a_procesar:
             producto = await db.get(Producto, item.producto_id)
@@ -154,7 +160,10 @@ async def procesar_checkout(
                 LoteInventario.estado == EstadoLote.ACTIVO,
                 LoteInventario.cantidad_disponible > 0,
                 LoteInventario.fecha_vencimiento >= datetime.date.today()
-            ).order_by(LoteInventario.fecha_vencimiento.asc()).with_for_update()
+            )
+            if sucursal_id_venta:
+                lotes_query = lotes_query.where(LoteInventario.sucursal_id == sucursal_id_venta)
+            lotes_query = lotes_query.order_by(LoteInventario.fecha_vencimiento.asc()).with_for_update()
             
             result = await db.execute(lotes_query)
             lotes_disponibles = result.scalars().all()
@@ -341,6 +350,7 @@ async def procesar_checkout(
         nueva_venta = Venta(
             sesion_caja_id=req.sesion_caja_id,
             cliente_id=req.cliente_id,
+            sucursal_id=sucursal_id_venta,
             folio_ticket=nuevo_folio,
             idempotency_key=req.idempotency_key,
             total_bruto=total_bruto_dec,
@@ -440,6 +450,7 @@ async def procesar_checkout(
 async def listar_ventas(
     limit: int = Query(50, ge=1, le=200),
     sesion_caja_id: Optional[UUID] = Query(None),
+    sucursal_id: Optional[UUID] = Query(None, description="Filtrar por sucursal"),
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
@@ -461,6 +472,8 @@ async def listar_ventas(
     
     if sesion_caja_id:
         query = query.where(Venta.sesion_caja_id == sesion_caja_id)
+    if sucursal_id:
+        query = query.where(Venta.sucursal_id == sucursal_id)
         
     query = (
         query
@@ -478,6 +491,7 @@ async def listar_ventas(
             VentaResumenResponse(
                 id=venta.id,
                 sesion_caja_id=venta.sesion_caja_id,
+                sucursal_id=venta.sucursal_id,
                 cliente_id=venta.cliente_id,
                 cliente_cedula=c_ced,
                 cliente_nombre=c_nom,
@@ -562,6 +576,7 @@ async def obtener_venta_detalle(
     return VentaDetalleResponse(
         id=venta.id,
         sesion_caja_id=venta.sesion_caja_id,
+        sucursal_id=venta.sucursal_id,
         cliente_id=venta.cliente_id,
         cliente_cedula=c_ced,
         cliente_nombre=c_nom,

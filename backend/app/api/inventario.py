@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, or_, case
+from sqlalchemy import select, func, or_, case, and_
 from sqlalchemy.orm import selectinload, joinedload
 from typing import List, Optional
 from datetime import date, datetime, timedelta
@@ -196,6 +196,7 @@ async def baja_logica_proveedor(
 async def listar_productos(
     activo_only: bool = Query(False, description="Filtrar solo productos activos"),
     categoria_id: Optional[UUID] = Query(None, description="Filtrar por categoría"),
+    sucursal_id: Optional[UUID] = Query(None, description="Filtrar stock consolidado por sucursal"),
     q: Optional[str] = Query(None, description="Búsqueda por nombre, SKU o código de barras"),
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
@@ -212,6 +213,10 @@ async def listar_productos(
         case((LoteInventario.estado == EstadoLote.ACTIVO, LoteInventario.id), else_=None)
     ).label("lotes_activos_count")
 
+    lote_join = (LoteInventario.producto_id == Producto.id)
+    if sucursal_id:
+        lote_join = and_(lote_join, LoteInventario.sucursal_id == sucursal_id)
+
     query = (
         select(
             Producto,
@@ -220,7 +225,7 @@ async def listar_productos(
             lotes_count_expr
         )
         .outerjoin(Categoria, Producto.categoria_id == Categoria.id)
-        .outerjoin(LoteInventario, LoteInventario.producto_id == Producto.id)
+        .outerjoin(LoteInventario, lote_join)
     )
 
     if activo_only:
@@ -449,6 +454,7 @@ async def baja_logica_producto(
 async def listar_lotes(
     producto_id: Optional[UUID] = Query(None, description="Filtrar por producto"),
     estado: Optional[str] = Query(None, description="Filtrar por estado (ACTIVO, AGOTADO, CADUCADO, MERMA)"),
+    sucursal_id: Optional[UUID] = Query(None, description="Filtrar por sucursal"),
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
@@ -460,6 +466,8 @@ async def listar_lotes(
         query = query.where(LoteInventario.producto_id == producto_id)
     if estado:
         query = query.where(LoteInventario.estado == estado)
+    if sucursal_id:
+        query = query.where(LoteInventario.sucursal_id == sucursal_id)
 
     query = query.order_by(LoteInventario.fecha_vencimiento.asc().nullslast(), LoteInventario.fecha_ingreso.desc())
     result = await db.execute(query)
@@ -479,7 +487,8 @@ async def listar_lotes(
                 costo_unitario=lote.costo_unitario,
                 fecha_ingreso=lote.fecha_ingreso,
                 fecha_vencimiento=lote.fecha_vencimiento,
-                estado=lote.estado.value if hasattr(lote.estado, 'value') else str(lote.estado)
+                estado=lote.estado.value if hasattr(lote.estado, 'value') else str(lote.estado),
+                sucursal_id=lote.sucursal_id
             )
         )
     return lotes_resp
@@ -498,6 +507,8 @@ async def registrar_ingreso_directo(
     if not producto:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
     
+    sucursal_id_lote = req.sucursal_id or getattr(current_user, 'sucursal_id', None) or UUID("00000000-0000-0000-0000-000000000001")
+
     nuevo_lote = LoteInventario(
         producto_id=req.producto_id,
         codigo_lote=req.codigo_lote,
@@ -505,7 +516,8 @@ async def registrar_ingreso_directo(
         cantidad_disponible=req.cantidad,
         costo_unitario=req.costo_unitario,
         fecha_vencimiento=req.fecha_vencimiento,
-        estado=EstadoLote.ACTIVO
+        estado=EstadoLote.ACTIVO,
+        sucursal_id=sucursal_id_lote
     )
     db.add(nuevo_lote)
     
@@ -540,7 +552,8 @@ async def registrar_ingreso_directo(
         costo_unitario=nuevo_lote.costo_unitario,
         fecha_ingreso=nuevo_lote.fecha_ingreso,
         fecha_vencimiento=nuevo_lote.fecha_vencimiento,
-        estado=nuevo_lote.estado.value if hasattr(nuevo_lote.estado, 'value') else str(nuevo_lote.estado)
+        estado=nuevo_lote.estado.value if hasattr(nuevo_lote.estado, 'value') else str(nuevo_lote.estado),
+        sucursal_id=nuevo_lote.sucursal_id
     )
 
 @router.put("/lotes/{lote_id}", response_model=LoteResponse)
@@ -749,6 +762,7 @@ async def listar_ordenes_compra(
 
 @router.get("/ordenes-compra/sugerencias", response_model=List[SugerenciaReordenResponse])
 async def sugerencias_reorden_compra(
+    sucursal_id: Optional[UUID] = Query(None, description="Filtrar sugerencias por sucursal"),
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(bodega_roles)
 ):
@@ -773,8 +787,11 @@ async def sugerencias_reorden_compra(
             func.coalesce(func.sum(LoteInventario.cantidad_disponible), Decimal("0")).label("stock_total")
         )
         .where(LoteInventario.estado == EstadoLote.ACTIVO)
-        .group_by(LoteInventario.producto_id)
     )
+    if sucursal_id:
+        query_stock = query_stock.where(LoteInventario.sucursal_id == sucursal_id)
+    query_stock = query_stock.group_by(LoteInventario.producto_id)
+
     res_stock = await db.execute(query_stock)
     stock_map = {row.producto_id: Decimal(str(row.stock_total or 0)) for row in res_stock.all()}
 
@@ -787,8 +804,11 @@ async def sugerencias_reorden_compra(
         )
         .join(Venta, DetalleVenta.venta_id == Venta.id)
         .where(Venta.estado == EstadoVenta.COMPLETADA, Venta.fecha_hora >= hace_30_dias)
-        .group_by(DetalleVenta.producto_id)
     )
+    if sucursal_id:
+        query_ventas = query_ventas.where(Venta.sucursal_id == sucursal_id)
+    query_ventas = query_ventas.group_by(DetalleVenta.producto_id)
+
     res_ventas = await db.execute(query_ventas)
     ventas_map = {row.producto_id: Decimal(str(row.total_vendido or 0)) for row in res_ventas.all()}
 
@@ -1166,6 +1186,7 @@ async def recibir_orden(
 @router.get("/alertas-caducidad", response_model=List[LoteResponse])
 async def alertas_caducidad(
     dias_alerta: int = 30,
+    sucursal_id: Optional[UUID] = Query(None, description="Filtrar alertas por sucursal"),
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(bodega_roles)
 ):
@@ -1179,8 +1200,11 @@ async def alertas_caducidad(
             LoteInventario.fecha_vencimiento <= fecha_limite,
             LoteInventario.cantidad_disponible > 0
         )
-        .order_by(LoteInventario.fecha_vencimiento.asc())
     )
+    if sucursal_id:
+        query = query.where(LoteInventario.sucursal_id == sucursal_id)
+        
+    query = query.order_by(LoteInventario.fecha_vencimiento.asc())
     
     result = await db.execute(query)
     rows = result.all()

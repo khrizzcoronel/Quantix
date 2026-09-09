@@ -3,6 +3,7 @@ import { usePOSStore } from '../store/posStore';
 import { useCajaStore } from '../store/cajaStore';
 import { useAuthStore } from '../store/authStore';
 import { useConnectivityStore } from '../store/connectivityStore';
+import { useSucursalStore } from '../store/sucursalStore';
 import { buscarProductosLocales } from '../services/offline/snapshotService';
 import { guardarVentaOffline } from '../services/offline/queueService';
 import { 
@@ -78,6 +79,7 @@ export default function POS() {
   const { cart, total, addItem, removeItem, updateQuantity, clearCart } = usePOSStore();
   const { estaAbierta, sesionActiva, recuperarSesionActiva } = useCajaStore();
   const user = useAuthStore((state) => state.user);
+  const { sucursalActual } = useSucursalStore();
   const {
     status: connectivityStatus,
     refreshPendingCount,
@@ -181,7 +183,12 @@ export default function POS() {
     }
 
     try {
-      const res = await api.get('/inventario/productos?activo_only=true');
+      const res = await api.get('/inventario/productos', {
+        params: {
+          activo_only: true,
+          sucursal_id: sucursalActual?.id
+        }
+      });
       const mapeados: ProductoCatalogo[] = (res.data || []).map((p: any) => ({
         producto_id: p.id,
         sku: p.sku,
@@ -218,18 +225,23 @@ export default function POS() {
       setProducts([]);
       setOperationError(getApiError(error, 'No se pudo cargar el catálogo. No se usarán datos simulados.'));
     }
-  }, [connectivityStatus, refrescarSnapshot]);
+  }, [connectivityStatus, refrescarSnapshot, sucursalActual?.id]);
 
   // Cargar lista de ventas recientes
   const cargarVentas = useCallback(async () => {
     try {
-      const res = await api.get('/pos/ventas?limit=50');
+      const res = await api.get('/pos/ventas', {
+        params: {
+          limit: 50,
+          sucursal_id: sucursalActual?.id
+        }
+      });
       setTicketsList(res.data);
     } catch (error: unknown) {
       setTicketsList([]);
       setOperationError(getApiError(error, 'No se pudo consultar el historial de ventas.'));
     }
-  }, []);
+  }, [sucursalActual?.id]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -241,7 +253,7 @@ export default function POS() {
         setOperationError(getApiError(error, 'No se pudo verificar la sesión activa de caja.'));
       });
     });
-  }, [recuperarSesionActiva, connectivityStatus, cargarCatalogo, cargarVentas]);
+  }, [recuperarSesionActiva, connectivityStatus, cargarCatalogo, cargarVentas, sucursalActual?.id]);
 
   // Calcular total acumulado de ventas del turno para gamificación
   const ventasTurnoTotal = useMemo(() => {
@@ -608,6 +620,7 @@ export default function POS() {
         const totalPagarOffline = total * 1.16;
         const ventaLocal = await guardarVentaOffline({
           sesion_caja_id: sesionActiva.id,
+          sucursal_id: sucursalActual?.id || null,
           terminal_id: sesionActiva.terminal_id || 'TERM-01',
           usuario_id: user?.id || null,
           cajero_nombre: user?.nombre || 'Cajero en Turno',
@@ -697,6 +710,7 @@ export default function POS() {
     const puntosACobrar = canjearPuntos && puntosACanjear > 0 ? puntosACanjear : 0;
     const payload = {
       sesion_caja_id: sesionActiva.id,
+      sucursal_id: sucursalActual?.id || null,
       cliente_id: clienteData && clienteData.id !== 'cli-temp' && clienteData.id !== 'consumidor-final' ? clienteData.id : null,
       items: cart.map((item) => ({
         producto_id: item.producto_id,
@@ -916,6 +930,12 @@ export default function POS() {
                 {sesionActiva?.terminal_id || 'CAJA-01'}
               </span>
             </div>
+            {sucursalActual && (
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-surface-container-low border border-surface-container-high/60 rounded-full text-xs font-semibold text-on-surface">
+                <span className="material-symbols-outlined text-[16px] text-primary">store</span>
+                <span>{sucursalActual.nombre}</span>
+              </div>
+            )}
             <span className="font-body-sm text-body-sm text-on-surface-variant hidden sm:inline">
               Fondo inicial: <strong className="text-on-surface font-mono font-semibold">${Number(sesionActiva?.fondo_inicial || 0).toFixed(2)}</strong>
             </span>
