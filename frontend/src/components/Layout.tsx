@@ -180,11 +180,11 @@ export default function Layout() {
         
         {/* Encabezado Logo y Marca */}
         <div className="p-5 border-b border-surface-container-low flex flex-col items-center select-none">
-          <Link to="/" className="flex items-center w-full group py-0.5" title="Quantix Retail OS">
+          <Link to="/" className="flex items-center justify-center w-full group py-1" title="Quantix Retail OS">
             <img 
               src="/quantix_logo.png" 
               alt="Quantix Retail OS" 
-              className="h-10 w-auto object-contain max-w-[210px] transition-transform duration-200 group-hover:scale-[1.02] dark:brightness-125" 
+              className="h-12 w-auto object-contain max-w-[225px] transition-transform duration-200 group-hover:scale-[1.03] dark:brightness-125" 
             />
           </Link>
 
