@@ -8,6 +8,12 @@ import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { exportToCSV, formatBoolean, formatDate } from '../utils/exportUtils';
 import { mostrarToast } from '../hooks/useWebSocket';
+import { 
+  validateEmail, 
+  validateRequired, 
+  validatePassword, 
+  evaluatePasswordStrength 
+} from '../utils/validation';
 
 interface UsuarioItem {
   id: string;
@@ -42,6 +48,13 @@ export default function Usuarios() {
     password: '',
     rol: 'CAJERO' as 'DIRECTOR' | 'SUPERVISOR' | 'CAJERO' | 'BODEGUERO'
   });
+
+  const [errorsUser, setErrorsUser] = useState<{
+    nombre?: string | null;
+    email?: string | null;
+    password?: string | null;
+    rol?: string | null;
+  }>({});
 
   const showToast = useCallback((tipo: 'success' | 'error', mensaje: string) => {
     setFeedback({ tipo, mensaje });
@@ -78,6 +91,7 @@ export default function Usuarios() {
       password: '',
       rol: 'CAJERO'
     });
+    setErrorsUser({});
     setModalUsuario({ open: true, editando: null });
   };
 
@@ -88,30 +102,61 @@ export default function Usuarios() {
       password: '',
       rol: u.rol
     });
+    setErrorsUser({});
     setModalUsuario({ open: true, editando: u });
+  };
+
+  const validarFormUsuario = (isEditing: boolean): boolean => {
+    const errs: typeof errorsUser = {};
+
+    const errNombre = validateRequired(formUser.nombre, 'Nombre completo', 3);
+    if (errNombre) errs.nombre = errNombre;
+
+    if (!isEditing) {
+      const errEmail = validateEmail(formUser.email);
+      if (errEmail) errs.email = errEmail;
+
+      const errPass = validatePassword(formUser.password);
+      if (errPass) errs.password = errPass;
+    } else {
+      if (formUser.password.trim()) {
+        const errPass = validatePassword(formUser.password);
+        if (errPass) errs.password = errPass;
+      }
+    }
+
+    if (!formUser.rol) {
+      errs.rol = 'El rol operacional es obligatorio';
+    }
+
+    setErrorsUser(errs);
+    return Object.keys(errs).length === 0;
   };
 
   const handleGuardarUsuario = async (e: React.FormEvent) => {
     e.preventDefault();
+    const isEditing = !!modalUsuario.editando;
+
+    if (!validarFormUsuario(isEditing)) {
+      showToast('error', 'Por favor corrige los campos señalados con error');
+      return;
+    }
+
     try {
-      if (modalUsuario.editando) {
+      if (isEditing) {
         const payload: any = {
-          nombre: formUser.nombre,
+          nombre: formUser.nombre.trim(),
           rol: formUser.rol
         };
         if (formUser.password.trim()) {
           payload.password = formUser.password;
         }
-        await api.put(`/usuarios/${modalUsuario.editando.id}`, payload);
+        await api.put(`/usuarios/${modalUsuario.editando!.id}`, payload);
         showToast('success', `Usuario ${formUser.nombre} actualizado correctamente`);
       } else {
-        if (!formUser.password) {
-          showToast('error', 'Debes asignar una contraseña para el nuevo usuario');
-          return;
-        }
         await api.post('/usuarios', {
-          nombre: formUser.nombre,
-          email: formUser.email,
+          nombre: formUser.nombre.trim(),
+          email: formUser.email.trim(),
           password: formUser.password,
           rol: formUser.rol
         });
@@ -121,7 +166,24 @@ export default function Usuarios() {
       if (detalleUsuario) setDetalleUsuario(null);
       cargarUsuarios();
     } catch (err: any) {
-      showToast('error', err.response?.data?.detail || 'Error al guardar el usuario');
+      const detail = err.response?.data?.detail;
+      if (Array.isArray(detail)) {
+        const newErrs: typeof errorsUser = {};
+        for (const item of detail) {
+          const field = item.loc?.[item.loc.length - 1];
+          if (field && typeof field === 'string') {
+            (newErrs as any)[field] = item.msg;
+          }
+        }
+        if (Object.keys(newErrs).length > 0) {
+          setErrorsUser(newErrs);
+        }
+      } else if (typeof detail === 'string') {
+        if (detail.toLowerCase().includes('email') || detail.toLowerCase().includes('correo') || detail.toLowerCase().includes('registrado')) {
+          setErrorsUser((prev) => ({ ...prev, email: detail }));
+        }
+      }
+      showToast('error', typeof detail === 'string' ? detail : 'Error al guardar el usuario');
     }
   };
 
@@ -532,19 +594,31 @@ export default function Usuarios() {
               </button>
             </div>
 
-            <form onSubmit={handleGuardarUsuario} className="p-6 space-y-4 text-body-sm">
+            <form onSubmit={handleGuardarUsuario} className="p-6 space-y-4 text-body-sm" noValidate>
               <div>
                 <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
                   Nombre Completo *
                 </label>
                 <input
                   type="text"
-                  required
                   value={formUser.nombre}
-                  onChange={(e) => setFormUser({ ...formUser, nombre: e.target.value })}
+                  onChange={(e) => {
+                    setFormUser({ ...formUser, nombre: e.target.value });
+                    if (errorsUser.nombre) setErrorsUser((prev) => ({ ...prev, nombre: null }));
+                  }}
                   placeholder="Ej. Juan Pérez López"
-                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-title-md text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all"
+                  className={`w-full px-4 py-2.5 rounded-2xl font-title-md text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none transition-all ${
+                    errorsUser.nombre
+                      ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                      : 'bg-surface-container-low border border-surface-container-high/40 focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20'
+                  }`}
                 />
+                {errorsUser.nombre && (
+                  <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 animate-in fade-in">
+                    <span className="material-symbols-outlined text-[15px]">error</span>
+                    <span>{errorsUser.nombre}</span>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -553,15 +627,27 @@ export default function Usuarios() {
                 </label>
                 <input
                   type="email"
-                  required
                   disabled={!!modalUsuario.editando}
                   value={formUser.email}
-                  onChange={(e) => setFormUser({ ...formUser, email: e.target.value })}
+                  onChange={(e) => {
+                    setFormUser({ ...formUser, email: e.target.value });
+                    if (errorsUser.email) setErrorsUser((prev) => ({ ...prev, email: null }));
+                  }}
                   placeholder="operador@quantix.local"
-                  className={`w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-title-md text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all ${
-                    modalUsuario.editando ? 'opacity-60 cursor-not-allowed' : ''
+                  className={`w-full px-4 py-2.5 rounded-2xl font-title-md text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none transition-all ${
+                    modalUsuario.editando ? 'opacity-60 cursor-not-allowed bg-surface-container-low border border-surface-container-high/40' : ''
+                  } ${
+                    errorsUser.email
+                      ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                      : 'bg-surface-container-low border border-surface-container-high/40 focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20'
                   }`}
                 />
+                {errorsUser.email && (
+                  <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 animate-in fade-in">
+                    <span className="material-symbols-outlined text-[15px]">error</span>
+                    <span>{errorsUser.email}</span>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -570,14 +656,27 @@ export default function Usuarios() {
                 </label>
                 <select
                   value={formUser.rol}
-                  onChange={(e) => setFormUser({ ...formUser, rol: e.target.value as any })}
-                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-title-md text-body-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                  onChange={(e) => {
+                    setFormUser({ ...formUser, rol: e.target.value as any });
+                    if (errorsUser.rol) setErrorsUser((prev) => ({ ...prev, rol: null }));
+                  }}
+                  className={`w-full px-4 py-2.5 rounded-2xl font-title-md text-body-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 cursor-pointer ${
+                    errorsUser.rol
+                      ? 'bg-error-container/10 border-2 border-error'
+                      : 'bg-surface-container-low border border-surface-container-high/40'
+                  }`}
                 >
                   <option value="CAJERO">CAJERO (Punto de Venta & Cobro)</option>
                   <option value="SUPERVISOR">SUPERVISOR (Arqueos, Anulaciones, Auditoría)</option>
                   <option value="BODEGUERO">BODEGUERO (Ingreso de Lotes FEFO & Almacén)</option>
                   <option value="DIRECTOR">DIRECTOR (Control General, BI y Parámetros)</option>
                 </select>
+                {errorsUser.rol && (
+                  <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 animate-in fade-in">
+                    <span className="material-symbols-outlined text-[15px]">error</span>
+                    <span>{errorsUser.rol}</span>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -588,13 +687,83 @@ export default function Usuarios() {
                   <Key className="w-4 h-4 text-outline absolute left-3.5 pointer-events-none" />
                   <input
                     type="password"
-                    required={!modalUsuario.editando}
                     value={formUser.password}
-                    onChange={(e) => setFormUser({ ...formUser, password: e.target.value })}
-                    placeholder={modalUsuario.editando ? '•••••••• (sin cambios)' : 'Contraseña segura'}
-                    className="w-full pl-10 pr-4 py-2.5 bg-surface-container-low rounded-2xl font-mono text-body-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all"
+                    onChange={(e) => {
+                      setFormUser({ ...formUser, password: e.target.value });
+                      if (errorsUser.password) setErrorsUser((prev) => ({ ...prev, password: null }));
+                    }}
+                    placeholder={modalUsuario.editando ? '•••••••• (sin cambios)' : 'Mínimo 8 caracteres (A-Z, a-z, 0-9, #)'}
+                    className={`w-full pl-10 pr-4 py-2.5 rounded-2xl font-mono text-body-sm text-on-surface focus:outline-none transition-all ${
+                      errorsUser.password
+                        ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                        : 'bg-surface-container-low border border-surface-container-high/40 focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20'
+                    }`}
                   />
                 </div>
+                {errorsUser.password && (
+                  <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 animate-in fade-in">
+                    <span className="material-symbols-outlined text-[15px]">error</span>
+                    <span>{errorsUser.password}</span>
+                  </div>
+                )}
+                {formUser.password && (() => {
+                  const strength = evaluatePasswordStrength(formUser.password);
+                  const colors = [
+                    'bg-error text-error',
+                    'bg-error text-error',
+                    'bg-amber-500 text-amber-600',
+                    'bg-blue-500 text-blue-600',
+                    'bg-primary text-primary',
+                  ];
+                  return (
+                    <div className="mt-2.5 p-3 rounded-2xl bg-surface-container-low border border-surface-container-high/40 space-y-2">
+                      <div className="flex items-center justify-between text-xs font-semibold">
+                        <span className="text-on-surface-variant">Fortaleza de contraseña:</span>
+                        <span className={`font-bold ${colors[strength.score]?.split(' ')[1] || 'text-outline'}`}>
+                          {strength.label}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-1.5 h-1.5">
+                        {[1, 2, 3, 4].map((step) => (
+                          <div
+                            key={step}
+                            className={`rounded-full h-full transition-all duration-300 ${
+                              strength.score >= step
+                                ? colors[strength.score]?.split(' ')[0]
+                                : 'bg-surface-container-highest'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-2 gap-1 text-[11px] text-on-surface-variant pt-1">
+                        <div className={`flex items-center gap-1 ${strength.hasMinLength ? 'text-primary font-medium' : 'text-outline'}`}>
+                          <span className="material-symbols-outlined text-[13px]">
+                            {strength.hasMinLength ? 'check_circle' : 'radio_button_unchecked'}
+                          </span>
+                          <span>8+ caracteres</span>
+                        </div>
+                        <div className={`flex items-center gap-1 ${strength.hasUpper && strength.hasLower ? 'text-primary font-medium' : 'text-outline'}`}>
+                          <span className="material-symbols-outlined text-[13px]">
+                            {strength.hasUpper && strength.hasLower ? 'check_circle' : 'radio_button_unchecked'}
+                          </span>
+                          <span>Mayús. y minús.</span>
+                        </div>
+                        <div className={`flex items-center gap-1 ${strength.hasNumber ? 'text-primary font-medium' : 'text-outline'}`}>
+                          <span className="material-symbols-outlined text-[13px]">
+                            {strength.hasNumber ? 'check_circle' : 'radio_button_unchecked'}
+                          </span>
+                          <span>Al menos 1 número</span>
+                        </div>
+                        <div className={`flex items-center gap-1 ${strength.hasSpecial ? 'text-primary font-medium' : 'text-outline'}`}>
+                          <span className="material-symbols-outlined text-[13px]">
+                            {strength.hasSpecial ? 'check_circle' : 'radio_button_unchecked'}
+                          </span>
+                          <span>Carácter especial</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="pt-4 flex justify-end gap-2.5 border-t border-surface-container-high/50">

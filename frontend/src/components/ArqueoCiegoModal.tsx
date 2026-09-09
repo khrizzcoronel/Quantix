@@ -5,6 +5,7 @@ import {
   X, Receipt, Printer, Download, ArrowLeft, FileText, Check 
 } from 'lucide-react';
 import api from '../services/api';
+import { validatePositiveNumber } from '../utils/validation';
 
 interface Props {
   isOpen: boolean;
@@ -48,6 +49,12 @@ export default function ArqueoCiegoModal({ isOpen, onClose }: Props) {
   const [otros, setOtros] = useState('');
   const [loading, setLoading] = useState(false);
   const [resultado, setResultado] = useState<ResultadoArqueo | null>(null);
+  const [errors, setErrors] = useState<{
+    efectivo?: string | null;
+    tarjeta?: string | null;
+    transferencia?: string | null;
+    otros?: string | null;
+  }>({});
 
   // Estados para visualización del Comprobante de Corte Z
   const [mostrarCorteZ, setMostrarCorteZ] = useState(false);
@@ -62,6 +69,31 @@ export default function ArqueoCiegoModal({ isOpen, onClose }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const errs: typeof errors = {};
+    const errEf = validatePositiveNumber(efectivo, 'Efectivo contado', { allowZero: true, min: 0 });
+    if (errEf) errs.efectivo = errEf;
+
+    if (tarjeta.trim()) {
+      const errTarj = validatePositiveNumber(tarjeta, 'Váuchers de tarjeta', { allowZero: true, min: 0 });
+      if (errTarj) errs.tarjeta = errTarj;
+    }
+
+    if (transferencia.trim()) {
+      const errTrans = validatePositiveNumber(transferencia, 'Transferencias / QR', { allowZero: true, min: 0 });
+      if (errTrans) errs.transferencia = errTrans;
+    }
+
+    if (otros.trim()) {
+      const errOtros = validatePositiveNumber(otros, 'Otros comprobantes', { allowZero: true, min: 0 });
+      if (errOtros) errs.otros = errOtros;
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      return;
+    }
+
     setLoading(true);
 
     const conteo = {
@@ -251,22 +283,34 @@ export default function ArqueoCiegoModal({ isOpen, onClose }: Props) {
               Ingresa el total contado físicamente en la gaveta y los váuchers de terminal. El sistema calculará la discrepancia, cerrará el turno y generará el <strong>Corte Z</strong> fiscal.
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-label-caps uppercase text-on-surface-variant font-bold mb-1.5">
-                    Efectivo Físico Contado ($)
+                    Efectivo Físico Contado ($) *
                   </label>
                   <input
                     type="number"
-                    step="0.50"
+                    step="0.01"
                     min="0"
-                    required
                     value={efectivo}
-                    onChange={(e) => setEfectivo(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-full bg-surface-container-low border border-surface-container-high text-base font-bold font-mono text-on-surface focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary outline-none transition-all"
+                    onChange={(e) => {
+                      setEfectivo(e.target.value);
+                      if (errors.efectivo) setErrors((prev) => ({ ...prev, efectivo: null }));
+                    }}
+                    className={`w-full px-4 py-2.5 rounded-full text-base font-bold font-mono text-on-surface outline-none transition-all ${
+                      errors.efectivo
+                        ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                        : 'bg-surface-container-low border border-surface-container-high focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary'
+                    }`}
                     placeholder="0.00"
                   />
+                  {errors.efectivo && (
+                    <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                      <span className="material-symbols-outlined text-[15px]">error</span>
+                      <span>{errors.efectivo}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -275,13 +319,26 @@ export default function ArqueoCiegoModal({ isOpen, onClose }: Props) {
                   </label>
                   <input
                     type="number"
-                    step="0.50"
+                    step="0.01"
                     min="0"
                     value={tarjeta}
-                    onChange={(e) => setTarjeta(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-full bg-surface-container-low border border-surface-container-high text-base font-bold font-mono text-on-surface focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary outline-none transition-all"
+                    onChange={(e) => {
+                      setTarjeta(e.target.value);
+                      if (errors.tarjeta) setErrors((prev) => ({ ...prev, tarjeta: null }));
+                    }}
+                    className={`w-full px-4 py-2.5 rounded-full text-base font-bold font-mono text-on-surface outline-none transition-all ${
+                      errors.tarjeta
+                        ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                        : 'bg-surface-container-low border border-surface-container-high focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary'
+                    }`}
                     placeholder="0.00"
                   />
+                  {errors.tarjeta && (
+                    <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                      <span className="material-symbols-outlined text-[15px]">error</span>
+                      <span>{errors.tarjeta}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -290,13 +347,26 @@ export default function ArqueoCiegoModal({ isOpen, onClose }: Props) {
                   </label>
                   <input
                     type="number"
-                    step="0.50"
+                    step="0.01"
                     min="0"
                     value={transferencia}
-                    onChange={(e) => setTransferencia(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-full bg-surface-container-low border border-surface-container-high text-base font-bold font-mono text-on-surface focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary outline-none transition-all"
+                    onChange={(e) => {
+                      setTransferencia(e.target.value);
+                      if (errors.transferencia) setErrors((prev) => ({ ...prev, transferencia: null }));
+                    }}
+                    className={`w-full px-4 py-2.5 rounded-full text-base font-bold font-mono text-on-surface outline-none transition-all ${
+                      errors.transferencia
+                        ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                        : 'bg-surface-container-low border border-surface-container-high focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary'
+                    }`}
                     placeholder="0.00"
                   />
+                  {errors.transferencia && (
+                    <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                      <span className="material-symbols-outlined text-[15px]">error</span>
+                      <span>{errors.transferencia}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -305,13 +375,26 @@ export default function ArqueoCiegoModal({ isOpen, onClose }: Props) {
                   </label>
                   <input
                     type="number"
-                    step="0.50"
+                    step="0.01"
                     min="0"
                     value={otros}
-                    onChange={(e) => setOtros(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-full bg-surface-container-low border border-surface-container-high text-base font-bold font-mono text-on-surface focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary outline-none transition-all"
+                    onChange={(e) => {
+                      setOtros(e.target.value);
+                      if (errors.otros) setErrors((prev) => ({ ...prev, otros: null }));
+                    }}
+                    className={`w-full px-4 py-2.5 rounded-full text-base font-bold font-mono text-on-surface outline-none transition-all ${
+                      errors.otros
+                        ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                        : 'bg-surface-container-low border border-surface-container-high focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary'
+                    }`}
                     placeholder="0.00"
                   />
+                  {errors.otros && (
+                    <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                      <span className="material-symbols-outlined text-[15px]">error</span>
+                      <span>{errors.otros}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 

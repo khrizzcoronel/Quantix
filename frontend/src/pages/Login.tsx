@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { Loader2, Users } from 'lucide-react';
+import { validateEmail } from '../utils/validation';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -22,9 +23,21 @@ export default function Login() {
     return <Navigate to="/pos" replace />;
   }
 
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string | null; password?: string | null }>({});
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    const emailErr = validateEmail(email);
+    const passErr = !password ? 'La contraseña es obligatoria' : null;
+
+    if (emailErr || passErr) {
+      setFieldErrors({ email: emailErr, password: passErr });
+      return;
+    }
+
+    setFieldErrors({});
     setIsLoading(true);
     
     try {
@@ -55,6 +68,8 @@ export default function Login() {
   const handleQuickFill = (testEmail: string, testPass: string) => {
     setEmail(testEmail);
     setPassword(testPass);
+    setFieldErrors({});
+    setError('');
   };
 
   return (
@@ -136,13 +151,25 @@ export default function Login() {
                   </span>
                   <input
                     type="email"
-                    required
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: null }));
+                    }}
                     placeholder="usuario@quantix.local"
-                    className="w-full h-14 pl-12 pr-4 bg-surface-container-low rounded-2xl font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 focus:shadow-sm transition-all"
+                    className={`w-full h-14 pl-12 pr-4 rounded-2xl font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none transition-all ${
+                      fieldErrors.email
+                        ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                        : 'bg-surface-container-low border border-surface-container-high focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20'
+                    }`}
                   />
                 </div>
+                {fieldErrors.email && (
+                  <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1.5 animate-in fade-in">
+                    <span className="material-symbols-outlined text-[15px]">error</span>
+                    <span>{fieldErrors.email}</span>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -155,13 +182,25 @@ export default function Login() {
                   </span>
                   <input
                     type="password"
-                    required
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: null }));
+                    }}
                     placeholder="••••••••"
-                    className="w-full h-14 pl-12 pr-4 bg-surface-container-low rounded-2xl font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 focus:shadow-sm transition-all"
+                    className={`w-full h-14 pl-12 pr-4 rounded-2xl font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none transition-all ${
+                      fieldErrors.password
+                        ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                        : 'bg-surface-container-low border border-surface-container-high focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20'
+                    }`}
                   />
                 </div>
+                {fieldErrors.password && (
+                  <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1.5 animate-in fade-in">
+                    <span className="material-symbols-outlined text-[15px]">error</span>
+                    <span>{fieldErrors.password}</span>
+                  </div>
+                )}
               </div>
 
               <button

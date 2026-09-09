@@ -6,12 +6,18 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { mostrarToast } from '../hooks/useWebSocket';
+import { 
+  validatePositiveNumber, 
+  validateEmail, 
+  validateRequired 
+} from '../utils/validation';
 
 export default function Configuracion() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string | null>>({});
 
   // SMTP
   const [smtpHost, setSmtpHost] = useState('smtp.gmail.com');
@@ -20,6 +26,7 @@ export default function Configuracion() {
   const [smtpPassword, setSmtpPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [emailPrueba, setEmailPrueba] = useState('');
+  const [emailPruebaError, setEmailPruebaError] = useState<string | null>(null);
   const [testingSmtp, setTestingSmtp] = useState(false);
   const [smtpResult, setSmtpResult] = useState<{ tipo: 'success' | 'error'; mensaje: string } | null>(null);
 
@@ -59,22 +66,60 @@ export default function Configuracion() {
     queueMicrotask(() => void cargarConfiguraciones());
   }, []);
 
+  const validarConfiguracion = (): boolean => {
+    const errs: Record<string, string | null> = {};
+
+    const errDias1 = validatePositiveNumber(fefoDias1, 'Días de alerta roja', { min: 1, max: 90, decimalsAllowed: false });
+    if (errDias1) errs.fefoDias1 = errDias1;
+
+    const errDias2 = validatePositiveNumber(fefoDias2, 'Días de alerta amarilla', { min: 1, max: 180, decimalsAllowed: false });
+    if (errDias2) {
+      errs.fefoDias2 = errDias2;
+    } else if (!errDias1 && parseInt(fefoDias2, 10) <= parseInt(fefoDias1, 10)) {
+      errs.fefoDias2 = 'La alerta amarilla debe ser estrictamente mayor a los días de alerta roja';
+    }
+
+    const errTol = validatePositiveNumber(toleranciaCaja, 'Tolerancia de caja', { allowZero: true, min: 0, max: 10000 });
+    if (errTol) errs.toleranciaCaja = errTol;
+
+    const errRfm = validatePositiveNumber(rfmMultiplicador, 'Factor RFM', { min: 1.0, max: 10.0 });
+    if (errRfm) errs.rfmMultiplicador = errRfm;
+
+    const errHost = validateRequired(smtpHost, 'Servidor SMTP (Host)', 3);
+    if (errHost) errs.smtpHost = errHost;
+
+    const errPort = validatePositiveNumber(smtpPort, 'Puerto SMTP', { min: 1, max: 65535, decimalsAllowed: false });
+    if (errPort) errs.smtpPort = errPort;
+
+    const errUser = validateEmail(smtpUser);
+    if (errUser) errs.smtpUser = errUser;
+
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
   const handleGuardarCambios = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
     setSaveSuccess(null);
     setErrorMsg(null);
 
+    if (!validarConfiguracion()) {
+      setErrorMsg('Por favor corrige los campos con error antes de guardar.');
+      return;
+    }
+
+    setSaving(true);
+
     const payload = {
       items: [
-        { clave: 'smtp_host', valor: smtpHost },
-        { clave: 'smtp_port', valor: smtpPort },
-        { clave: 'smtp_user', valor: smtpUser },
+        { clave: 'smtp_host', valor: smtpHost.trim() },
+        { clave: 'smtp_port', valor: smtpPort.trim() },
+        { clave: 'smtp_user', valor: smtpUser.trim() },
         ...(smtpPassword && smtpPassword !== '••••••••' ? [{ clave: 'smtp_password', valor: smtpPassword }] : []),
-        { clave: 'caja_tolerancia_descuadre', valor: toleranciaCaja },
-        { clave: 'fefo_alerta_dias_1', valor: fefoDias1 },
-        { clave: 'fefo_alerta_dias_2', valor: fefoDias2 },
-        { clave: 'rfm_multiplo_reactivacion', valor: rfmMultiplicador }
+        { clave: 'caja_tolerancia_descuadre', valor: toleranciaCaja.trim() },
+        { clave: 'fefo_alerta_dias_1', valor: fefoDias1.trim() },
+        { clave: 'fefo_alerta_dias_2', valor: fefoDias2.trim() },
+        { clave: 'rfm_multiplo_reactivacion', valor: rfmMultiplicador.trim() }
       ]
     };
 
@@ -103,13 +148,18 @@ export default function Configuracion() {
 
   const handleProbarSmtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!emailPrueba) return;
+    const errMail = validateEmail(emailPrueba);
+    if (errMail) {
+      setEmailPruebaError(errMail);
+      return;
+    }
+    setEmailPruebaError(null);
 
     setTestingSmtp(true);
     setSmtpResult(null);
 
     try {
-      const res = await api.post('/configuracion/smtp/probar', { email_destino: emailPrueba });
+      const res = await api.post('/configuracion/smtp/probar', { email_destino: emailPrueba.trim() });
       const exitoMsg = res.data.mensaje || 'Correo de prueba enviado correctamente.';
       setSmtpResult({
         tipo: 'success',
@@ -199,7 +249,7 @@ export default function Configuracion() {
         </button>
       </div>
 
-      <form onSubmit={handleGuardarCambios} className="space-y-6">
+      <form onSubmit={handleGuardarCambios} className="space-y-6" noValidate>
         
         {/* Grid de Políticas Operativas */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -220,7 +270,7 @@ export default function Configuracion() {
               <div className="space-y-5 text-body-sm">
                 <div>
                   <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
-                    Alerta Amarilla / Riesgo Medio (Días previos)
+                    Alerta Amarilla / Riesgo Medio (Días previos) *
                   </label>
                   <div className="relative">
                     <input
@@ -228,17 +278,30 @@ export default function Configuracion() {
                       min="1"
                       max="180"
                       value={fefoDias2}
-                      onChange={(e) => setFefoDias2(e.target.value)}
-                      className="w-full px-4 py-3 bg-surface-container-low rounded-2xl font-mono text-body-md font-bold text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all"
+                      onChange={(e) => {
+                        setFefoDias2(e.target.value);
+                        if (errors.fefoDias2) setErrors((prev) => ({ ...prev, fefoDias2: null }));
+                      }}
+                      className={`w-full px-4 py-3 rounded-2xl font-mono text-body-md font-bold text-on-surface focus:outline-none transition-all ${
+                        errors.fefoDias2
+                          ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                          : 'bg-surface-container-low focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20'
+                      }`}
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-outline font-title-md text-body-sm">días</span>
                   </div>
+                  {errors.fefoDias2 && (
+                    <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                      <span className="material-symbols-outlined text-[15px]">error</span>
+                      <span>{errors.fefoDias2}</span>
+                    </div>
+                  )}
                   <p className="font-body-sm text-[11px] text-outline mt-1.5">Lotes que caduquen dentro de este lapso entran en semáforo preventivo.</p>
                 </div>
 
                 <div>
                   <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
-                    Alerta Roja / Riesgo Inminente (Días previos)
+                    Alerta Roja / Riesgo Inminente (Días previos) *
                   </label>
                   <div className="relative">
                     <input
@@ -246,11 +309,24 @@ export default function Configuracion() {
                       min="1"
                       max="90"
                       value={fefoDias1}
-                      onChange={(e) => setFefoDias1(e.target.value)}
-                      className="w-full px-4 py-3 bg-surface-container-low rounded-2xl font-mono text-body-md font-bold text-error focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-error/20 transition-all"
+                      onChange={(e) => {
+                        setFefoDias1(e.target.value);
+                        if (errors.fefoDias1) setErrors((prev) => ({ ...prev, fefoDias1: null }));
+                      }}
+                      className={`w-full px-4 py-3 rounded-2xl font-mono text-body-md font-bold text-error focus:outline-none transition-all ${
+                        errors.fefoDias1
+                          ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                          : 'bg-surface-container-low focus:bg-surface-container-lowest focus:ring-2 focus:ring-error/20'
+                      }`}
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-outline font-title-md text-body-sm">días</span>
                   </div>
+                  {errors.fefoDias1 && (
+                    <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                      <span className="material-symbols-outlined text-[15px]">error</span>
+                      <span>{errors.fefoDias1}</span>
+                    </div>
+                  )}
                   <p className="font-body-sm text-[11px] text-outline mt-1.5">Dispara sugerencia prioritaria de rotación FEFO e inspección en bodega.</p>
                 </div>
               </div>
@@ -273,7 +349,7 @@ export default function Configuracion() {
               <div className="space-y-5 text-body-sm">
                 <div>
                   <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
-                    Tolerancia Máxima de Descuadre ($ MXN)
+                    Tolerancia Máxima de Descuadre ($) *
                   </label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-outline font-title-md text-body-md font-bold">$</span>
@@ -282,10 +358,23 @@ export default function Configuracion() {
                       step="0.50"
                       min="0"
                       value={toleranciaCaja}
-                      onChange={(e) => setToleranciaCaja(e.target.value)}
-                      className="w-full pl-9 pr-4 py-3 bg-surface-container-low rounded-2xl font-mono text-body-md font-bold text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all"
+                      onChange={(e) => {
+                        setToleranciaCaja(e.target.value);
+                        if (errors.toleranciaCaja) setErrors((prev) => ({ ...prev, toleranciaCaja: null }));
+                      }}
+                      className={`w-full pl-9 pr-4 py-3 rounded-2xl font-mono text-body-md font-bold text-on-surface focus:outline-none transition-all ${
+                        errors.toleranciaCaja
+                          ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                          : 'bg-surface-container-low focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20'
+                      }`}
                     />
                   </div>
+                  {errors.toleranciaCaja && (
+                    <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                      <span className="material-symbols-outlined text-[15px]">error</span>
+                      <span>{errors.toleranciaCaja}</span>
+                    </div>
+                  )}
                   <p className="font-body-sm text-[11px] text-outline mt-1.5">
                     Si la diferencia entre el efectivo físico contado y el teórico supera este monto, se marca como Descuadre Auditado.
                   </p>
@@ -293,20 +382,33 @@ export default function Configuracion() {
 
                 <div>
                   <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
-                    Factor de Reactivación RFM (CRM)
+                    Factor de Reactivación RFM (CRM) *
                   </label>
                   <div className="relative">
                     <input
                       type="number"
                       step="0.1"
                       min="1.0"
-                      max="5.0"
+                      max="10.0"
                       value={rfmMultiplicador}
-                      onChange={(e) => setRfmMultiplicador(e.target.value)}
-                      className="w-full px-4 py-3 bg-surface-container-low rounded-2xl font-mono text-body-md font-bold text-tertiary focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all"
+                      onChange={(e) => {
+                        setRfmMultiplicador(e.target.value);
+                        if (errors.rfmMultiplicador) setErrors((prev) => ({ ...prev, rfmMultiplicador: null }));
+                      }}
+                      className={`w-full px-4 py-3 rounded-2xl font-mono text-body-md font-bold text-tertiary focus:outline-none transition-all ${
+                        errors.rfmMultiplicador
+                          ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                          : 'bg-surface-container-low focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20'
+                      }`}
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-outline font-title-md text-body-sm">× ciclo</span>
                   </div>
+                  {errors.rfmMultiplicador && (
+                    <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                      <span className="material-symbols-outlined text-[15px]">error</span>
+                      <span>{errors.rfmMultiplicador}</span>
+                    </div>
+                  )}
                   <p className="font-body-sm text-[11px] text-outline mt-1.5">
                     Multiplicador del ciclo intercompra para catalogar a un cliente habitual en riesgo de deserción.
                   </p>
@@ -332,41 +434,80 @@ export default function Configuracion() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-body-sm">
             <div>
               <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
-                Servidor SMTP (Host)
+                Servidor SMTP (Host) *
               </label>
               <input
                 type="text"
                 value={smtpHost}
-                onChange={(e) => setSmtpHost(e.target.value)}
+                onChange={(e) => {
+                  setSmtpHost(e.target.value);
+                  if (errors.smtpHost) setErrors((prev) => ({ ...prev, smtpHost: null }));
+                }}
                 placeholder="smtp.gmail.com"
-                className="w-full px-4 py-3 bg-surface-container-low rounded-2xl font-mono text-body-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all"
+                className={`w-full px-4 py-3 rounded-2xl font-mono text-body-sm text-on-surface focus:outline-none transition-all ${
+                  errors.smtpHost
+                    ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                    : 'bg-surface-container-low focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20'
+                }`}
               />
+              {errors.smtpHost && (
+                <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                  <span className="material-symbols-outlined text-[15px]">error</span>
+                  <span>{errors.smtpHost}</span>
+                </div>
+              )}
             </div>
 
             <div>
               <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
-                Puerto
+                Puerto *
               </label>
               <input
                 type="number"
                 value={smtpPort}
-                onChange={(e) => setSmtpPort(e.target.value)}
+                onChange={(e) => {
+                  setSmtpPort(e.target.value);
+                  if (errors.smtpPort) setErrors((prev) => ({ ...prev, smtpPort: null }));
+                }}
                 placeholder="587"
-                className="w-full px-4 py-3 bg-surface-container-low rounded-2xl font-mono text-body-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all"
+                className={`w-full px-4 py-3 rounded-2xl font-mono text-body-sm text-on-surface focus:outline-none transition-all ${
+                  errors.smtpPort
+                    ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                    : 'bg-surface-container-low focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20'
+                }`}
               />
+              {errors.smtpPort && (
+                <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                  <span className="material-symbols-outlined text-[15px]">error</span>
+                  <span>{errors.smtpPort}</span>
+                </div>
+              )}
             </div>
 
             <div>
               <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
-                Usuario Remitente
+                Usuario Remitente (Email) *
               </label>
               <input
                 type="email"
                 value={smtpUser}
-                onChange={(e) => setSmtpUser(e.target.value)}
+                onChange={(e) => {
+                  setSmtpUser(e.target.value);
+                  if (errors.smtpUser) setErrors((prev) => ({ ...prev, smtpUser: null }));
+                }}
                 placeholder="alertas@quantix.local"
-                className="w-full px-4 py-3 bg-surface-container-low rounded-2xl font-mono text-body-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all"
+                className={`w-full px-4 py-3 rounded-2xl font-mono text-body-sm text-on-surface focus:outline-none transition-all ${
+                  errors.smtpUser
+                    ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                    : 'bg-surface-container-low focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20'
+                }`}
               />
+              {errors.smtpUser && (
+                <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                  <span className="material-symbols-outlined text-[15px]">error</span>
+                  <span>{errors.smtpUser}</span>
+                </div>
+              )}
             </div>
 
             <div>
@@ -393,30 +534,45 @@ export default function Configuracion() {
           </div>
 
           {/* Test de Correo */}
-          <div className="mt-6 pt-6 border-t border-surface-container-high/50 flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex-1 w-full flex items-center gap-3">
-              <input
-                type="email"
-                value={emailPrueba}
-                onChange={(e) => setEmailPrueba(e.target.value)}
-                placeholder="correo-destino@ejemplo.com para prueba..."
-                className="flex-1 px-4 py-2.5 bg-surface-container-low rounded-full font-body-md text-body-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all"
-              />
-              <button
-                type="button"
-                onClick={handleProbarSmtp}
-                disabled={testingSmtp || !emailPrueba}
-                className="flex items-center gap-2 px-5 py-2.5 bg-surface-container-high hover:bg-surface-container text-on-surface font-title-md text-body-sm font-semibold rounded-full disabled:opacity-50 transition-all cursor-pointer shadow-xs shrink-0"
-              >
-                {testingSmtp ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                <span>{testingSmtp ? 'Enviando...' : 'Enviar Prueba'}</span>
-              </button>
-            </div>
+          <div className="mt-6 pt-6 border-t border-surface-container-high/50 space-y-2">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex-1 w-full flex items-center gap-3">
+                <input
+                  type="email"
+                  value={emailPrueba}
+                  onChange={(e) => {
+                    setEmailPrueba(e.target.value);
+                    if (emailPruebaError) setEmailPruebaError(null);
+                  }}
+                  placeholder="correo-destino@ejemplo.com para prueba..."
+                  className={`flex-1 px-4 py-2.5 rounded-full font-body-md text-body-sm text-on-surface focus:outline-none transition-all ${
+                    emailPruebaError
+                      ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                      : 'bg-surface-container-low focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20'
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={handleProbarSmtp}
+                  disabled={testingSmtp || !emailPrueba}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-surface-container-high hover:bg-surface-container text-on-surface font-title-md text-body-sm font-semibold rounded-full disabled:opacity-50 transition-all cursor-pointer shadow-xs shrink-0"
+                >
+                  {testingSmtp ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  <span>{testingSmtp ? 'Enviando...' : 'Enviar Prueba'}</span>
+                </button>
+              </div>
 
-            {smtpResult && (
-              <span className={`font-title-md text-body-sm font-bold ${smtpResult.tipo === 'success' ? 'text-primary' : 'text-error'}`}>
-                {smtpResult.mensaje}
-              </span>
+              {smtpResult && (
+                <span className={`font-title-md text-body-sm font-bold ${smtpResult.tipo === 'success' ? 'text-primary' : 'text-error'}`}>
+                  {smtpResult.mensaje}
+                </span>
+              )}
+            </div>
+            {emailPruebaError && (
+              <div className="flex items-center gap-1.5 text-error text-xs font-medium px-1 animate-in fade-in">
+                <span className="material-symbols-outlined text-[15px]">error</span>
+                <span>{emailPruebaError}</span>
+              </div>
             )}
           </div>
         </div>

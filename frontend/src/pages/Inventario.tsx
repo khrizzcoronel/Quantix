@@ -9,6 +9,14 @@ import TransferenciaDetalleModal from '../components/TransferenciaDetalleModal';
 import type { TransferenciaData } from '../components/TransferenciaDetalleModal';
 import { exportToCSV, formatCurrency, formatNumber, formatDate } from '../utils/exportUtils';
 import { mostrarToast } from '../hooks/useWebSocket';
+import { 
+  validateRequired, 
+  validatePositiveNumber, 
+  validateFutureDate, 
+  validateEan13, 
+  validateEmail, 
+  validatePhone 
+} from '../utils/validation';
 
 interface Categoria {
   id: string;
@@ -191,6 +199,12 @@ export default function Inventario() {
     nombre: '',
     descripcion: ''
   });
+
+  const [errorsProd, setErrorsProd] = useState<Record<string, string | null>>({});
+  const [errorsLote, setErrorsLote] = useState<Record<string, string | null>>({});
+  const [errorsBaja, setErrorsBaja] = useState<Record<string, string | null>>({});
+  const [errorsProv, setErrorsProv] = useState<Record<string, string | null>>({});
+  const [errorsCat, setErrorsCat] = useState<Record<string, string | null>>({});
 
   const showToast = useCallback((tipo: 'success' | 'error', mensaje: string) => {
     setFeedback({ tipo, mensaje });
@@ -378,6 +392,7 @@ export default function Inventario() {
       clasificacion_abc: 'A',
       imagen: ''
     });
+    setErrorsProd({});
     setModalProducto({ open: true, editando: null });
   };
 
@@ -394,17 +409,64 @@ export default function Inventario() {
       clasificacion_abc: prod.clasificacion_abc || 'A',
       imagen: prod.imagen || ''
     });
+    setErrorsProd({});
     setModalProducto({ open: true, editando: prod });
+  };
+
+  const validarProducto = (): boolean => {
+    const errs: Record<string, string | null> = {};
+    const errSku = validateRequired(formProd.sku, 'SKU', 3, 30);
+    if (errSku) errs.sku = errSku;
+
+    const errCat = validateRequired(formProd.categoria_id, 'Categoría');
+    if (errCat) errs.categoria_id = errCat;
+
+    const errNombre = validateRequired(formProd.nombre, 'Nombre del producto', 3);
+    if (errNombre) errs.nombre = errNombre;
+
+    if (formProd.codigo_barras.trim()) {
+      const errEan = validateEan13(formProd.codigo_barras);
+      if (errEan) errs.codigo_barras = errEan;
+    }
+
+    if (!isBodeguero) {
+      const errCosto = validatePositiveNumber(formProd.costo_base, 'Costo base', { min: 0.01 });
+      if (errCosto) errs.costo_base = errCosto;
+
+      const errPrecio = validatePositiveNumber(formProd.precio_venta, 'Precio de venta', { min: 0.01 });
+      if (errPrecio) {
+        errs.precio_venta = errPrecio;
+      } else if (!errCosto) {
+        const costo = parseFloat(formProd.costo_base);
+        const precio = parseFloat(formProd.precio_venta);
+        if (precio <= costo) {
+          errs.precio_venta = `El precio de venta ($${precio.toFixed(2)}) no puede ser menor o igual al costo base ($${costo.toFixed(2)})`;
+        }
+      }
+
+      if (formProd.margen_minimo_pct) {
+        const errMargen = validatePositiveNumber(formProd.margen_minimo_pct, 'Margen mínimo', { allowZero: true, min: 0, max: 100 });
+        if (errMargen) errs.margen_minimo_pct = errMargen;
+      }
+    }
+
+    setErrorsProd(errs);
+    return Object.keys(errs).length === 0;
   };
 
   const handleGuardarProducto = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validarProducto()) {
+      showToast('error', 'Por favor corrige los campos señalados con error');
+      return;
+    }
+
     try {
       const payload = {
         categoria_id: formProd.categoria_id,
-        sku: formProd.sku,
-        nombre: formProd.nombre,
-        codigo_barras: formProd.codigo_barras || null,
+        sku: formProd.sku.trim(),
+        nombre: formProd.nombre.trim(),
+        codigo_barras: formProd.codigo_barras.trim() || null,
         costo_base: parseFloat(formProd.costo_base),
         precio_venta: parseFloat(formProd.precio_venta),
         margen_minimo_pct: parseFloat(formProd.margen_minimo_pct),
@@ -424,7 +486,16 @@ export default function Inventario() {
       if (detalleItem?.tipo === 'producto') setDetalleItem(null);
       cargarDatos();
     } catch (err: any) {
-      showToast('error', err.response?.data?.detail || 'Error al guardar producto');
+      const detail = err.response?.data?.detail;
+      if (Array.isArray(detail)) {
+        const newErrs: Record<string, string | null> = {};
+        for (const item of detail) {
+          const field = item.loc?.[item.loc.length - 1];
+          if (field) newErrs[field] = item.msg;
+        }
+        if (Object.keys(newErrs).length > 0) setErrorsProd(newErrs);
+      }
+      showToast('error', typeof detail === 'string' ? detail : 'Error al guardar producto');
     }
   };
 
@@ -462,15 +533,48 @@ export default function Inventario() {
       fecha_vencimiento: vencimientoDefecto,
       notas: 'Ingreso directo al almacén'
     });
+    setErrorsLote({});
     setModalIngresoLote(true);
+  };
+
+  const validarIngresoLote = (): boolean => {
+    const errs: Record<string, string | null> = {};
+    const errProd = validateRequired(formLote.producto_id, 'Artículo / Producto');
+    if (errProd) errs.producto_id = errProd;
+
+    const errCodigo = validateRequired(formLote.codigo_lote, 'Código de lote', 3);
+    if (errCodigo) errs.codigo_lote = errCodigo;
+
+    const errCant = validatePositiveNumber(formLote.cantidad, 'Cantidad', { min: 0.01 });
+    if (errCant) errs.cantidad = errCant;
+
+    if (!isBodeguero) {
+      const errCosto = validatePositiveNumber(formLote.costo_unitario, 'Costo unitario', { min: 0.01 });
+      if (errCosto) errs.costo_unitario = errCosto;
+    }
+
+    if (formLote.fecha_vencimiento) {
+      const errFecha = validateFutureDate(formLote.fecha_vencimiento, 'Fecha de caducidad');
+      if (errFecha) errs.fecha_vencimiento = errFecha;
+    } else {
+      errs.fecha_vencimiento = 'La fecha de caducidad sanitaria es obligatoria (política FEFO)';
+    }
+
+    setErrorsLote(errs);
+    return Object.keys(errs).length === 0;
   };
 
   const handleGuardarIngresoLote = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validarIngresoLote()) {
+      showToast('error', 'Por favor corrige los campos señalados con error');
+      return;
+    }
+
     try {
       await api.post('/inventario/lotes/ingreso-directo', {
         producto_id: formLote.producto_id,
-        codigo_lote: formLote.codigo_lote,
+        codigo_lote: formLote.codigo_lote.trim(),
         cantidad: parseFloat(formLote.cantidad),
         costo_unitario: parseFloat(formLote.costo_unitario),
         fecha_vencimiento: formLote.fecha_vencimiento || null,
@@ -482,7 +586,16 @@ export default function Inventario() {
       if (detalleItem?.tipo === 'producto') setDetalleItem(null);
       cargarDatos();
     } catch (err: any) {
-      showToast('error', err.response?.data?.detail || 'Error al ingresar lote');
+      const detail = err.response?.data?.detail;
+      if (Array.isArray(detail)) {
+        const newErrs: Record<string, string | null> = {};
+        for (const item of detail) {
+          const field = item.loc?.[item.loc.length - 1];
+          if (field) newErrs[field] = item.msg;
+        }
+        if (Object.keys(newErrs).length > 0) setErrorsLote(newErrs);
+      }
+      showToast('error', typeof detail === 'string' ? detail : 'Error al ingresar lote');
     }
   };
 
@@ -492,12 +605,22 @@ export default function Inventario() {
       cantidad_baja: String(lote.cantidad_disponible),
       notas: ''
     });
+    setErrorsBaja({});
     setModalBajaLote({ open: true, lote });
   };
 
   const handleConfirmarBajaLote = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!modalBajaLote.lote) return;
+
+    const max = modalBajaLote.lote.cantidad_disponible;
+    const errCant = validatePositiveNumber(formBaja.cantidad_baja, 'Cantidad a dar de baja', { min: 0.01, max });
+    if (errCant) {
+      setErrorsBaja({ cantidad_baja: errCant });
+      showToast('error', errCant);
+      return;
+    }
+
     try {
       await api.post(`/inventario/lotes/${modalBajaLote.lote.id}/baja`, {
         motivo: formBaja.motivo,
@@ -524,17 +647,41 @@ export default function Inventario() {
       email: '',
       lead_time_dias: '7'
     });
+    setErrorsProv({});
     setModalProveedor({ open: true, editando: null });
   };
 
   const handleGuardarProveedor = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errs: Record<string, string | null> = {};
+    const errNom = validateRequired(formProv.nombre, 'Razón social', 3);
+    if (errNom) errs.nombre = errNom;
+
+    if (formProv.telefono?.trim()) {
+      const errTel = validatePhone(formProv.telefono, false);
+      if (errTel) errs.telefono = errTel;
+    }
+    if (formProv.email?.trim()) {
+      const errMail = validateEmail(formProv.email, false);
+      if (errMail) errs.email = errMail;
+    }
+    if (formProv.lead_time_dias) {
+      const errLead = validatePositiveNumber(formProv.lead_time_dias, 'Lead time', { allowZero: true, min: 0, decimalsAllowed: false });
+      if (errLead) errs.lead_time_dias = errLead;
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setErrorsProv(errs);
+      showToast('error', 'Por favor corrige los campos señalados con error');
+      return;
+    }
+
     try {
       const payload = {
-        nombre: formProv.nombre,
-        contacto_nombre: formProv.contacto_nombre || null,
-        telefono: formProv.telefono || null,
-        email: formProv.email || null,
+        nombre: formProv.nombre.trim(),
+        contacto_nombre: formProv.contacto_nombre?.trim() || null,
+        telefono: formProv.telefono?.trim() || null,
+        email: formProv.email?.trim() || null,
         lead_time_dias: parseInt(formProv.lead_time_dias) || 7
       };
       if (modalProveedor.editando) {
@@ -554,17 +701,31 @@ export default function Inventario() {
 
   const handleAbrirCrearCategoria = () => {
     setFormCat({ nombre: '', descripcion: '' });
+    setErrorsCat({});
     setModalCategoria({ open: true, editando: null });
   };
 
   const handleGuardarCategoria = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errNom = validateRequired(formCat.nombre, 'Nombre de categoría', 3);
+    if (errNom) {
+      setErrorsCat({ nombre: errNom });
+      showToast('error', errNom);
+      return;
+    }
+
     try {
       if (modalCategoria.editando) {
-        await api.put(`/inventario/categorias/${modalCategoria.editando.id}`, formCat);
+        await api.put(`/inventario/categorias/${modalCategoria.editando.id}`, {
+          nombre: formCat.nombre.trim(),
+          descripcion: formCat.descripcion.trim()
+        });
         showToast('success', 'Categoría actualizada');
       } else {
-        await api.post('/inventario/categorias', formCat);
+        await api.post('/inventario/categorias', {
+          nombre: formCat.nombre.trim(),
+          descripcion: formCat.descripcion.trim()
+        });
         showToast('success', 'Categoría creada');
       }
       setModalCategoria({ open: false });
@@ -2937,31 +3098,56 @@ export default function Inventario() {
               </button>
             </div>
 
-            <form onSubmit={handleGuardarProducto} className="p-6 space-y-4 overflow-y-auto">
+            <form onSubmit={handleGuardarProducto} className="p-6 space-y-4 overflow-y-auto" noValidate>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1.5">SKU *</label>
                   <input
                     type="text"
-                    required
                     value={formProd.sku}
-                    onChange={(e) => setFormProd({ ...formProd, sku: e.target.value })}
-                    className="w-full h-11 px-4 rounded-full bg-surface-container-low text-on-surface font-mono text-body-md focus:bg-surface-container focus:outline-none"
+                    onChange={(e) => {
+                      setFormProd({ ...formProd, sku: e.target.value });
+                      if (errorsProd.sku) setErrorsProd((prev) => ({ ...prev, sku: null }));
+                    }}
+                    placeholder="Ej. BEB-COCA-001"
+                    className={`w-full h-11 px-4 rounded-full font-mono text-body-md text-on-surface focus:outline-none transition-all ${
+                      errorsProd.sku
+                        ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                        : 'bg-surface-container-low focus:bg-surface-container'
+                    }`}
                   />
+                  {errorsProd.sku && (
+                    <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                      <span className="material-symbols-outlined text-[15px]">error</span>
+                      <span>{errorsProd.sku}</span>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1.5">Categoría *</label>
                   <select
                     value={formProd.categoria_id}
-                    onChange={(e) => setFormProd({ ...formProd, categoria_id: e.target.value })}
-                    required
-                    className="w-full h-11 px-4 rounded-full bg-surface-container-low text-on-surface font-body-md focus:bg-surface-container focus:outline-none cursor-pointer"
+                    onChange={(e) => {
+                      setFormProd({ ...formProd, categoria_id: e.target.value });
+                      if (errorsProd.categoria_id) setErrorsProd((prev) => ({ ...prev, categoria_id: null }));
+                    }}
+                    className={`w-full h-11 px-4 rounded-full font-body-md text-on-surface focus:outline-none cursor-pointer transition-all ${
+                      errorsProd.categoria_id
+                        ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                        : 'bg-surface-container-low focus:bg-surface-container'
+                    }`}
                   >
                     <option value="">Seleccionar...</option>
                     {categorias.map(c => (
                       <option key={c.id} value={c.id}>{c.nombre}</option>
                     ))}
                   </select>
+                  {errorsProd.categoria_id && (
+                    <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                      <span className="material-symbols-outlined text-[15px]">error</span>
+                      <span>{errorsProd.categoria_id}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -2969,22 +3155,49 @@ export default function Inventario() {
                 <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1.5">Nombre del Producto *</label>
                 <input
                   type="text"
-                  required
                   value={formProd.nombre}
-                  onChange={(e) => setFormProd({ ...formProd, nombre: e.target.value })}
-                  className="w-full h-11 px-4 rounded-full bg-surface-container-low text-on-surface font-headline-md text-body-md focus:bg-surface-container focus:outline-none"
+                  onChange={(e) => {
+                    setFormProd({ ...formProd, nombre: e.target.value });
+                    if (errorsProd.nombre) setErrorsProd((prev) => ({ ...prev, nombre: null }));
+                  }}
+                  placeholder="Ej. Bebida Gaseosa 500ml"
+                  className={`w-full h-11 px-4 rounded-full font-headline-md text-body-md text-on-surface focus:outline-none transition-all ${
+                    errorsProd.nombre
+                      ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                      : 'bg-surface-container-low focus:bg-surface-container'
+                  }`}
                 />
+                {errorsProd.nombre && (
+                  <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                    <span className="material-symbols-outlined text-[15px]">error</span>
+                    <span>{errorsProd.nombre}</span>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1.5">Código de Barras</label>
+                  <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1.5">Código de Barras (EAN-13)</label>
                   <input
                     type="text"
                     value={formProd.codigo_barras}
-                    onChange={(e) => setFormProd({ ...formProd, codigo_barras: e.target.value })}
-                    className="w-full h-11 px-4 rounded-full bg-surface-container-low text-on-surface font-mono text-body-md focus:bg-surface-container focus:outline-none"
+                    onChange={(e) => {
+                      setFormProd({ ...formProd, codigo_barras: e.target.value });
+                      if (errorsProd.codigo_barras) setErrorsProd((prev) => ({ ...prev, codigo_barras: null }));
+                    }}
+                    placeholder="Ej. 7861000100014"
+                    className={`w-full h-11 px-4 rounded-full font-mono text-body-md text-on-surface focus:outline-none transition-all ${
+                      errorsProd.codigo_barras
+                        ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                        : 'bg-surface-container-low focus:bg-surface-container'
+                    }`}
                   />
+                  {errorsProd.codigo_barras && (
+                    <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                      <span className="material-symbols-outlined text-[15px]">error</span>
+                      <span>{errorsProd.codigo_barras}</span>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1.5">Clasificación ABC</label>
@@ -3001,42 +3214,82 @@ export default function Inventario() {
               </div>
 
               {!isBodeguero && (
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1.5">Costo Base ($) *</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      required
-                      value={formProd.costo_base}
-                      onChange={(e) => setFormProd({ ...formProd, costo_base: e.target.value })}
-                      className="w-full h-11 px-4 rounded-full bg-surface-container-low text-on-surface font-label-numeric-md text-body-md text-right focus:bg-surface-container focus:outline-none"
-                    />
+                <div className="space-y-2">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1.5">Costo Base ($) *</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formProd.costo_base}
+                        onChange={(e) => {
+                          setFormProd({ ...formProd, costo_base: e.target.value });
+                          if (errorsProd.costo_base) setErrorsProd((prev) => ({ ...prev, costo_base: null }));
+                          if (errorsProd.precio_venta) setErrorsProd((prev) => ({ ...prev, precio_venta: null }));
+                        }}
+                        className={`w-full h-11 px-4 rounded-full text-on-surface font-label-numeric-md text-body-md text-right focus:outline-none transition-all ${
+                          errorsProd.costo_base
+                            ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                            : 'bg-surface-container-low focus:bg-surface-container'
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1.5">Precio Venta ($) *</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formProd.precio_venta}
+                        onChange={(e) => {
+                          setFormProd({ ...formProd, precio_venta: e.target.value });
+                          if (errorsProd.precio_venta) setErrorsProd((prev) => ({ ...prev, precio_venta: null }));
+                        }}
+                        className={`w-full h-11 px-4 rounded-full text-on-surface font-label-numeric-md text-body-md text-right focus:outline-none transition-all ${
+                          errorsProd.precio_venta
+                            ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                            : 'bg-surface-container-low focus:bg-surface-container'
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1.5">Margen Mín %</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        value={formProd.margen_minimo_pct}
+                        onChange={(e) => {
+                          setFormProd({ ...formProd, margen_minimo_pct: e.target.value });
+                          if (errorsProd.margen_minimo_pct) setErrorsProd((prev) => ({ ...prev, margen_minimo_pct: null }));
+                        }}
+                        className={`w-full h-11 px-4 rounded-full text-on-surface font-label-numeric-md text-body-md text-right focus:outline-none transition-all ${
+                          errorsProd.margen_minimo_pct
+                            ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                            : 'bg-surface-container-low focus:bg-surface-container'
+                        }`}
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1.5">Precio Venta ($) *</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      required
-                      value={formProd.precio_venta}
-                      onChange={(e) => setFormProd({ ...formProd, precio_venta: e.target.value })}
-                      className="w-full h-11 px-4 rounded-full bg-surface-container-low text-on-surface font-label-numeric-md text-body-md text-right focus:bg-surface-container focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1.5">Margen Mín %</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      value={formProd.margen_minimo_pct}
-                      onChange={(e) => setFormProd({ ...formProd, margen_minimo_pct: e.target.value })}
-                      className="w-full h-11 px-4 rounded-full bg-surface-container-low text-on-surface font-label-numeric-md text-body-md text-right focus:bg-surface-container focus:outline-none"
-                    />
-                  </div>
+                  {errorsProd.costo_base && (
+                    <div className="flex items-center gap-1.5 text-error text-xs font-medium px-1 animate-in fade-in">
+                      <span className="material-symbols-outlined text-[15px]">error</span>
+                      <span>{errorsProd.costo_base}</span>
+                    </div>
+                  )}
+                  {errorsProd.precio_venta && (
+                    <div className="flex items-center gap-1.5 text-error text-xs font-medium px-1 animate-in fade-in">
+                      <span className="material-symbols-outlined text-[15px]">error</span>
+                      <span>{errorsProd.precio_venta}</span>
+                    </div>
+                  )}
+                  {errorsProd.margen_minimo_pct && (
+                    <div className="flex items-center gap-1.5 text-error text-xs font-medium px-1 animate-in fade-in">
+                      <span className="material-symbols-outlined text-[15px]">error</span>
+                      <span>{errorsProd.margen_minimo_pct}</span>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -3090,30 +3343,54 @@ export default function Inventario() {
               </button>
             </div>
 
-            <form onSubmit={handleGuardarIngresoLote} className="p-6 space-y-4">
+            <form onSubmit={handleGuardarIngresoLote} className="p-6 space-y-4" noValidate>
               <div>
                 <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1.5">Artículo / Producto *</label>
                 <select
                   value={formLote.producto_id}
-                  onChange={(e) => setFormLote({ ...formLote, producto_id: e.target.value })}
-                  required
-                  className="w-full h-11 px-4 rounded-full bg-surface-container-low text-on-surface font-body-md focus:bg-surface-container focus:outline-none cursor-pointer"
+                  onChange={(e) => {
+                    setFormLote({ ...formLote, producto_id: e.target.value });
+                    if (errorsLote.producto_id) setErrorsLote((prev) => ({ ...prev, producto_id: null }));
+                  }}
+                  className={`w-full h-11 px-4 rounded-full text-on-surface font-body-md focus:outline-none cursor-pointer transition-all ${
+                    errorsLote.producto_id
+                      ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                      : 'bg-surface-container-low focus:bg-surface-container'
+                  }`}
                 >
                   {productos.map(p => (
                     <option key={p.id} value={p.id}>{p.sku} • {p.nombre}</option>
                   ))}
                 </select>
+                {errorsLote.producto_id && (
+                  <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                    <span className="material-symbols-outlined text-[15px]">error</span>
+                    <span>{errorsLote.producto_id}</span>
+                  </div>
+                )}
               </div>
 
               <div>
                 <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1.5">Código de Lote Sanitario *</label>
                 <input
                   type="text"
-                  required
                   value={formLote.codigo_lote}
-                  onChange={(e) => setFormLote({ ...formLote, codigo_lote: e.target.value })}
-                  className="w-full h-11 px-4 rounded-full bg-surface-container-low text-on-surface font-mono text-body-md focus:bg-surface-container focus:outline-none"
+                  onChange={(e) => {
+                    setFormLote({ ...formLote, codigo_lote: e.target.value });
+                    if (errorsLote.codigo_lote) setErrorsLote((prev) => ({ ...prev, codigo_lote: null }));
+                  }}
+                  className={`w-full h-11 px-4 rounded-full text-on-surface font-mono text-body-md focus:outline-none transition-all ${
+                    errorsLote.codigo_lote
+                      ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                      : 'bg-surface-container-low focus:bg-surface-container'
+                  }`}
                 />
+                {errorsLote.codigo_lote && (
+                  <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                    <span className="material-symbols-outlined text-[15px]">error</span>
+                    <span>{errorsLote.codigo_lote}</span>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -3123,11 +3400,23 @@ export default function Inventario() {
                     type="number"
                     step="any"
                     min="0.01"
-                    required
                     value={formLote.cantidad}
-                    onChange={(e) => setFormLote({ ...formLote, cantidad: e.target.value })}
-                    className="w-full h-11 px-4 rounded-full bg-surface-container-low text-on-surface font-label-numeric-md text-body-md text-center focus:bg-surface-container focus:outline-none"
+                    onChange={(e) => {
+                      setFormLote({ ...formLote, cantidad: e.target.value });
+                      if (errorsLote.cantidad) setErrorsLote((prev) => ({ ...prev, cantidad: null }));
+                    }}
+                    className={`w-full h-11 px-4 rounded-full text-on-surface font-label-numeric-md text-body-md text-center focus:outline-none transition-all ${
+                      errorsLote.cantidad
+                        ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                        : 'bg-surface-container-low focus:bg-surface-container'
+                    }`}
                   />
+                  {errorsLote.cantidad && (
+                    <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                      <span className="material-symbols-outlined text-[15px]">error</span>
+                      <span>{errorsLote.cantidad}</span>
+                    </div>
+                  )}
                 </div>
                 {!isBodeguero && (
                   <div>
@@ -3136,23 +3425,48 @@ export default function Inventario() {
                       type="number"
                       step="0.01"
                       min="0"
-                      required
                       value={formLote.costo_unitario}
-                      onChange={(e) => setFormLote({ ...formLote, costo_unitario: e.target.value })}
-                      className="w-full h-11 px-4 rounded-full bg-surface-container-low text-on-surface font-label-numeric-md text-body-md text-right focus:bg-surface-container focus:outline-none"
+                      onChange={(e) => {
+                        setFormLote({ ...formLote, costo_unitario: e.target.value });
+                        if (errorsLote.costo_unitario) setErrorsLote((prev) => ({ ...prev, costo_unitario: null }));
+                      }}
+                      className={`w-full h-11 px-4 rounded-full text-on-surface font-label-numeric-md text-body-md text-right focus:outline-none transition-all ${
+                        errorsLote.costo_unitario
+                          ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                          : 'bg-surface-container-low focus:bg-surface-container'
+                      }`}
                     />
+                    {errorsLote.costo_unitario && (
+                      <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                        <span className="material-symbols-outlined text-[15px]">error</span>
+                        <span>{errorsLote.costo_unitario}</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
 
               <div>
-                <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1.5">Fecha de Caducidad Sanitaria</label>
+                <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1.5">Fecha de Caducidad Sanitaria (FEFO) *</label>
                 <input
                   type="date"
                   value={formLote.fecha_vencimiento}
-                  onChange={(e) => setFormLote({ ...formLote, fecha_vencimiento: e.target.value })}
-                  className="w-full h-11 px-4 rounded-full bg-surface-container-low text-on-surface font-body-md focus:bg-surface-container focus:outline-none"
+                  onChange={(e) => {
+                    setFormLote({ ...formLote, fecha_vencimiento: e.target.value });
+                    if (errorsLote.fecha_vencimiento) setErrorsLote((prev) => ({ ...prev, fecha_vencimiento: null }));
+                  }}
+                  className={`w-full h-11 px-4 rounded-full text-on-surface font-body-md focus:outline-none transition-all ${
+                    errorsLote.fecha_vencimiento
+                      ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                      : 'bg-surface-container-low focus:bg-surface-container'
+                  }`}
                 />
+                {errorsLote.fecha_vencimiento && (
+                  <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                    <span className="material-symbols-outlined text-[15px]">error</span>
+                    <span>{errorsLote.fecha_vencimiento}</span>
+                  </div>
+                )}
               </div>
 
               <div className="pt-4 flex justify-end gap-3 border-t border-outline-variant/20">
@@ -3192,7 +3506,7 @@ export default function Inventario() {
               </button>
             </div>
 
-            <form onSubmit={handleConfirmarBajaLote} className="p-6 space-y-4">
+            <form onSubmit={handleConfirmarBajaLote} className="p-6 space-y-4" noValidate>
               <div>
                 <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1.5">Motivo de Baja *</label>
                 <select
@@ -3216,11 +3530,23 @@ export default function Inventario() {
                   step="any"
                   min="0.01"
                   max={modalBajaLote.lote.cantidad_disponible}
-                  required
                   value={formBaja.cantidad_baja}
-                  onChange={(e) => setFormBaja({ ...formBaja, cantidad_baja: e.target.value })}
-                  className="w-full h-11 px-4 rounded-full bg-surface-container-low text-on-surface font-label-numeric-md text-body-md text-center focus:bg-surface-container focus:outline-none"
+                  onChange={(e) => {
+                    setFormBaja({ ...formBaja, cantidad_baja: e.target.value });
+                    if (errorsBaja.cantidad_baja) setErrorsBaja((prev) => ({ ...prev, cantidad_baja: null }));
+                  }}
+                  className={`w-full h-11 px-4 rounded-full font-label-numeric-md text-body-md text-center focus:outline-none transition-all ${
+                    errorsBaja.cantidad_baja
+                      ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20 text-on-surface'
+                      : 'bg-surface-container-low text-on-surface focus:bg-surface-container'
+                  }`}
                 />
+                {errorsBaja.cantidad_baja && (
+                  <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                    <span className="material-symbols-outlined text-[15px]">error</span>
+                    <span>{errorsBaja.cantidad_baja}</span>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -3272,16 +3598,28 @@ export default function Inventario() {
               </button>
             </div>
 
-            <form onSubmit={handleGuardarProveedor} className="p-6 space-y-4">
+            <form onSubmit={handleGuardarProveedor} className="p-6 space-y-4" noValidate>
               <div>
                 <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1.5">Razón Social *</label>
                 <input
                   type="text"
-                  required
                   value={formProv.nombre}
-                  onChange={(e) => setFormProv({ ...formProv, nombre: e.target.value })}
-                  className="w-full h-11 px-4 rounded-full bg-surface-container-low text-on-surface font-headline-md text-body-md focus:bg-surface-container focus:outline-none"
+                  onChange={(e) => {
+                    setFormProv({ ...formProv, nombre: e.target.value });
+                    if (errorsProv.nombre) setErrorsProv((prev) => ({ ...prev, nombre: null }));
+                  }}
+                  className={`w-full h-11 px-4 rounded-full font-headline-md text-body-md text-on-surface focus:outline-none transition-all ${
+                    errorsProv.nombre
+                      ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                      : 'bg-surface-container-low focus:bg-surface-container'
+                  }`}
                 />
+                {errorsProv.nombre && (
+                  <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                    <span className="material-symbols-outlined text-[15px]">error</span>
+                    <span>{errorsProv.nombre}</span>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -3300,9 +3638,71 @@ export default function Inventario() {
                     type="number"
                     min="0"
                     value={formProv.lead_time_dias}
-                    onChange={(e) => setFormProv({ ...formProv, lead_time_dias: e.target.value })}
-                    className="w-full h-11 px-4 rounded-full bg-surface-container-low text-on-surface font-label-numeric-md text-body-md text-center focus:bg-surface-container focus:outline-none"
+                    onChange={(e) => {
+                      setFormProv({ ...formProv, lead_time_dias: e.target.value });
+                      if (errorsProv.lead_time_dias) setErrorsProv((prev) => ({ ...prev, lead_time_dias: null }));
+                    }}
+                    className={`w-full h-11 px-4 rounded-full text-on-surface font-label-numeric-md text-body-md text-center focus:outline-none transition-all ${
+                      errorsProv.lead_time_dias
+                        ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                        : 'bg-surface-container-low focus:bg-surface-container'
+                    }`}
                   />
+                  {errorsProv.lead_time_dias && (
+                    <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                      <span className="material-symbols-outlined text-[15px]">error</span>
+                      <span>{errorsProv.lead_time_dias}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1.5">Teléfono</label>
+                  <input
+                    type="text"
+                    value={formProv.telefono}
+                    onChange={(e) => {
+                      setFormProv({ ...formProv, telefono: e.target.value });
+                      if (errorsProv.telefono) setErrorsProv((prev) => ({ ...prev, telefono: null }));
+                    }}
+                    placeholder="Ej. 0991234567"
+                    className={`w-full h-11 px-4 rounded-full font-mono text-body-md text-on-surface focus:outline-none transition-all ${
+                      errorsProv.telefono
+                        ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                        : 'bg-surface-container-low focus:bg-surface-container'
+                    }`}
+                  />
+                  {errorsProv.telefono && (
+                    <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                      <span className="material-symbols-outlined text-[15px]">error</span>
+                      <span>{errorsProv.telefono}</span>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1.5">Correo Electrónico</label>
+                  <input
+                    type="email"
+                    value={formProv.email}
+                    onChange={(e) => {
+                      setFormProv({ ...formProv, email: e.target.value });
+                      if (errorsProv.email) setErrorsProv((prev) => ({ ...prev, email: null }));
+                    }}
+                    placeholder="proveedor@empresa.com"
+                    className={`w-full h-11 px-4 rounded-full text-body-md text-on-surface focus:outline-none transition-all ${
+                      errorsProv.email
+                        ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                        : 'bg-surface-container-low focus:bg-surface-container'
+                    }`}
+                  />
+                  {errorsProv.email && (
+                    <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                      <span className="material-symbols-outlined text-[15px]">error</span>
+                      <span>{errorsProv.email}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -3345,16 +3745,28 @@ export default function Inventario() {
               </button>
             </div>
 
-            <form onSubmit={handleGuardarCategoria} className="p-6 space-y-4">
+            <form onSubmit={handleGuardarCategoria} className="p-6 space-y-4" noValidate>
               <div>
                 <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1.5">Nombre *</label>
                 <input
                   type="text"
-                  required
                   value={formCat.nombre}
-                  onChange={(e) => setFormCat({ ...formCat, nombre: e.target.value })}
-                  className="w-full h-11 px-4 rounded-full bg-surface-container-low text-on-surface font-headline-md text-body-md focus:bg-surface-container focus:outline-none"
+                  onChange={(e) => {
+                    setFormCat({ ...formCat, nombre: e.target.value });
+                    if (errorsCat.nombre) setErrorsCat((prev) => ({ ...prev, nombre: null }));
+                  }}
+                  className={`w-full h-11 px-4 rounded-full font-headline-md text-body-md text-on-surface focus:outline-none transition-all ${
+                    errorsCat.nombre
+                      ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                      : 'bg-surface-container-low focus:bg-surface-container'
+                  }`}
                 />
+                {errorsCat.nombre && (
+                  <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                    <span className="material-symbols-outlined text-[15px]">error</span>
+                    <span>{errorsCat.nombre}</span>
+                  </div>
+                )}
               </div>
 
               <div>

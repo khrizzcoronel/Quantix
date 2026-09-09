@@ -7,6 +7,7 @@ import {
   Banknote, Monitor, Loader2, AlertCircle, 
   CheckCircle2, Search, ChevronDown, UserCircle, Lock, X
 } from 'lucide-react';
+import { validatePositiveNumber } from '../utils/validation';
 
 interface Props {
   onSuccess?: () => void;
@@ -82,17 +83,27 @@ export default function AperturaCajaModal({ onSuccess, onClose }: Props) {
     descripcion: 'Terminal personalizada',
   };
 
+  const [fondoError, setFondoError] = useState<string | null>(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
 
-    const monto = parseFloat(fondoInicial);
-    if (isNaN(monto) || monto < 0) {
-      setError('Ingresa un monto de fondo inicial válido');
-      setLoading(false);
+    const err = validatePositiveNumber(fondoInicial, 'El fondo inicial en efectivo', {
+      allowZero: true,
+      min: 0,
+      max: 50000,
+    });
+
+    if (err) {
+      setFondoError(err);
       return;
     }
+
+    setFondoError(null);
+    setLoading(true);
+
+    const monto = parseFloat(fondoInicial);
 
     try {
       await abrirCaja(monto, terminalId, sucursalActual?.id);
@@ -300,13 +311,25 @@ export default function AperturaCajaModal({ onSuccess, onClose }: Props) {
                 type="number"
                 step="0.50"
                 min="0"
-                required
                 value={fondoInicial}
-                onChange={(e) => setFondoInicial(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 rounded-full bg-surface-container-low border border-surface-container-high text-lg font-black font-mono text-on-surface focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary outline-none transition-all"
+                onChange={(e) => {
+                  setFondoInicial(e.target.value);
+                  if (fondoError) setFondoError(null);
+                }}
+                className={`w-full pl-9 pr-4 py-2.5 rounded-full text-lg font-black font-mono text-on-surface focus:outline-none transition-all ${
+                  fondoError
+                    ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                    : 'bg-surface-container-low border border-surface-container-high focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary'
+                }`}
                 placeholder="0.00"
               />
             </div>
+            {fondoError && (
+              <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1.5 animate-in fade-in">
+                <span className="material-symbols-outlined text-[15px]">error</span>
+                <span>{fondoError}</span>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3 pt-4 border-t border-surface-container-high/60 mt-6">

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import api from '../services/api';
 import { ArrowDownLeft, ArrowUpRight, X, CheckCircle2, AlertCircle } from 'lucide-react';
 import { mostrarToast } from '../hooks/useWebSocket';
+import { validatePositiveNumber, validateRequired } from '../utils/validation';
 
 interface Props {
   isOpen: boolean;
@@ -15,6 +16,7 @@ export default function MovimientoCajaModal({ isOpen, onClose, onSuccess }: Prop
   const [concepto, setConcepto] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ monto?: string | null; concepto?: string | null }>({});
 
   if (!isOpen) return null;
 
@@ -36,17 +38,19 @@ export default function MovimientoCajaModal({ isOpen, onClose, onSuccess }: Prop
     e.preventDefault();
     setErrorMsg(null);
 
+    const errs: typeof errors = {};
+    const errMonto = validatePositiveNumber(monto, 'El monto en efectivo', { min: 0.01 });
+    if (errMonto) errs.monto = errMonto;
+
+    const errConcepto = validateRequired(concepto, 'El concepto o motivo', 5, 255);
+    if (errConcepto) errs.concepto = errConcepto;
+
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      return;
+    }
+
     const montoNum = parseFloat(monto);
-    if (isNaN(montoNum) || montoNum <= 0) {
-      setErrorMsg('Ingresa un monto válido mayor a $0.00');
-      return;
-    }
-
-    if (!concepto.trim()) {
-      setErrorMsg('Debes especificar el motivo o concepto del movimiento');
-      return;
-    }
-
     setLoading(true);
     try {
       await api.post('/caja/movimientos', {
@@ -74,6 +78,7 @@ export default function MovimientoCajaModal({ isOpen, onClose, onSuccess }: Prop
     setMonto('');
     setConcepto('');
     setErrorMsg(null);
+    setErrors({});
     onClose();
   };
 
@@ -164,12 +169,24 @@ export default function MovimientoCajaModal({ isOpen, onClose, onSuccess }: Prop
                 min="0.01"
                 placeholder="0.00"
                 value={monto}
-                onChange={(e) => setMonto(e.target.value)}
-                required
+                onChange={(e) => {
+                  setMonto(e.target.value);
+                  if (errors.monto) setErrors((prev) => ({ ...prev, monto: null }));
+                }}
                 autoFocus
-                className="w-full h-12 pl-9 pr-4 rounded-full bg-surface-container-low text-on-surface font-label-numeric-lg text-title-lg font-bold focus:bg-surface-container focus:outline-none transition-all"
+                className={`w-full h-12 pl-9 pr-4 rounded-full font-label-numeric-lg text-title-lg font-bold text-on-surface focus:outline-none transition-all ${
+                  errors.monto
+                    ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                    : 'bg-surface-container-low focus:bg-surface-container'
+                }`}
               />
             </div>
+            {errors.monto && (
+              <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                <span className="material-symbols-outlined text-[15px]">error</span>
+                <span>{errors.monto}</span>
+              </div>
+            )}
           </div>
 
           {/* Concepto / Motivo */}
@@ -181,11 +198,23 @@ export default function MovimientoCajaModal({ isOpen, onClose, onSuccess }: Prop
               type="text"
               placeholder="Ej. Dotación de monedas o pago de papelería"
               value={concepto}
-              onChange={(e) => setConcepto(e.target.value)}
-              required
+              onChange={(e) => {
+                setConcepto(e.target.value);
+                if (errors.concepto) setErrors((prev) => ({ ...prev, concepto: null }));
+              }}
               maxLength={255}
-              className="w-full h-11 px-4 rounded-full bg-surface-container-low text-on-surface font-body-md focus:bg-surface-container focus:outline-none transition-all"
+              className={`w-full h-11 px-4 rounded-full font-body-md text-on-surface focus:outline-none transition-all ${
+                errors.concepto
+                  ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                  : 'bg-surface-container-low focus:bg-surface-container'
+              }`}
             />
+            {errors.concepto && (
+              <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 px-1 animate-in fade-in">
+                <span className="material-symbols-outlined text-[15px]">error</span>
+                <span>{errors.concepto}</span>
+              </div>
+            )}
           </div>
 
           {/* Sugerencias Rápidas */}

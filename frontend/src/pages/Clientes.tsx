@@ -8,6 +8,7 @@ import {
 import api from '../services/api';
 import { exportToCSV, formatDate, formatBoolean } from '../utils/exportUtils';
 import { mostrarToast } from '../hooks/useWebSocket';
+import { validateCedulaRuc, validateRequired, validatePhone, validateEmail, validatePositiveNumber } from '../utils/validation';
 
 interface Cliente {
   id: string;
@@ -125,6 +126,59 @@ export default function Clientes() {
     valido_hasta: '',
   });
 
+  const [errorsCliente, setErrorsCliente] = useState<{
+    cedula?: string | null;
+    nombre?: string | null;
+    telefono?: string | null;
+    email?: string | null;
+  }>({});
+
+  const [errorsCupon, setErrorsCupon] = useState<{
+    cliente_id?: string | null;
+    codigo?: string | null;
+    descuento_valor?: string | null;
+  }>({});
+
+  const validarFormCliente = () => {
+    const errs: typeof errorsCliente = {};
+    if (formCliente.cedula.trim()) {
+      const cedErr = validateCedulaRuc(formCliente.cedula);
+      if (cedErr) errs.cedula = cedErr;
+    }
+    const nomErr = validateRequired(formCliente.nombre, 'El nombre completo', 3);
+    if (nomErr) errs.nombre = nomErr;
+
+    const telErr = validatePhone(formCliente.telefono, true);
+    if (telErr) errs.telefono = telErr;
+
+    if (formCliente.email.trim()) {
+      const emErr = validateEmail(formCliente.email, false);
+      if (emErr) errs.email = emErr;
+    }
+
+    setErrorsCliente(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const validarFormCupon = () => {
+    const errs: typeof errorsCupon = {};
+    if (!formCupon.cliente_id) {
+      errs.cliente_id = 'Debes seleccionar un cliente beneficiario';
+    }
+    const codErr = validateRequired(formCupon.codigo, 'El código del cupón', 3);
+    if (codErr) errs.codigo = codErr;
+
+    const valErr = validatePositiveNumber(formCupon.descuento_valor, 'El valor del descuento', {
+      allowZero: false,
+      min: 0.01,
+      max: formCupon.descuento_tipo === 'PORCENTAJE' ? 100 : 10000,
+    });
+    if (valErr) errs.descuento_valor = valErr;
+
+    setErrorsCupon(errs);
+    return Object.keys(errs).length === 0;
+  };
+
   const [notificacion, setNotificacion] = useState<string | null>(null);
 
   const mostrarAviso = (msg: string, severidad: 'SUCCESS' | 'CRITICO' | 'WARNING' | 'INFO' = 'SUCCESS') => {
@@ -221,6 +275,8 @@ export default function Clientes() {
 
   const handleCrearCliente = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validarFormCliente()) return;
+
     try {
       await api.post('/crm/clientes', {
         cedula: formCliente.cedula.trim() || null,
@@ -231,15 +287,30 @@ export default function Clientes() {
       mostrarAviso('¡Cliente registrado exitosamente!');
       setShowModalCrearCliente(false);
       setFormCliente({ cedula: '', nombre: '', telefono: '', email: '' });
+      setErrorsCliente({});
       cargarClientes();
     } catch (err: any) {
-      mostrarAviso(err.response?.data?.detail || 'Error al registrar cliente', 'CRITICO');
+      const detail = err.response?.data?.detail;
+      if (typeof detail === 'string') {
+        if (detail.toLowerCase().includes('cédula') || detail.toLowerCase().includes('cedula')) {
+          setErrorsCliente((prev) => ({ ...prev, cedula: detail }));
+        } else if (detail.toLowerCase().includes('teléfono') || detail.toLowerCase().includes('telefono')) {
+          setErrorsCliente((prev) => ({ ...prev, telefono: detail }));
+        } else if (detail.toLowerCase().includes('correo') || detail.toLowerCase().includes('email')) {
+          setErrorsCliente((prev) => ({ ...prev, email: detail }));
+        }
+        mostrarAviso(detail, 'CRITICO');
+      } else {
+        mostrarAviso('Error al registrar cliente', 'CRITICO');
+      }
     }
   };
 
   const handleActualizarCliente = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clienteAEditar) return;
+    if (!validarFormCliente()) return;
+
     try {
       await api.put(`/crm/clientes/${clienteAEditar.id}`, {
         cedula: formCliente.cedula.trim() || null,
@@ -250,9 +321,20 @@ export default function Clientes() {
       mostrarAviso('¡Datos de cliente actualizados!');
       setClienteAEditar(null);
       setFormCliente({ cedula: '', nombre: '', telefono: '', email: '' });
+      setErrorsCliente({});
       cargarClientes();
     } catch (err: any) {
-      mostrarAviso(err.response?.data?.detail || 'Error al actualizar cliente', 'CRITICO');
+      const detail = err.response?.data?.detail;
+      if (typeof detail === 'string') {
+        if (detail.toLowerCase().includes('cédula') || detail.toLowerCase().includes('cedula')) {
+          setErrorsCliente((prev) => ({ ...prev, cedula: detail }));
+        } else if (detail.toLowerCase().includes('teléfono') || detail.toLowerCase().includes('telefono')) {
+          setErrorsCliente((prev) => ({ ...prev, telefono: detail }));
+        }
+        mostrarAviso(detail, 'CRITICO');
+      } else {
+        mostrarAviso('Error al actualizar cliente', 'CRITICO');
+      }
     }
   };
 
@@ -279,6 +361,8 @@ export default function Clientes() {
 
   const handleCrearCupon = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validarFormCupon()) return;
+
     try {
       await api.post('/crm/cupones', {
         cliente_id: formCupon.cliente_id,
@@ -300,6 +384,7 @@ export default function Clientes() {
         valido_desde: '',
         valido_hasta: '',
       });
+      setErrorsCupon({});
       cargarCupones();
     } catch (err: any) {
       mostrarAviso(err.response?.data?.detail || 'Error al emitir cupón', 'CRITICO');
@@ -1128,15 +1213,28 @@ export default function Clientes() {
             <form onSubmit={handleCrearCliente} className="p-6 space-y-4 text-body-sm">
               <div>
                 <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
-                  Cédula / Documento de Identidad
+                  Cédula / Documento de Identidad (10 o 13 dígitos)
                 </label>
                 <input
                   type="text"
                   value={formCliente.cedula}
-                  onChange={(e) => setFormCliente({ ...formCliente, cedula: e.target.value })}
-                  placeholder="Ej. 12345678"
-                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-mono text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40"
+                  onChange={(e) => {
+                    setFormCliente({ ...formCliente, cedula: e.target.value });
+                    if (errorsCliente.cedula) setErrorsCliente((prev) => ({ ...prev, cedula: null }));
+                  }}
+                  placeholder="Ej. 1710034065"
+                  className={`w-full px-4 py-2.5 rounded-2xl font-mono text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none transition-all ${
+                    errorsCliente.cedula
+                      ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                      : 'bg-surface-container-low border border-surface-container-high/40 focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20'
+                  }`}
                 />
+                {errorsCliente.cedula && (
+                  <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 animate-in fade-in">
+                    <span className="material-symbols-outlined text-[15px]">error</span>
+                    <span>{errorsCliente.cedula}</span>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -1145,26 +1243,50 @@ export default function Clientes() {
                 </label>
                 <input
                   type="text"
-                  required
                   value={formCliente.nombre}
-                  onChange={(e) => setFormCliente({ ...formCliente, nombre: e.target.value })}
+                  onChange={(e) => {
+                    setFormCliente({ ...formCliente, nombre: e.target.value });
+                    if (errorsCliente.nombre) setErrorsCliente((prev) => ({ ...prev, nombre: null }));
+                  }}
                   placeholder="Ej. Roberto Martínez"
-                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-title-md text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40"
+                  className={`w-full px-4 py-2.5 rounded-2xl font-title-md text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none transition-all ${
+                    errorsCliente.nombre
+                      ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                      : 'bg-surface-container-low border border-surface-container-high/40 focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20'
+                  }`}
                 />
+                {errorsCliente.nombre && (
+                  <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 animate-in fade-in">
+                    <span className="material-symbols-outlined text-[15px]">error</span>
+                    <span>{errorsCliente.nombre}</span>
+                  </div>
+                )}
               </div>
 
               <div>
                 <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
-                  Teléfono Móvil (ID en Caja) *
+                  Teléfono Móvil (10 dígitos) *
                 </label>
                 <input
                   type="tel"
-                  required
                   value={formCliente.telefono}
-                  onChange={(e) => setFormCliente({ ...formCliente, telefono: e.target.value })}
-                  placeholder="Ej. 5512345678"
-                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-mono text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40"
+                  onChange={(e) => {
+                    setFormCliente({ ...formCliente, telefono: e.target.value });
+                    if (errorsCliente.telefono) setErrorsCliente((prev) => ({ ...prev, telefono: null }));
+                  }}
+                  placeholder="Ej. 0991234567"
+                  className={`w-full px-4 py-2.5 rounded-2xl font-mono text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none transition-all ${
+                    errorsCliente.telefono
+                      ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                      : 'bg-surface-container-low border border-surface-container-high/40 focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20'
+                  }`}
                 />
+                {errorsCliente.telefono && (
+                  <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 animate-in fade-in">
+                    <span className="material-symbols-outlined text-[15px]">error</span>
+                    <span>{errorsCliente.telefono}</span>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -1174,10 +1296,23 @@ export default function Clientes() {
                 <input
                   type="email"
                   value={formCliente.email}
-                  onChange={(e) => setFormCliente({ ...formCliente, email: e.target.value })}
+                  onChange={(e) => {
+                    setFormCliente({ ...formCliente, email: e.target.value });
+                    if (errorsCliente.email) setErrorsCliente((prev) => ({ ...prev, email: null }));
+                  }}
                   placeholder="cliente@ejemplo.com"
-                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-title-md text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40"
+                  className={`w-full px-4 py-2.5 rounded-2xl font-title-md text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none transition-all ${
+                    errorsCliente.email
+                      ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                      : 'bg-surface-container-low border border-surface-container-high/40 focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20'
+                  }`}
                 />
+                {errorsCliente.email && (
+                  <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1.5 animate-in fade-in">
+                    <span className="material-symbols-outlined text-[15px]">error</span>
+                    <span>{errorsCliente.email}</span>
+                  </div>
+                )}
               </div>
 
               <div className="pt-3 border-t border-surface-container-low flex gap-2 justify-end">
@@ -1214,53 +1349,103 @@ export default function Clientes() {
             <form onSubmit={handleActualizarCliente} className="p-6 space-y-4 text-body-sm">
               <div>
                 <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
-                  Cédula / Documento de Identidad
+                  Cédula / Documento de Identidad (10 o 13 dígitos)
                 </label>
                 <input
                   type="text"
                   value={formCliente.cedula}
-                  onChange={(e) => setFormCliente({ ...formCliente, cedula: e.target.value })}
-                  placeholder="Ej. 12345678"
-                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-mono text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40"
+                  onChange={(e) => {
+                    setFormCliente({ ...formCliente, cedula: e.target.value });
+                    if (errorsCliente.cedula) setErrorsCliente((prev) => ({ ...prev, cedula: null }));
+                  }}
+                  placeholder="Ej. 1710034065"
+                  className={`w-full px-4 py-2.5 rounded-2xl font-mono text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none transition-all ${
+                    errorsCliente.cedula
+                      ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                      : 'bg-surface-container-low border border-surface-container-high/40 focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20'
+                  }`}
                 />
+                {errorsCliente.cedula && (
+                  <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 animate-in fade-in">
+                    <span className="material-symbols-outlined text-[15px]">error</span>
+                    <span>{errorsCliente.cedula}</span>
+                  </div>
+                )}
               </div>
 
               <div>
                 <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
-                  Nombre Completo
+                  Nombre Completo *
                 </label>
                 <input
                   type="text"
-                  required
                   value={formCliente.nombre}
-                  onChange={(e) => setFormCliente({ ...formCliente, nombre: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-title-md text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40"
+                  onChange={(e) => {
+                    setFormCliente({ ...formCliente, nombre: e.target.value });
+                    if (errorsCliente.nombre) setErrorsCliente((prev) => ({ ...prev, nombre: null }));
+                  }}
+                  className={`w-full px-4 py-2.5 rounded-2xl font-title-md text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none transition-all ${
+                    errorsCliente.nombre
+                      ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                      : 'bg-surface-container-low border border-surface-container-high/40 focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20'
+                  }`}
                 />
+                {errorsCliente.nombre && (
+                  <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 animate-in fade-in">
+                    <span className="material-symbols-outlined text-[15px]">error</span>
+                    <span>{errorsCliente.nombre}</span>
+                  </div>
+                )}
               </div>
 
               <div>
                 <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
-                  Teléfono
+                  Teléfono Móvil (10 dígitos) *
                 </label>
                 <input
                   type="tel"
-                  required
                   value={formCliente.telefono}
-                  onChange={(e) => setFormCliente({ ...formCliente, telefono: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-mono text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40"
+                  onChange={(e) => {
+                    setFormCliente({ ...formCliente, telefono: e.target.value });
+                    if (errorsCliente.telefono) setErrorsCliente((prev) => ({ ...prev, telefono: null }));
+                  }}
+                  className={`w-full px-4 py-2.5 rounded-2xl font-mono text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none transition-all ${
+                    errorsCliente.telefono
+                      ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                      : 'bg-surface-container-low border border-surface-container-high/40 focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20'
+                  }`}
                 />
+                {errorsCliente.telefono && (
+                  <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 animate-in fade-in">
+                    <span className="material-symbols-outlined text-[15px]">error</span>
+                    <span>{errorsCliente.telefono}</span>
+                  </div>
+                )}
               </div>
 
               <div>
                 <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
-                  Correo Electrónico
+                  Correo Electrónico (Opcional)
                 </label>
                 <input
                   type="email"
                   value={formCliente.email}
-                  onChange={(e) => setFormCliente({ ...formCliente, email: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-title-md text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40"
+                  onChange={(e) => {
+                    setFormCliente({ ...formCliente, email: e.target.value });
+                    if (errorsCliente.email) setErrorsCliente((prev) => ({ ...prev, email: null }));
+                  }}
+                  className={`w-full px-4 py-2.5 rounded-2xl font-title-md text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none transition-all ${
+                    errorsCliente.email
+                      ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                      : 'bg-surface-container-low border border-surface-container-high/40 focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20'
+                  }`}
                 />
+                {errorsCliente.email && (
+                  <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 animate-in fade-in">
+                    <span className="material-symbols-outlined text-[15px]">error</span>
+                    <span>{errorsCliente.email}</span>
+                  </div>
+                )}
               </div>
 
               <div className="pt-3 border-t border-surface-container-low flex gap-2 justify-end">
@@ -1300,10 +1485,16 @@ export default function Clientes() {
                   Cliente Beneficiario *
                 </label>
                 <select
-                  required
                   value={formCupon.cliente_id}
-                  onChange={(e) => setFormCupon({ ...formCupon, cliente_id: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-title-md text-body-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40 cursor-pointer"
+                  onChange={(e) => {
+                    setFormCupon({ ...formCupon, cliente_id: e.target.value });
+                    if (errorsCupon.cliente_id) setErrorsCupon((prev) => ({ ...prev, cliente_id: null }));
+                  }}
+                  className={`w-full px-4 py-2.5 rounded-2xl font-title-md text-body-sm text-on-surface focus:outline-none transition-all cursor-pointer ${
+                    errorsCupon.cliente_id
+                      ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                      : 'bg-surface-container-low border border-surface-container-high/40 focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20'
+                  }`}
                 >
                   <option value="">Seleccione un cliente...</option>
                   {clientes.map((c) => (
@@ -1312,6 +1503,12 @@ export default function Clientes() {
                     </option>
                   ))}
                 </select>
+                {errorsCupon.cliente_id && (
+                  <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 animate-in fade-in">
+                    <span className="material-symbols-outlined text-[15px]">error</span>
+                    <span>{errorsCupon.cliente_id}</span>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -1320,12 +1517,24 @@ export default function Clientes() {
                 </label>
                 <input
                   type="text"
-                  required
                   value={formCupon.codigo}
-                  onChange={(e) => setFormCupon({ ...formCupon, codigo: e.target.value.toUpperCase() })}
+                  onChange={(e) => {
+                    setFormCupon({ ...formCupon, codigo: e.target.value.toUpperCase() });
+                    if (errorsCupon.codigo) setErrorsCupon((prev) => ({ ...prev, codigo: null }));
+                  }}
                   placeholder="Ej. VERANO20"
-                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-mono uppercase font-bold text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40"
+                  className={`w-full px-4 py-2.5 rounded-2xl font-mono uppercase font-bold text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none transition-all ${
+                    errorsCupon.codigo
+                      ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                      : 'bg-surface-container-low border border-surface-container-high/40 focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20'
+                  }`}
                 />
+                {errorsCupon.codigo && (
+                  <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 animate-in fade-in">
+                    <span className="material-symbols-outlined text-[15px]">error</span>
+                    <span>{errorsCupon.codigo}</span>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -1367,11 +1576,23 @@ export default function Clientes() {
                 <input
                   type="number"
                   step="0.01"
-                  required
                   value={formCupon.descuento_valor}
-                  onChange={(e) => setFormCupon({ ...formCupon, descuento_valor: Number(e.target.value) })}
-                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-headline-md font-bold text-body-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40"
+                  onChange={(e) => {
+                    setFormCupon({ ...formCupon, descuento_valor: Number(e.target.value) });
+                    if (errorsCupon.descuento_valor) setErrorsCupon((prev) => ({ ...prev, descuento_valor: null }));
+                  }}
+                  className={`w-full px-4 py-2.5 rounded-2xl font-headline-md font-bold text-body-sm text-on-surface focus:outline-none transition-all ${
+                    errorsCupon.descuento_valor
+                      ? 'bg-error-container/10 border-2 border-error focus:ring-2 focus:ring-error/20'
+                      : 'bg-surface-container-low border border-surface-container-high/40 focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20'
+                  }`}
                 />
+                {errorsCupon.descuento_valor && (
+                  <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 animate-in fade-in">
+                    <span className="material-symbols-outlined text-[15px]">error</span>
+                    <span>{errorsCupon.descuento_valor}</span>
+                  </div>
+                )}
               </div>
 
               <div className="pt-3 border-t border-surface-container-low flex gap-2 justify-end">
