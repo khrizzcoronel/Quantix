@@ -2,11 +2,12 @@ openapi: 3.0.3
 info:
   title: Quantix - API de Sincronización Offline (Módulo 008)
   version: 1.0.0
-  description: Endpoints para heartbeat de red y sincronización por lotes de ventas offline.
+  description: Endpoints para heartbeat de red, sincronización por lotes de ventas offline y resolución de conflictos.
 paths:
   /health:
     get:
       summary: Health check ultra-rápido para comprobación de conectividad
+      description: Endpoint raíz para verificar disponibilidad del backend y latencia de red.
       responses:
         '200':
           description: Servidor en línea
@@ -18,6 +19,12 @@ paths:
                   status:
                     type: string
                     example: ok
+                  service:
+                    type: string
+                    example: Quantix API
+                  version:
+                    type: string
+                    example: 1.0.0
                   timestamp:
                     type: string
                     format: date-time
@@ -25,6 +32,7 @@ paths:
   /api/v1/sync/ventas-offline:
     post:
       summary: Sincronizar lote de ventas generadas durante desconexión
+      description: Recibe ventas acumuladas en la terminal durante el periodo offline y las procesa en orden FIFO mediante reconciliación FEFO.
       requestBody:
         required: true
         content:
@@ -40,18 +48,92 @@ paths:
                     $ref: '#/components/schemas/VentaOfflineSyncItem'
       responses:
         '200':
-          description: Lote procesado con reporte de resultados
+          description: Lote procesado con reporte de resultados individuales por cada venta
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SyncResultadoResponse'
+        '401':
+          description: No autenticado o sesión no autorizada
+        '422':
+          description: Error de validación en la estructura del lote
 
   /api/v1/sync/conflictos:
     get:
-      summary: Listar ventas offline que tuvieron conflicto de stock
+      summary: Listar ventas offline que tuvieron conflicto de stock o incidencias
+      description: Permite a Supervisores y Directores auditar ventas en conflicto que requieren revisión.
+      parameters:
+        - name: estado
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [PENDIENTE_REVISION, RESUELTO, RECHAZADO]
+        - name: skip
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
       responses:
         '200':
           description: Lista de incidencias para revisión de supervisión
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IncidenciaConflictoSync'
+
+  /api/v1/sync/conflictos/{id}/resolver:
+    post:
+      summary: Resolver un conflicto de sincronización offline con registro de auditoría
+      description: Permite a Supervisores y Directores resolver discrepancias de inventario derivadas de ventas offline.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID único de la incidencia de conflicto
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - accion
+                - nota
+              properties:
+                accion:
+                  type: string
+                  enum: [ACEPTAR_CON_AJUSTE, DESCARTAR, REINTENTAR]
+                nota:
+                  type: string
+                  example: Stock ajustado físicamente en bodega.
+      responses:
+        '200':
+          description: Conflicto resuelto exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mensaje:
+                    type: string
+                    example: Conflicto resuelto con ajuste de inventario
+                  conflicto_id:
+                    type: string
+                  nuevo_estado:
+                    type: string
+                    example: RESUELTO
 
 components:
   schemas:
@@ -64,52 +146,181 @@ components:
       properties:
         producto_id:
           type: string
+          description: UUID del producto central
+        sku:
+          type: string
+          description: Código SKU del producto
+        nombre:
+          type: string
+          description: Nombre del producto
         cantidad:
           type: integer
+          description: Unidades vendidas
         precio_unitario:
           type: number
+          description: Precio unitario registrado en el momento offline
+        subtotal:
+          type: number
+          description: Subtotal de la línea de producto
+        lote_codigo:
+          type: string
+          nullable: true
+          description: Código de lote sugerido o vacío para asignación automática FEFO
 
     VentaOfflineSyncItem:
       type: object
       required:
         - id_local
+        - sesion_caja_id
+        - terminal_id
         - fecha_hora
         - subtotal
         - total_pagar
+        - metodo_pago
         - items
       properties:
         id_local:
           type: string
+          description: UUID generado en cliente para idempotencia estricta
+        sesion_caja_id:
+          type: string
+          description: ID de la sesión de caja en la que se cobró
+        terminal_id:
+          type: string
+          description: Identificador de la terminal física
+        usuario_id:
+          type: string
+          nullable: true
+          description: ID del cajero/usuario que registró la venta
         fecha_hora:
           type: string
           format: date-time
+          description: Marca de tiempo local de emisión del ticket
         subtotal:
           type: number
+          description: Subtotal antes de impuestos y descuentos
+        descuento:
+          type: number
+          default: 0
+          description: Descuento aplicado
+        impuestos:
+          type: number
+          default: 0
+          description: Impuestos calculados
         total_pagar:
           type: number
+          description: Total efectivamente cobrado
+        metodo_pago:
+          type: string
+          enum: [EFECTIVO]
+          description: Único método de pago admitido en modo offline
+        monto_recibido:
+          type: number
+          nullable: true
+          description: Efectivo entregado por el cliente
+        cambio:
+          type: number
+          nullable: true
+          description: Cambio devuelto
+        codigo_cupon:
+          type: string
+          nullable: true
+          description: Cupón (no permitido en offline estándar)
         items:
           type: array
           items:
             $ref: '#/components/schemas/ItemOffline'
 
+    SyncDetalleItem:
+      type: object
+      required:
+        - id_local
+        - estado
+      properties:
+        id_local:
+          type: string
+          description: UUID local de la venta reportada
+        estado:
+          type: string
+          enum:
+            - SINCRONIZADA
+            - YA_PROCESADA
+            - PENDIENTE_REVISION
+            - RECHAZADA
+          description: Resultado del procesamiento central para esta venta
+        venta_id:
+          type: string
+          nullable: true
+          description: UUID de la venta creada en el servidor central
+        folio_ticket:
+          type: string
+          nullable: true
+          description: Folio fiscal/ticket asignado en el servidor central
+        mensaje:
+          type: string
+          description: Detalle informativo o razón de rechazo/conflicto
+
     SyncResultadoResponse:
       type: object
+      required:
+        - procesadas
+        - exitosas
+        - conflictos
+        - detalles
       properties:
         procesadas:
           type: integer
+          description: Total de ventas evaluadas en el lote
         exitosas:
           type: integer
+          description: Ventas sincronizadas correctamente o ya existentes
         conflictos:
           type: integer
+          description: Ventas puestas en estado PENDIENTE_REVISION por discrepancia de stock
+        rechazadas:
+          type: integer
+          description: Ventas rechazadas por error de validación o seguridad
         detalles:
           type: array
           items:
-            type: object
-            properties:
-              id_local:
-                type: string
-              estado:
-                type: string
-                enum: [SINCRONIZADA, PENDIENTE_REVISION]
-              mensaje:
-                type: string
+            $ref: '#/components/schemas/SyncDetalleItem'
+
+    IncidenciaConflictoSync:
+      type: object
+      required:
+        - id
+        - id_local
+        - sesion_caja_id
+        - terminal_id
+        - fecha_recepcion
+        - motivo_conflicto
+        - estado
+      properties:
+        id:
+          type: string
+          description: ID de la incidencia
+        id_local:
+          type: string
+          description: UUID de la venta local en conflicto
+        sesion_caja_id:
+          type: string
+        terminal_id:
+          type: string
+        usuario_id:
+          type: string
+          nullable: true
+        fecha_local:
+          type: string
+          format: date-time
+        fecha_recepcion:
+          type: string
+          format: date-time
+        motivo_conflicto:
+          type: string
+        estado:
+          type: string
+          enum: [PENDIENTE_REVISION, RESUELTO, RECHAZADO]
+        venta_id:
+          type: string
+          nullable: true
+          description: Venta generada si fue aprobada o nulo si está retenida

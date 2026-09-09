@@ -7,6 +7,8 @@ class UserAuthResponse(BaseModel):
     email: str
     nombre: str
     rol: str
+    avatar: Optional[str] = None
+    telefono: Optional[str] = None
 
 class Token(BaseModel):
     access_token: str

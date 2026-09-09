@@ -32,6 +32,8 @@ export interface TicketData {
   monto_recibido?: number;
   cambio?: number;
   estado?: string;
+  es_offline?: boolean;
+  id_local?: string;
 }
 
 interface TicketModalProps {
@@ -70,9 +72,18 @@ export default function TicketModal({ isOpen, onClose, ticket }: TicketModalProp
     txt += center('Ciudad de México, CDMX - CP 03100') + '\n';
     txt += center('Tel: (55) 8000-QUANTIX') + '\n';
     txt += center('Régimen: 601 General Personas Morales') + '\n';
-    txt += '='.repeat(W) + '\n';
-    txt += `FOLIO: ${ticket.folio_ticket}\n`;
-    txt += `FECHA: ${new Date(ticket.fecha_hora).toLocaleString('es-MX')}\n`;
+    if (ticket.es_offline) {
+      txt += '='.repeat(W) + '\n';
+      txt += center('COMPROBANTE OFFLINE') + '\n';
+      txt += center('PENDIENTE DE SINCRONIZACION') + '\n';
+      txt += '='.repeat(W) + '\n';
+      txt += `ID LOCAL: ${ticket.id_local || ticket.folio_ticket}\n`;
+      txt += `FECHA LOCAL: ${new Date(ticket.fecha_hora).toLocaleString('es-MX')}\n`;
+    } else {
+      txt += '='.repeat(W) + '\n';
+      txt += `FOLIO: ${ticket.folio_ticket}\n`;
+      txt += `FECHA: ${new Date(ticket.fecha_hora).toLocaleString('es-MX')}\n`;
+    }
     txt += `TERMINAL: ${ticket.terminal_id || 'TERM-01'}   CAJA: 01\n`;
     txt += `CAJERO: ${ticket.cajero_nombre || 'Cajero en Turno'}\n`;
     if (ticket.cliente_nombre) {
@@ -122,11 +133,18 @@ export default function TicketModal({ isOpen, onClose, ticket }: TicketModalProp
 
     txt += '='.repeat(W) + '\n';
     txt += center('¡GRACIAS POR SU PREFERENCIA!') + '\n';
-    txt += center('Facturación CFDI en línea en:') + '\n';
-    txt += center('https://facturacion.quantix.mx') + '\n';
-    txt += center('Vigencia: 72 horas naturales') + '\n';
-    txt += '-'.repeat(W) + '\n';
-    txt += center(`*${ticket.folio_ticket}*`) + '\n';
+    if (ticket.es_offline) {
+      txt += center('Registro local en terminal offline') + '\n';
+      txt += center('Folio fiscal asignado al sincronizar') + '\n';
+      txt += '-'.repeat(W) + '\n';
+      txt += center(`*${ticket.id_local || ticket.folio_ticket}*`) + '\n';
+    } else {
+      txt += center('Facturación CFDI en línea en:') + '\n';
+      txt += center('https://facturacion.quantix.mx') + '\n';
+      txt += center('Vigencia: 72 horas naturales') + '\n';
+      txt += '-'.repeat(W) + '\n';
+      txt += center(`*${ticket.folio_ticket}*`) + '\n';
+    }
 
     const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -357,14 +375,20 @@ export default function TicketModal({ isOpen, onClose, ticket }: TicketModalProp
               </div>
               <div>
                 <h3 className="text-base font-black text-gray-900 flex items-center gap-2">
-                  Ticket de Venta Térmico (80mm)
-                  {ticket.estado === 'COMPLETADA' && (
+                  {ticket.es_offline ? 'Comprobante de Venta Offline' : 'Ticket de Venta Térmico (80mm)'}
+                  {ticket.es_offline ? (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 font-bold border border-amber-300">
+                      Pendiente de Sincronización
+                    </span>
+                  ) : ticket.estado === 'COMPLETADA' && (
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold border border-emerald-200">
                       Emitido
                     </span>
                   )}
                 </h3>
-                <p className="text-xs text-gray-500 font-mono">Folio: {ticket.folio_ticket}</p>
+                <p className="text-xs text-gray-500 font-mono">
+                  {ticket.es_offline ? `ID Local: ${ticket.id_local || ticket.folio_ticket}` : `Folio: ${ticket.folio_ticket}`}
+                </p>
               </div>
             </div>
 
@@ -400,14 +424,28 @@ export default function TicketModal({ isOpen, onClose, ticket }: TicketModalProp
                 <p className="text-[9px] text-gray-500">Régimen 601 General de Ley Personas Morales</p>
               </div>
 
+              {/* Banner Destacado para Modo Offline */}
+              {ticket.es_offline && (
+                <div className="my-2.5 p-2 bg-amber-50 border-2 border-dashed border-amber-400 rounded-lg text-center">
+                  <span className="font-black text-[10px] text-amber-900 block uppercase tracking-tight">
+                    COMPROBANTE OFFLINE / PENDIENTE DE SINCRONIZACIÓN
+                  </span>
+                  <span className="text-[9px] text-amber-700 block mt-0.5 font-medium">
+                    Pago en efectivo registrado en terminal local durante desconexión.
+                  </span>
+                </div>
+              )}
+
               {/* Metadatos de la Venta */}
               <div className="py-2.5 border-b border-dashed border-gray-300 space-y-1 text-[11px]">
                 <div className="flex justify-between font-bold">
-                  <span>FOLIO:</span>
-                  <span className="font-mono text-gray-900">{ticket.folio_ticket}</span>
+                  <span>{ticket.es_offline ? 'ID LOCAL:' : 'FOLIO:'}</span>
+                  <span className="font-mono text-gray-900 text-[10px] break-all text-right max-w-[210px]">
+                    {ticket.es_offline ? (ticket.id_local || ticket.folio_ticket) : ticket.folio_ticket}
+                  </span>
                 </div>
                 <div className="flex justify-between text-gray-600 text-[10px]">
-                  <span>FECHA Y HORA:</span>
+                  <span>FECHA Y HORA {ticket.es_offline ? 'LOCAL:' : ':'}</span>
                   <span>{new Date(ticket.fecha_hora).toLocaleString('es-MX')}</span>
                 </div>
                 <div className="flex justify-between text-gray-600 text-[10px]">
@@ -558,54 +596,70 @@ export default function TicketModal({ isOpen, onClose, ticket }: TicketModalProp
                     })}
                   </svg>
                   <span className="text-[9px] font-mono tracking-widest text-gray-600 mt-0.5">
-                    *{ticket.folio_ticket}*
+                    *{ticket.es_offline ? (ticket.id_local || ticket.folio_ticket) : ticket.folio_ticket}*
                   </span>
                 </div>
 
-                {/* SVG Código QR Fiscal */}
-                <div className="flex items-center justify-center gap-3 pt-1">
-                  <div className="p-1.5 bg-white border border-gray-300 rounded shadow-sm inline-block">
-                    <svg className="w-16 h-16" viewBox="0 0 33 33" fill="none">
-                      {/* Marcadores de Esquina QR */}
-                      {/* Top-Left */}
-                      <rect x="1" y="1" width="9" height="9" fill="black" />
-                      <rect x="2.5" y="2.5" width="6" height="6" fill="white" />
-                      <rect x="4" y="4" width="3" height="3" fill="black" />
-
-                      {/* Top-Right */}
-                      <rect x="23" y="1" width="9" height="9" fill="black" />
-                      <rect x="24.5" y="2.5" width="6" height="6" fill="white" />
-                      <rect x="26" y="4" width="3" height="3" fill="black" />
-
-                      {/* Bottom-Left */}
-                      <rect x="1" y="23" width="9" height="9" fill="black" />
-                      <rect x="2.5" y="24.5" width="6" height="6" fill="white" />
-                      <rect x="4" y="26" width="3" height="3" fill="black" />
-
-                      {/* Puntos y patrones del cuerpo del QR */}
-                      {[
-                        [12, 2], [14, 2], [16, 4], [18, 2], [20, 3],
-                        [11, 6], [13, 5], [15, 8], [17, 6], [19, 7],
-                        [2, 12], [4, 14], [6, 11], [8, 13],
-                        [12, 12], [14, 13], [16, 11], [18, 14], [20, 12],
-                        [23, 13], [25, 12], [27, 14], [29, 11], [31, 13],
-                        [12, 16], [15, 17], [17, 19], [19, 16],
-                        [11, 20], [13, 21], [16, 22], [18, 20], [21, 22],
-                        [12, 25], [15, 27], [18, 24], [20, 26],
-                        [24, 23], [26, 25], [28, 23], [30, 26], [31, 24],
-                        [23, 28], [25, 30], [27, 29], [29, 31], [31, 28]
-                      ].map(([x, y], idx) => (
-                        <rect key={idx} x={x} y={y} width="1.4" height="1.4" fill="black" />
-                      ))}
-                    </svg>
+                {/* Sección Fiscal vs Comprobante Offline */}
+                {ticket.es_offline ? (
+                  <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-lg text-center space-y-1 my-2">
+                    <p className="font-bold text-[10px] text-amber-900 uppercase tracking-wide">
+                      Registro Local en Terminal
+                    </p>
+                    <p className="text-[9px] text-amber-800 leading-tight">
+                      Venta persistida durablemente en almacenamiento local offline.<br />
+                      El folio fiscal central se emitirá al conectar con el servidor.
+                    </p>
+                    <p className="text-[9px] font-mono text-gray-500 pt-0.5 break-all">
+                      ID Local: {ticket.id_local || ticket.folio_ticket}
+                    </p>
                   </div>
-                  <div className="text-left text-[9px] text-gray-500 leading-tight space-y-0.5">
-                    <p className="font-bold text-gray-700">Comprobante Fiscal Digital</p>
-                    <p>Factura en: <strong>quantix.mx/factura</strong></p>
-                    <p>UUID: {ticket.id ? ticket.id.slice(0, 13) + '...' : 'QTX-VALID-CFDI'}</p>
-                    <p className="text-emerald-700 font-semibold">Descarga FEFO verificada</p>
+                ) : (
+                  /* SVG Código QR Fiscal */
+                  <div className="flex items-center justify-center gap-3 pt-1">
+                    <div className="p-1.5 bg-white border border-gray-300 rounded shadow-sm inline-block">
+                      <svg className="w-16 h-16" viewBox="0 0 33 33" fill="none">
+                        {/* Marcadores de Esquina QR */}
+                        {/* Top-Left */}
+                        <rect x="1" y="1" width="9" height="9" fill="black" />
+                        <rect x="2.5" y="2.5" width="6" height="6" fill="white" />
+                        <rect x="4" y="4" width="3" height="3" fill="black" />
+
+                        {/* Top-Right */}
+                        <rect x="23" y="1" width="9" height="9" fill="black" />
+                        <rect x="24.5" y="2.5" width="6" height="6" fill="white" />
+                        <rect x="26" y="4" width="3" height="3" fill="black" />
+
+                        {/* Bottom-Left */}
+                        <rect x="1" y="23" width="9" height="9" fill="black" />
+                        <rect x="2.5" y="24.5" width="6" height="6" fill="white" />
+                        <rect x="4" y="26" width="3" height="3" fill="black" />
+
+                        {/* Puntos y patrones del cuerpo del QR */}
+                        {[
+                          [12, 2], [14, 2], [16, 4], [18, 2], [20, 3],
+                          [11, 6], [13, 5], [15, 8], [17, 6], [19, 7],
+                          [2, 12], [4, 14], [6, 11], [8, 13],
+                          [12, 12], [14, 13], [16, 11], [18, 14], [20, 12],
+                          [23, 13], [25, 12], [27, 14], [29, 11], [31, 13],
+                          [12, 16], [15, 17], [17, 19], [19, 16],
+                          [11, 20], [13, 21], [16, 22], [18, 20], [21, 22],
+                          [12, 25], [15, 27], [18, 24], [20, 26],
+                          [24, 23], [26, 25], [28, 23], [30, 26], [31, 24],
+                          [23, 28], [25, 30], [27, 29], [29, 31], [31, 28]
+                        ].map(([x, y], idx) => (
+                          <rect key={idx} x={x} y={y} width="1.4" height="1.4" fill="black" />
+                        ))}
+                      </svg>
+                    </div>
+                    <div className="text-left text-[9px] text-gray-500 leading-tight space-y-0.5">
+                      <p className="font-bold text-gray-700">Comprobante Fiscal Digital</p>
+                      <p>Factura en: <strong>quantix.mx/factura</strong></p>
+                      <p>UUID: {ticket.id ? ticket.id.slice(0, 13) + '...' : 'QTX-VALID-CFDI'}</p>
+                      <p className="text-emerald-700 font-semibold">Descarga FEFO verificada</p>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="pt-2 text-[10px] text-gray-500 leading-tight">
                   <p className="font-bold text-gray-800">¡GRACIAS POR SU COMPRA!</p>

@@ -1,6 +1,6 @@
-# Análisis de Cobertura de Requisitos (Gap Analysis) v4
+# Análisis de Cobertura de Requisitos (Gap Analysis) v5
 
-**Actualizado:** 2026-09-08  
+**Actualizado:** 2026-09-09  
 **Fuente de verdad:** código y pruebas presentes en el repositorio. La existencia de una especificación no se considera evidencia de implementación.
 
 ## Escala de estado
@@ -16,7 +16,7 @@
 | RF-POS-01 Búsqueda y cobro rápido | Implementado | Catálogo y búsqueda vía API. El objetivo de 200 ms aún necesita prueba de rendimiento. |
 | RF-POS-02 Cobro multimodal | Parcial | Efectivo, pagos divididos y pasarela simulada determinista con intentos persistentes y conciliación. No existe integración bancaria o datáfono real. |
 | RF-POS-03 Identificación del cliente | Implementado | Asociación opcional por teléfono desde POS y CRM. |
-| RF-POS-04 Offline-first | Pendiente | Ante fallo se conserva el carrito; aún no existe IndexedDB, cola FIFO o sincronización de ventas. |
+| RF-POS-04 Offline-first | Implementado | Modo degradado en POS: cobro exclusivo en efectivo, catálogo local en IndexedDB (`quantix_offline_db`), emisión de comprobante offline explícito con ID local (sin folio fiscal falso) y persistencia durable ante recargas de navegador o desconexión. |
 | RF-POS-05 Comprobantes | Parcial | Ticket visual/imprimible implementado. Envío automático por correo/SMS pendiente. |
 | RF-POS-06 Usuarios y sesión | Implementado | Login JWT, roles, apertura, recuperación de sesión real y arqueo. |
 | RF-INV-01 Trazabilidad por lote | Implementado | Lotes con código, costo, cantidad y vencimiento; recepción desde órdenes de compra. |
@@ -48,7 +48,7 @@
 | :--- | :--- | :--- |
 | RNF-PERF-01/02 | Sin certificar | No hay pruebas automáticas de latencia de búsqueda o checkout. |
 | RNF-PERF-03 | Sin certificar | No hay benchmark con un millón de registros. |
-| RNF-DISP-01/02 | Pendiente | Offline-first y recuperación local siguen pendientes. |
+| RNF-DISP-01/02 | Implementado | Arquitectura offline-first completa: IndexedDB nativo (`quantix_offline_db` v1 con stores `catalogo`, `ventas`, `cola_sync`, `metadata`), snapshot configurable con TTL (24h), cola FIFO transaccional con Web Locks API (`quantix_sync_lock`), tolerancia a desconexión con histéresis anti-oscilación (2 fallos = offline, 2 éxitos = online), asignación FEFO en servidor sin stock negativo (`PENDIENTE_REVISION` + `IncidenciaSync`) y supervisión auditada de incidencias. |
 | RNF-SEG-01 | Implementado | bcrypt y JWT; los secretos se inyectan por entorno. |
 | RNF-SEG-02 | Implementado para simulación | La pasarela simulada no recibe ni almacena PAN/CVV. |
 | RNF-SEG-03 | Implementado básico | REST y WebSocket requieren JWT; el frontend bloquea también la navegación directa según rol. |
@@ -57,16 +57,15 @@
 
 ## Calidad verificada
 
-- 68 pruebas automáticas aprobadas en la ejecución conjunta.
+- 73 pruebas automáticas aprobadas en backend (pytest), 0 advertencias de linter (oxlint) y compilación exitosa (tsc + Vite).
 - Build TypeScript/Vite y lint frontend aprobados sin advertencias.
 - Rutas frontend protegidas por rol y módulos cargados bajo demanda.
-- Migraciones Alembic verificadas mediante `upgrade → downgrade → upgrade` sobre una base vacía.
+- Migraciones Alembic verificadas mediante `upgrade → downgrade → upgrade` sobre una base vacía (incluyendo revisión `0004_offline_sync`).
 - El frontend no contiene datos mock de negocio, comprobantes contables locales inventados ni convierte errores de API en operaciones exitosas.
 
 ## Próximas prioridades
 
-1. Offline-first con IndexedDB, idempotencia y resolución de conflictos.
-2. Adaptador de proveedor real, webhooks firmados y conciliación bancaria.
-3. Gold dimensional completo, RFM/LTV y tableros restantes.
-4. Multi-sucursal y aislamiento obligatorio de consultas.
-5. Pruebas E2E, rendimiento y CI.
+1. Adaptador de proveedor real, webhooks firmados y conciliación bancaria.
+2. Gold dimensional completo, RFM/LTV y tableros restantes.
+3. Multi-sucursal y aislamiento obligatorio de consultas.
+4. Pruebas E2E, rendimiento y CI.

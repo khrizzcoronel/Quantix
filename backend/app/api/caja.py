@@ -135,7 +135,7 @@ async def arqueo_ciego(
         .join(Venta)
         .where(
             Venta.sesion_caja_id == sesion.id,
-            Venta.estado == 'COMPLETADA'
+            Venta.estado.in_(['COMPLETADA', 'PAGADO'])
         )
     )
     result_pagos = await db.execute(query_pagos)
@@ -340,7 +340,7 @@ async def obtener_corte_z(
     )
     ventas = ventas_q.scalars().all()
 
-    ventas_completadas = [v for v in ventas if (v.estado.value if hasattr(v.estado, 'value') else str(v.estado)) == 'COMPLETADA']
+    ventas_completadas = [v for v in ventas if (v.estado.value if hasattr(v.estado, 'value') else str(v.estado)) in {'COMPLETADA', 'PAGADO'}]
     tickets_anulados = sum(1 for v in ventas if (v.estado.value if hasattr(v.estado, 'value') else str(v.estado)) == 'ANULADA')
 
     primer_folio = ventas_completadas[0].folio_ticket if ventas_completadas else (ventas[0].folio_ticket if ventas else None)
@@ -355,7 +355,7 @@ async def obtener_corte_z(
     pagos_q = await db.execute(
         select(PagoVenta)
         .join(Venta, PagoVenta.venta_id == Venta.id)
-        .where(Venta.sesion_caja_id == sesion.id, Venta.estado == 'COMPLETADA')
+        .where(Venta.sesion_caja_id == sesion.id, Venta.estado.in_(['COMPLETADA', 'PAGADO']))
     )
     pagos = pagos_q.scalars().all()
 
@@ -444,7 +444,7 @@ async def obtener_estadisticas_historicas(
             func.count(Venta.id).label("tickets_count"),
             func.coalesce(func.sum(Venta.total_pagar), 0).label("monto_ventas")
         )
-        .where(Venta.estado == 'COMPLETADA')
+        .where(Venta.estado.in_(['COMPLETADA', 'PAGADO']))
         .group_by(Venta.sesion_caja_id)
     )
     result_v = await db.execute(query_ventas)

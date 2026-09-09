@@ -29,6 +29,7 @@ class Usuario(Base):
     rol: Mapped[RolUsuario] = mapped_column(SAEnum(RolUsuario), nullable=False)
     activo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     avatar: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    telefono: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
     creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
     sesiones_caja: Mapped[list["SesionCaja"]] = relationship("SesionCaja", back_populates="usuario", cascade="all, delete-orphan")

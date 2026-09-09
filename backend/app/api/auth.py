@@ -42,7 +42,8 @@ async def login_access_token(
             "email": user.email,
             "nombre": user.nombre,
             "rol": user.rol.name,
-            "avatar": user.avatar
+            "avatar": user.avatar,
+            "telefono": user.telefono
         }
     }
 

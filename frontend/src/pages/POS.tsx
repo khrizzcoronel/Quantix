@@ -1,7 +1,10 @@
-import React, { useState, useEffect, useEffectEvent, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useEffectEvent, useRef, useMemo, useCallback } from 'react';
 import { usePOSStore } from '../store/posStore';
 import { useCajaStore } from '../store/cajaStore';
 import { useAuthStore } from '../store/authStore';
+import { useConnectivityStore } from '../store/connectivityStore';
+import { buscarProductosLocales } from '../services/offline/snapshotService';
+import { guardarVentaOffline } from '../services/offline/queueService';
 import { 
   Search, Trash2, Plus, Minus, CreditCard, Banknote, ShoppingCart, 
   UserCheck, Tag, LogOut, ShieldCheck, CheckCircle2, Receipt,
@@ -69,6 +72,11 @@ export default function POS() {
   const { cart, total, addItem, removeItem, updateQuantity, clearCart } = usePOSStore();
   const { estaAbierta, sesionActiva, recuperarSesionActiva } = useCajaStore();
   const user = useAuthStore((state) => state.user);
+  const {
+    status: connectivityStatus,
+    refreshPendingCount,
+    refrescarSnapshot
+  } = useConnectivityStore();
 
   const [products, setProducts] = useState<ProductoCatalogo[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -124,30 +132,77 @@ export default function POS() {
   const clienteTelefonoRef = useRef<HTMLInputElement>(null);
   const checkoutIdempotencyRef = useRef<string | null>(null);
 
-  // Cargar catálogo de productos real de la API
-  const cargarCatalogo = async () => {
-    try {
-      const res = await api.get('/inventario/productos?activo_only=true');
-      const mapeados: ProductoCatalogo[] = (res.data || []).map((p: any) => ({
+  // Cargar catálogo de productos real de la API o IndexedDB
+  const cargarCatalogo = useCallback(async () => {
+    if (connectivityStatus === 'OFFLINE_LISTO') {
+      try {
+        const locales = await buscarProductosLocales('');
+        const mapeados: ProductoCatalogo[] = locales.map((p) => ({
           producto_id: p.id,
           sku: p.sku,
           nombre: p.nombre,
           precio_venta: Number(p.precio_venta),
-          codigo_barras: p.codigo_barras,
+          codigo_barras: p.codigo_barras || undefined,
           stock_total: p.stock_total || 0,
-          categoria_nombre: p.categoria_nombre,
-          requiere_pesaje: p.requiere_pesaje,
+          categoria_nombre: p.categoria_nombre || undefined,
+          requiere_pesaje: Boolean(p.requiere_pesaje),
           imagen: p.imagen || null
         }));
+        setProducts(mapeados);
+      } catch (err: unknown) {
+        setProducts([]);
+        setOperationError(getApiError(err, 'No se pudo cargar el catálogo local offline.'));
+      }
+      return;
+    }
+
+    if (connectivityStatus === 'OFFLINE_NO_DISPONIBLE') {
+      setProducts([]);
+      return;
+    }
+
+    try {
+      const res = await api.get('/inventario/productos?activo_only=true');
+      const mapeados: ProductoCatalogo[] = (res.data || []).map((p: any) => ({
+        producto_id: p.id,
+        sku: p.sku,
+        nombre: p.nombre,
+        precio_venta: Number(p.precio_venta),
+        codigo_barras: p.codigo_barras,
+        stock_total: p.stock_total || 0,
+        categoria_nombre: p.categoria_nombre,
+        requiere_pesaje: p.requiere_pesaje,
+        imagen: p.imagen || null
+      }));
       setProducts(mapeados);
+      void refrescarSnapshot();
     } catch (error: unknown) {
+      // Fallback a catálogo local offline si la API no responde
+      try {
+        const locales = await buscarProductosLocales('');
+        if (locales.length > 0) {
+          const mapeados: ProductoCatalogo[] = locales.map((p) => ({
+            producto_id: p.id,
+            sku: p.sku,
+            nombre: p.nombre,
+            precio_venta: Number(p.precio_venta),
+            codigo_barras: p.codigo_barras || undefined,
+            stock_total: p.stock_total || 0,
+            categoria_nombre: p.categoria_nombre || undefined,
+            requiere_pesaje: Boolean(p.requiere_pesaje),
+            imagen: p.imagen || null
+          }));
+          setProducts(mapeados);
+          return;
+        }
+      } catch {}
       setProducts([]);
       setOperationError(getApiError(error, 'No se pudo cargar el catálogo. No se usarán datos simulados.'));
     }
-  };
+  }, [connectivityStatus, refrescarSnapshot]);
 
   // Cargar lista de ventas recientes
-  const cargarVentas = async () => {
+  const cargarVentas = useCallback(async () => {
     try {
       const res = await api.get('/pos/ventas?limit=50');
       setTicketsList(res.data);
@@ -155,17 +210,19 @@ export default function POS() {
       setTicketsList([]);
       setOperationError(getApiError(error, 'No se pudo consultar el historial de ventas.'));
     }
-  };
+  }, []);
 
   useEffect(() => {
     queueMicrotask(() => {
       void cargarCatalogo();
-      void cargarVentas();
+      if (connectivityStatus === 'ONLINE') {
+        void cargarVentas();
+      }
       recuperarSesionActiva().catch((error: unknown) => {
         setOperationError(getApiError(error, 'No se pudo verificar la sesión activa de caja.'));
       });
     });
-  }, [recuperarSesionActiva]);
+  }, [recuperarSesionActiva, connectivityStatus, cargarCatalogo, cargarVentas]);
 
   // Calcular total acumulado de ventas del turno para gamificación
   const ventasTurnoTotal = useMemo(() => {
@@ -316,6 +373,10 @@ export default function POS() {
 
   const buscarCliente = async () => {
     if (!clienteTelefono) return;
+    if (connectivityStatus !== 'ONLINE') {
+      setOperationError('La búsqueda y fidelización CRM requieren conexión al servidor central.');
+      return;
+    }
     try {
       const res = await api.get(`/crm/clientes/buscar/${clienteTelefono}`);
       setClienteData({
@@ -331,6 +392,11 @@ export default function POS() {
 
   const aplicarCupon = async () => {
     if (!codigoCupon) return;
+    if (connectivityStatus !== 'ONLINE') {
+      setDescuentoCupon(0);
+      setCuponMensaje('Los cupones de descuento no están disponibles en modo offline.');
+      return;
+    }
     try {
       const res = await api.post('/crm/cupones/validar', { codigo: codigoCupon });
       if (res.data.valido) {
@@ -348,14 +414,99 @@ export default function POS() {
     }
   };
 
-  const totalConDescuento = Math.max(0, total - descuentoCupon);
+  const effectivePaymentMethod = connectivityStatus !== 'ONLINE' ? 'EFECTIVO' : paymentMethod;
+  const effectiveDescuentoCupon = connectivityStatus !== 'ONLINE' ? 0 : descuentoCupon;
+  const totalConDescuento = Math.max(0, total - effectiveDescuentoCupon);
 
   const handleCheckout = async () => {
     if (cart.length === 0 || !sesionActiva) return;
+
+    if (connectivityStatus === 'OFFLINE_NO_DISPONIBLE') {
+      setOperationError('Cobro suspendido: Se requiere conexión al servidor para descargar el catálogo inicial.');
+      return;
+    }
+
     setIsProcessing(true);
     setSaleSuccess(null);
     setOperationError(null);
 
+    // MODO OFFLINE SEGURO: Guardar durablemente en IndexedDB
+    if (connectivityStatus === 'OFFLINE_LISTO') {
+      try {
+        const totalPagarOffline = total * 1.16;
+        const ventaLocal = await guardarVentaOffline({
+          sesion_caja_id: sesionActiva.id,
+          terminal_id: sesionActiva.terminal_id || 'TERM-01',
+          usuario_id: user?.id || null,
+          cajero_nombre: user?.nombre || 'Cajero en Turno',
+          cliente_id: clienteData && clienteData.id !== 'cli-temp' ? clienteData.id : null,
+          cliente_nombre: clienteData?.nombre || null,
+          cliente_telefono: clienteTelefono.trim() || null,
+          items: cart.map((item) => ({
+            producto_id: item.producto_id,
+            sku: item.sku,
+            nombre: item.nombre,
+            cantidad: item.cantidad,
+            precio_unitario: item.precio_venta,
+            subtotal: item.precio_venta * item.cantidad,
+            lote_codigo: null
+          })),
+          subtotal: total,
+          descuento: 0,
+          impuestos: total * 0.16,
+          total_pagar: totalPagarOffline,
+          monto_recibido: totalPagarOffline,
+          cambio: 0,
+          codigo_cupon: null
+        });
+
+        setCurrentTicketData({
+          id: ventaLocal.id_local,
+          folio_ticket: `OFFLINE-${ventaLocal.id_local.slice(0, 8).toUpperCase()}`,
+          id_local: ventaLocal.id_local,
+          es_offline: true,
+          fecha_hora: ventaLocal.fecha_hora,
+          terminal_id: sesionActiva.terminal_id || 'TERM-01',
+          cajero_nombre: user?.nombre || 'Cajero en Turno',
+          cliente_nombre: clienteData?.nombre || null,
+          cliente_telefono: clienteTelefono.trim() || null,
+          items: cart.map((item) => ({
+            nombre: item.nombre,
+            sku: item.sku,
+            cantidad: item.cantidad,
+            precio_unitario: item.precio_venta,
+            subtotal: item.precio_venta * item.cantidad,
+            lote_codigo: 'Asignación FEFO al sincronizar'
+          })),
+          subtotal: total,
+          descuento: 0,
+          impuestos: total * 0.16,
+          total: totalPagarOffline,
+          metodo_pago: 'EFECTIVO',
+          monto_recibido: totalPagarOffline,
+          cambio: 0,
+          estado: 'PENDIENTE_SYNC'
+        });
+
+        setShowTicketModal(true);
+        setSaleSuccess(`Venta offline guardada localmente (UUID: ${ventaLocal.id_local.slice(0, 8)}...). Pendiente de sincronización.`);
+        clearCart();
+        setClienteData(null);
+        setClienteTelefono('');
+        setCodigoCupon('');
+        setDescuentoCupon(0);
+        setCuponMensaje(null);
+        checkoutIdempotencyRef.current = null;
+        void refreshPendingCount();
+      } catch (error: unknown) {
+        setOperationError(getApiError(error, 'Error al guardar la venta en la base de datos local IndexedDB.'));
+      } finally {
+        setIsProcessing(false);
+      }
+      return;
+    }
+
+    // MODO ONLINE: Checkout estándar vía API REST
     const totalPagarFinal = totalConDescuento * 1.16;
     const payload = {
       sesion_caja_id: sesionActiva.id,
@@ -366,9 +517,9 @@ export default function POS() {
       })),
       pagos: [
         {
-          metodo_pago: paymentMethod,
+          metodo_pago: effectivePaymentMethod,
           monto: totalPagarFinal,
-          referencia_pasarela: paymentMethod === 'TARJETA' ? 'SIM-APPROVED' : null
+          referencia_pasarela: effectivePaymentMethod === 'TARJETA' ? 'SIM-APPROVED' : null
         }
       ],
       codigo_cupon: codigoCupon.trim() || null,
@@ -953,10 +1104,10 @@ export default function POS() {
               <span>Subtotal:</span>
               <span>${total.toFixed(2)}</span>
             </div>
-            {descuentoCupon > 0 && (
+            {effectiveDescuentoCupon > 0 && (
               <div className="flex justify-between text-emerald-600 font-semibold">
                 <span>Descuento cupón:</span>
-                <span>-${descuentoCupon.toFixed(2)}</span>
+                <span>-${effectiveDescuentoCupon.toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between text-gray-500">
@@ -969,34 +1120,65 @@ export default function POS() {
             </div>
           </div>
 
+          {/* Aviso de Modo Offline / No Disponible */}
+          {connectivityStatus === 'OFFLINE_NO_DISPONIBLE' && (
+            <div className="p-2.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl font-bold text-center mb-3">
+              Cobro suspendido: Se requiere conexión al servidor para descargar el catálogo inicial.
+            </div>
+          )}
+
+          {connectivityStatus === 'OFFLINE_LISTO' && (
+            <div className="p-2 bg-amber-50 border border-amber-200 text-amber-800 text-[11px] rounded-xl font-semibold flex items-center gap-1.5 mb-3">
+              <Banknote className="w-3.5 h-3.5 shrink-0 text-amber-600" />
+              <span>Modo Offline: Cobro exclusivo en Efectivo. Venta guardada durablemente en IndexedDB.</span>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-2 mb-3">
             <button 
               onClick={() => setPaymentMethod('EFECTIVO')}
               className={`py-2.5 rounded-xl flex items-center justify-center gap-2 border-2 transition-colors text-xs font-bold ${
-                paymentMethod === 'EFECTIVO' ? 'border-quantix-500 bg-quantix-50 text-quantix-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                effectivePaymentMethod === 'EFECTIVO' ? 'border-quantix-500 bg-quantix-50 text-quantix-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'
               }`}
             >
               <Banknote className="w-4 h-4" />
               Efectivo
             </button>
             <button 
+              disabled={connectivityStatus !== 'ONLINE'}
               onClick={() => setPaymentMethod('TARJETA')}
               className={`py-2.5 rounded-xl flex items-center justify-center gap-2 border-2 transition-colors text-xs font-bold ${
-                paymentMethod === 'TARJETA' ? 'border-quantix-500 bg-quantix-50 text-quantix-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                connectivityStatus !== 'ONLINE'
+                  ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : effectivePaymentMethod === 'TARJETA'
+                  ? 'border-quantix-500 bg-quantix-50 text-quantix-700'
+                  : 'border-gray-200 text-gray-600 hover:border-gray-300'
               }`}
+              title={connectivityStatus !== 'ONLINE' ? 'Tarjeta deshabilitada en modo offline' : 'Cobro con tarjeta'}
             >
               <CreditCard className="w-4 h-4" />
-              Tarjeta
+              Tarjeta {connectivityStatus !== 'ONLINE' && '(Bloqueado)'}
             </button>
           </div>
 
           <button 
-            disabled={cart.length === 0 || isProcessing || !estaAbierta}
+            disabled={
+              cart.length === 0 || 
+              isProcessing || 
+              !estaAbierta || 
+              connectivityStatus === 'OFFLINE_NO_DISPONIBLE'
+            }
             onClick={handleCheckout}
             className="w-full py-3.5 bg-quantix-600 hover:bg-quantix-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-extrabold rounded-xl shadow-lg transition-all text-base flex items-center justify-center gap-2 active:scale-95"
             title="Cobrar venta [F3]"
           >
-            {isProcessing ? 'Descargando FEFO...' : `Cobrar $${(totalConDescuento * 1.16).toFixed(2)} [F3]`}
+            {isProcessing
+              ? (connectivityStatus === 'OFFLINE_LISTO' ? 'Guardando en IndexedDB...' : 'Descargando FEFO...')
+              : connectivityStatus === 'OFFLINE_NO_DISPONIBLE'
+              ? 'Cobro Suspendido (Sin conexión)'
+              : connectivityStatus === 'OFFLINE_LISTO'
+              ? `Cobrar en Efectivo $${(total * 1.16).toFixed(2)} (Offline) [F3]`
+              : `Cobrar $${(totalConDescuento * 1.16).toFixed(2)} [F3]`}
           </button>
         </div>
       </div>

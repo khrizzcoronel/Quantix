@@ -8,6 +8,7 @@ export interface User {
   nombre: string;
   rol: string;
   avatar?: string | null;
+  telefono?: string | null;
 }
 
 interface AuthState {
@@ -17,6 +18,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<User>;
   logout: () => void;
   updateAvatar: (avatar: string) => void;
+  updateProfile: (data: Partial<User>) => void;
 }
 
 // Función auxiliar para decodificar el payload del token JWT de forma segura
@@ -84,6 +86,13 @@ export const useAuthStore = create<AuthState>()(
         const currentUser = get().user;
         if (currentUser) {
           set({ user: { ...currentUser, avatar } });
+        }
+      },
+
+      updateProfile: (data: Partial<User>) => {
+        const currentUser = get().user;
+        if (currentUser) {
+          set({ user: { ...currentUser, ...data } });
         }
       },
     }),

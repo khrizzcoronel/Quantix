@@ -28,6 +28,7 @@ class EstadoVenta(str, Enum):
     CANCELADA_PARCIAL = "CANCELADA_PARCIAL"
     ANULADA = "ANULADA"
     PENDIENTE_SYNC = "PENDIENTE_SYNC"
+    PAGADO = "PAGADO"
 
 class MetodoPago(str, Enum):
     EFECTIVO = "EFECTIVO"
