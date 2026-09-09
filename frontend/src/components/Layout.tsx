@@ -301,9 +301,11 @@ export default function Layout() {
               <button
                 type="button"
                 onClick={() => setModalPerfilOpen(true)}
-                className="font-label-caps text-[10px] text-primary hover:underline font-bold cursor-pointer uppercase tracking-wider"
+                className="flex items-center justify-center p-1.5 rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container-high/60 transition-colors cursor-pointer group"
+                title="Configuración de Perfil"
+                aria-label="Configuración de perfil"
               >
-                Editar Perfil
+                <span className="material-symbols-outlined text-[18px] transition-transform duration-300 group-hover:rotate-45 leading-none">settings</span>
               </button>
               <button 
                 onClick={handleLogout}
