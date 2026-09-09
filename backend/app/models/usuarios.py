@@ -19,6 +19,10 @@ class EstadoSesionCaja(enum.Enum):
     CERRADA = "CERRADA"
     DESCUADRE = "DESCUADRE"
 
+class TipoMovimientoCaja(enum.Enum):
+    INGRESO = "INGRESO"
+    EGRESO = "EGRESO"
+
 class Usuario(Base):
     __tablename__ = 'usuario'
 
@@ -30,6 +34,7 @@ class Usuario(Base):
     activo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     avatar: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     telefono: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
+    sucursal_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey('sucursal.id'), nullable=True)
     creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
     sesiones_caja: Mapped[list["SesionCaja"]] = relationship("SesionCaja", back_populates="usuario", cascade="all, delete-orphan")
@@ -50,9 +55,25 @@ class SesionCaja(Base):
     fecha_cierre: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     fondo_inicial: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     estado: Mapped[EstadoSesionCaja] = mapped_column(SAEnum(EstadoSesionCaja), default=EstadoSesionCaja.ABIERTA, nullable=False)
+    sucursal_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey('sucursal.id'), nullable=True)
 
     usuario: Mapped["Usuario"] = relationship("Usuario", back_populates="sesiones_caja")
     arqueos: Mapped[list["ArqueoCaja"]] = relationship("ArqueoCaja", back_populates="sesion", cascade="all, delete-orphan")
+    movimientos: Mapped[list["MovimientoCaja"]] = relationship("MovimientoCaja", back_populates="sesion", cascade="all, delete-orphan")
+
+class MovimientoCaja(Base):
+    __tablename__ = 'movimiento_caja'
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    sesion_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('sesion_caja.id', ondelete='CASCADE'), nullable=False)
+    usuario_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('usuario.id', ondelete='CASCADE'), nullable=False)
+    tipo: Mapped[TipoMovimientoCaja] = mapped_column(SAEnum(TipoMovimientoCaja), nullable=False)
+    monto: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
+    concepto: Mapped[str] = mapped_column(String(255), nullable=False)
+    fecha_hora: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    sesion: Mapped["SesionCaja"] = relationship("SesionCaja", back_populates="movimientos")
+    usuario: Mapped["Usuario"] = relationship("Usuario")
 
 class ArqueoCaja(Base):
     __tablename__ = 'arqueo_caja'

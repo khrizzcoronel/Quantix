@@ -9,6 +9,7 @@ import {
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { exportToCSV, formatDate, formatNumber } from '../utils/exportUtils';
+import { mostrarToast } from '../hooks/useWebSocket';
 
 interface RegistroETL {
   id: string;
@@ -99,11 +100,17 @@ export default function Operaciones() {
   const [filtroConflicto, setFiltroConflicto] = useState<'Todos' | 'Pendientes' | 'Resueltos'>('Todos');
   const [busquedaConflicto, setBusquedaConflicto] = useState('');
   const [modalResolver, setModalResolver] = useState<IncidenciaSync | null>(null);
+  const [accionResolucion, setAccionResolucion] = useState<'AJUSTE_AUTOMATICO' | 'FORZAR_VENTA' | 'DESCARTAR'>('AJUSTE_AUTOMATICO');
   const [notaResolucion, setNotaResolucion] = useState('');
   const [guardandoResolucion, setGuardandoResolucion] = useState(false);
 
   const showToast = (tipo: 'success' | 'error', mensaje: string) => {
     setFeedback({ tipo, mensaje });
+    mostrarToast({
+      titulo: tipo === 'success' ? 'Operaciones & ETL' : 'Error en Operaciones',
+      mensaje,
+      severidad: tipo === 'success' ? 'SUCCESS' : 'CRITICO',
+    });
     setTimeout(() => setFeedback(null), 5000);
   };
 
@@ -211,11 +218,13 @@ export default function Operaciones() {
     try {
       setGuardandoResolucion(true);
       await api.post(`/sync/conflictos/${modalResolver.id}/resolver`, {
+        accion: accionResolucion,
         nota_resolucion: nota
       });
-      showToast('success', `Incidencia de venta ${modalResolver.id_local.slice(0, 8)}... resuelta con éxito`);
+      showToast('success', `Incidencia de venta ${modalResolver.id_local.slice(0, 8)}... resuelta con éxito (${accionResolucion})`);
       setModalResolver(null);
       setNotaResolucion('');
+      setAccionResolucion('AJUSTE_AUTOMATICO');
       await cargarConflictos();
     } catch (err: any) {
       showToast('error', err.response?.data?.detail || 'Error al resolver la incidencia de sincronización');
@@ -278,41 +287,43 @@ export default function Operaciones() {
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-gray-50 p-6 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-300">
+    <div className="h-full overflow-y-auto bg-background text-on-surface p-6 md:p-8 select-none">
+      <div className="w-full space-y-6 animate-in fade-in duration-300">
       
       {/* Feedback Toast */}
       {feedback && (
-        <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl border text-sm font-bold ${
+        <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl border text-body-sm font-bold ${
           feedback.tipo === 'success' 
-            ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
-            : 'bg-red-50 text-red-800 border-red-200'
+            ? 'bg-primary-fixed/30 text-on-primary-fixed-variant border-primary-fixed' 
+            : 'bg-error-container text-on-error-container border-error'
         }`}>
-          {feedback.tipo === 'success' ? <CheckCircle2 className="w-5 h-5 text-emerald-600" /> : <AlertCircle className="w-5 h-5 text-red-600" />}
+          {feedback.tipo === 'success' ? <CheckCircle2 className="w-5 h-5 text-primary" /> : <AlertCircle className="w-5 h-5 text-error" />}
           <span>{feedback.mensaje}</span>
         </div>
       )}
 
       {/* Header General */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 pb-5">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-surface-container-high/60 pb-5">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-quantix-50 text-quantix-600 rounded-2xl border border-quantix-100 shadow-sm">
+          <div className="w-11 h-11 bg-surface-container-low text-primary rounded-2xl flex items-center justify-center shadow-xs">
             <Cpu className="w-6 h-6" />
           </div>
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="px-2.5 py-0.5 bg-purple-100 text-purple-800 rounded-md text-[10px] font-black uppercase tracking-wider">
-                Estratégico • Operaciones
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="px-2.5 py-0.5 bg-tertiary-fixed text-on-tertiary-fixed rounded-full font-label-caps text-[10px] font-bold uppercase tracking-wider">
+                Nivel Estratégico • Operaciones
               </span>
             </div>
-            <h1 className="text-2xl font-black text-gray-900 tracking-tight">Centro de Operaciones y Sincronización</h1>
-            <p className="text-gray-500 text-xs font-medium">
-              Pipeline analítico Medallion (Bronze ➔ Silver ➔ Gold) y supervisión de incidencias de sincronización offline
+            <h1 className="font-headline-xl text-2xl md:text-3xl font-bold text-on-surface tracking-tight">
+              Centro de Operaciones & Sincronización
+            </h1>
+            <p className="font-body-sm text-body-sm text-on-surface-variant">
+              Pipeline analítico Medallion (Bronze ➔ Silver ➔ Gold) y resolución de conflictos offline
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-start md:self-auto">
+        <div className="flex items-center gap-2.5 self-start md:self-auto">
           <button
             onClick={() => {
               if (activeTab === 'etl') {
@@ -336,10 +347,10 @@ export default function Operaciones() {
                 handleExportarConflictos();
               }
             }}
-            className="flex items-center gap-2 px-3.5 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold rounded-xl text-xs transition-colors shadow-sm cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2.5 bg-surface-container-lowest border border-surface-container-high hover:bg-surface-container text-on-surface font-title-md rounded-full text-body-sm transition-all shadow-xs cursor-pointer"
             title="Exportar a CSV / Excel"
           >
-            <Download className="w-3.5 h-3.5 text-quantix-600" />
+            <Download className="w-4 h-4 text-primary" />
             <span>Exportar CSV</span>
           </button>
 
@@ -352,22 +363,22 @@ export default function Operaciones() {
               }
             }}
             disabled={activeTab === 'etl' ? (loading || loadingHistorial) : loadingConflictos}
-            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold rounded-xl text-xs transition-colors shadow-sm cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2.5 bg-surface-container-lowest border border-surface-container-high hover:bg-surface-container text-on-surface font-title-md rounded-full text-body-sm transition-all shadow-xs cursor-pointer disabled:opacity-50"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${(activeTab === 'etl' ? loading : loadingConflictos) ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 text-primary ${(activeTab === 'etl' ? loading : loadingConflictos) ? 'animate-spin' : ''}`} />
             <span>Actualizar</span>
           </button>
         </div>
       </div>
 
       {/* Pestañas de Navegación */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-gray-200 pb-3">
+      <div className="flex flex-wrap items-center gap-2 border-b border-surface-container-high/60 pb-3">
         <button
           onClick={() => setActiveTab('etl')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-title-md text-body-sm transition-all cursor-pointer ${
             activeTab === 'etl'
-              ? 'bg-quantix-600 text-white shadow-md shadow-quantix-600/20'
-              : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+              ? 'bg-primary-container text-on-primary-container font-bold shadow-sm'
+              : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
           }`}
         >
           <Layers className="w-4 h-4" />
@@ -379,21 +390,21 @@ export default function Operaciones() {
             setActiveTab('conflictos');
             if (conflictos.length === 0) cargarConflictos();
           }}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer relative ${
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-title-md text-body-sm transition-all cursor-pointer relative ${
             activeTab === 'conflictos'
-              ? 'bg-quantix-600 text-white shadow-md shadow-quantix-600/20'
-              : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+              ? 'bg-primary-container text-on-primary-container font-bold shadow-sm'
+              : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
           }`}
         >
           <WifiOff className="w-4 h-4" />
           <span>Supervisión de Conflictos Offline</span>
           {pendientesCount > 0 && (
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+            <span className={`px-2 py-0.5 rounded-full font-label-caps text-[10px] font-bold ${
               activeTab === 'conflictos'
-                ? 'bg-amber-400 text-amber-950'
-                : 'bg-amber-100 text-amber-800 border border-amber-300'
+                ? 'bg-surface-container-lowest text-on-surface'
+                : 'bg-amber-200 text-amber-950'
             }`}>
-              {pendientesCount} {pendientesCount === 1 ? 'pendiente' : 'pendientes'}
+              {pendientesCount}
             </span>
           )}
         </button>
@@ -989,16 +1000,19 @@ export default function Operaciones() {
       {/* MODAL DE RESOLUCIÓN DE INCIDENCIA OFFLINE */}
       {/* ========================================================================= */}
       {modalResolver && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 my-auto">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-start bg-gradient-to-r from-amber-50 to-white">
+        <div className="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in overflow-y-auto">
+          <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-surface-container-high/40 animate-in zoom-in-95 my-auto">
+            <div className="p-6 border-b border-surface-container-low flex justify-between items-start bg-surface-container-low/50">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-amber-100 text-amber-800 rounded-xl">
-                  <ShieldAlert className="w-5 h-5" />
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-900 dark:text-amber-200 flex items-center justify-center">
+                  <ShieldAlert className="w-5 h-5 text-amber-700" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-gray-900">Resolver Conflicto de Sincronización</h3>
-                  <p className="text-xs text-gray-500">Auditoría y resolución de incidencia offline</p>
+                  <span className="px-2.5 py-0.5 bg-amber-500/15 text-amber-900 dark:text-amber-200 rounded-full font-label-caps text-[10px] font-bold uppercase tracking-wider">
+                    Auditoría & Sync
+                  </span>
+                  <h3 className="font-headline-md text-title-lg font-bold text-on-surface mt-1">Resolver Conflicto Offline</h3>
+                  <p className="font-body-sm font-mono text-outline">Resolución de incidencia y trazabilidad</p>
                 </div>
               </div>
               <button
@@ -1006,38 +1020,82 @@ export default function Operaciones() {
                   setModalResolver(null);
                   setNotaResolucion('');
                 }}
-                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl cursor-pointer"
+                className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleResolverConflicto} className="p-6 space-y-4">
-              <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-2 text-xs">
+            <form onSubmit={handleResolverConflicto} className="p-6 space-y-4 text-body-sm">
+              <div className="p-4 bg-surface-container-low rounded-2xl border border-surface-container-high/40 space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400 font-bold uppercase text-[10px]">UUID Venta Local:</span>
-                  <span className="font-mono font-bold text-gray-800 text-[11px]">{modalResolver.id_local}</span>
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase">UUID Venta Local:</span>
+                  <span className="font-mono font-bold text-on-surface text-[11px]">{modalResolver.id_local}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400 font-bold uppercase text-[10px]">Tipo de Conflicto:</span>
-                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-black border ${getBadgeTipoConflicto(modalResolver.tipo)}`}>
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase">Tipo de Conflicto:</span>
+                  <span className={`px-2.5 py-0.5 rounded-full font-label-caps text-[10px] font-bold uppercase border ${getBadgeTipoConflicto(modalResolver.tipo)}`}>
                     {modalResolver.tipo}
                   </span>
                 </div>
-                <div className="pt-2 border-t border-gray-200">
-                  <span className="text-gray-400 font-bold uppercase text-[10px] block mb-1">Motivo Reportado:</span>
-                  <p className="text-gray-700 bg-white p-2.5 rounded-xl border border-gray-200 font-medium">
+                <div className="pt-2 border-t border-surface-container-high/40">
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Motivo Reportado:</span>
+                  <p className="text-on-surface bg-surface-container-lowest p-3 rounded-2xl border border-surface-container-high/40 font-medium">
                     {modalResolver.detalle}
                   </p>
                 </div>
-                <div className="text-[10px] text-gray-400 font-mono">
+                <div className="text-[10px] text-outline font-mono">
                   Registrado el: {new Date(modalResolver.creado_en).toLocaleString()}
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
-                  Nota de Resolución <span className="text-red-500">*</span>
+                <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                  Acción Resolutiva <span className="text-error">*</span>
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAccionResolucion('AJUSTE_AUTOMATICO')}
+                    className={`p-3 rounded-2xl text-left border transition-all cursor-pointer ${
+                      accionResolucion === 'AJUSTE_AUTOMATICO'
+                        ? 'bg-primary-fixed/30 border-primary text-on-primary-fixed-variant shadow-xs ring-1 ring-primary'
+                        : 'bg-surface-container-low border-surface-container-high/60 text-on-surface hover:bg-surface-container'
+                    }`}
+                  >
+                    <div className="font-title-md text-xs font-bold">Ajuste de Stock</div>
+                    <div className="text-[10px] opacity-75 mt-0.5">Crear lote de ajuste contable FEFO</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAccionResolucion('FORZAR_VENTA')}
+                    className={`p-3 rounded-2xl text-left border transition-all cursor-pointer ${
+                      accionResolucion === 'FORZAR_VENTA'
+                        ? 'bg-secondary-fixed/30 border-secondary text-on-secondary-fixed-variant shadow-xs ring-1 ring-secondary'
+                        : 'bg-surface-container-low border-surface-container-high/60 text-on-surface hover:bg-surface-container'
+                    }`}
+                  >
+                    <div className="font-title-md text-xs font-bold">Forzar Venta</div>
+                    <div className="text-[10px] opacity-75 mt-0.5">Registrar venta oficial</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAccionResolucion('DESCARTAR')}
+                    className={`p-3 rounded-2xl text-left border transition-all cursor-pointer ${
+                      accionResolucion === 'DESCARTAR'
+                        ? 'bg-error-container border-error text-on-error-container shadow-xs ring-1 ring-error'
+                        : 'bg-surface-container-low border-surface-container-high/60 text-on-surface hover:bg-surface-container'
+                    }`}
+                  >
+                    <div className="font-title-md text-xs font-bold">Descartar Venta</div>
+                    <div className="text-[10px] opacity-75 mt-0.5">Rechazar registro offline</div>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                  Nota de Resolución <span className="text-error">*</span>
                 </label>
                 <textarea
                   required
@@ -1045,14 +1103,14 @@ export default function Operaciones() {
                   value={notaResolucion}
                   onChange={(e) => setNotaResolucion(e.target.value)}
                   placeholder="Explica la acción técnica o comercial adoptada para solventar la discrepancia (ej. merma justificada, ajuste de inventario realizado, venta confirmada)..."
-                  className="w-full p-3 border border-gray-300 rounded-xl text-xs text-gray-900 focus:ring-2 focus:ring-quantix-500 focus:border-quantix-500 outline-none resize-none font-medium"
+                  className="w-full p-3.5 bg-surface-container-low rounded-2xl font-title-md text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40 resize-none font-medium"
                 />
-                <p className="text-[11px] text-gray-400 mt-1">
+                <p className="text-[11px] text-outline mt-1">
                   Esta nota quedará vinculada permanentemente con tu usuario ({user?.nombre || user?.email}) para auditoría forense.
                 </p>
               </div>
 
-              <div className="pt-3 border-t border-gray-100 flex items-center justify-end gap-2">
+              <div className="pt-3 border-t border-surface-container-low flex items-center justify-end gap-2">
                 <button
                   type="button"
                   disabled={guardandoResolucion}
@@ -1060,14 +1118,14 @@ export default function Operaciones() {
                     setModalResolver(null);
                     setNotaResolucion('');
                   }}
-                  className="px-4 py-2.5 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
+                  className="px-4 py-2 font-title-md text-body-sm font-bold text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={guardandoResolucion || !notaResolucion.trim()}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-quantix-600 hover:bg-quantix-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer active:scale-95"
+                  className="flex items-center gap-2 px-5 py-2 font-title-md text-body-sm font-bold bg-primary hover:opacity-95 disabled:opacity-50 text-on-primary rounded-full cursor-pointer transition-all shadow-xs"
                 >
                   <Check className={`w-3.5 h-3.5 ${guardandoResolucion ? 'animate-spin' : ''}`} />
                   <span>{guardandoResolucion ? 'Guardando...' : 'Confirmar Resolución'}</span>
@@ -1082,113 +1140,115 @@ export default function Operaciones() {
       {/* MODAL DE DETALLE DE TRAZABILIDAD ETL */}
       {/* ========================================================================= */}
       {detalleLog && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 my-auto">
+        <div className="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in overflow-y-auto">
+          <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-surface-container-high/40 animate-in zoom-in-95 my-auto">
             
             {/* Header Modal */}
-            <div className="p-6 border-b border-gray-100 flex justify-between items-start bg-gradient-to-r from-quantix-50 to-white shrink-0">
+            <div className="p-6 border-b border-surface-container-low flex justify-between items-start bg-surface-container-low/50 shrink-0">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 bg-quantix-600 text-white rounded-md text-[10px] font-black uppercase tracking-wider">
+                  <span className="px-2.5 py-0.5 bg-primary text-on-primary rounded-full font-label-caps text-[10px] font-bold uppercase tracking-wider">
                     Ficha Forense ETL
                   </span>
-                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                    detalleLog.status === 'EXITOSO' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+                  <span className={`px-2.5 py-0.5 rounded-full font-label-caps text-[10px] font-bold uppercase ${
+                    detalleLog.status === 'EXITOSO' ? 'bg-primary-fixed/30 text-on-primary-fixed-variant' : 'bg-error-container text-on-error-container'
                   }`}>
                     {detalleLog.status}
                   </span>
                 </div>
-                <h3 className="text-xl font-black text-gray-900 mt-1">Trazabilidad de Sincronización</h3>
-                <p className="text-xs font-mono text-gray-500">ID Lote: {detalleLog.id}</p>
+                <h3 className="font-headline-md text-title-lg font-bold text-on-surface mt-1.5">Trazabilidad de Sincronización</h3>
+                <p className="font-body-sm font-mono text-outline">ID Lote: {detalleLog.id}</p>
               </div>
               <button 
                 onClick={() => setDetalleLog(null)} 
-                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl cursor-pointer"
+                className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Contenido Modal */}
-            <div className="p-6 space-y-4 text-xs overflow-y-auto flex-1">
+            <div className="p-6 space-y-4 text-body-sm overflow-y-auto flex-1">
               
               {/* Origen y Destino */}
-              <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-2">
-                <div className="flex items-center justify-between text-gray-600">
-                  <span className="font-bold uppercase text-[10px] text-gray-400">Origen de Extracción:</span>
-                  <span className="font-mono font-bold text-gray-800">{detalleLog.origen_datos}</span>
+              <div className="p-4 bg-surface-container-low rounded-2xl border border-surface-container-high/40 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase">Origen de Extracción:</span>
+                  <span className="font-mono font-bold text-on-surface">{detalleLog.origen_datos}</span>
                 </div>
-                <div className="flex items-center justify-center text-quantix-600 my-1">
+                <div className="flex items-center justify-center text-primary my-1">
                   <ArrowRight className="w-4 h-4" />
                 </div>
-                <div className="flex items-center justify-between text-gray-600">
-                  <span className="font-bold uppercase text-[10px] text-gray-400">Destino de Almacenamiento:</span>
-                  <span className="font-mono font-bold text-quantix-700">{detalleLog.destino_archivo}</span>
+                <div className="flex items-center justify-between">
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase">Destino de Almacenamiento:</span>
+                  <span className="font-mono font-bold text-primary">{detalleLog.destino_archivo}</span>
                 </div>
               </div>
 
               {/* Conteo de Filas por Capa */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 bg-amber-50/70 rounded-xl border border-amber-200">
-                  <span className="text-[10px] font-bold text-amber-800 uppercase block">Capa Bronze (Raw)</span>
-                  <div className="text-lg font-black text-amber-900 font-mono mt-0.5">
-                    {detalleLog.filas_bronze_ventas} <span className="text-xs font-medium">ventas</span>
+                <div className="p-4 bg-surface-container-low rounded-2xl border border-surface-container-high/40">
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Capa Bronze (Raw)</span>
+                  <div className="font-headline-md text-title-lg font-black text-on-surface font-mono">
+                    {detalleLog.filas_bronze_ventas} <span className="text-body-sm font-medium font-sans text-on-surface-variant">ventas</span>
                   </div>
-                  <span className="text-[10px] text-amber-700 mt-0.5 block">Tablas: bronze.venta, bronze.detalle_venta</span>
+                  <span className="font-mono text-[10px] text-outline mt-1 block">bronze.venta, bronze.detalle_venta</span>
                 </div>
 
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-300">
-                  <span className="text-[10px] font-bold text-slate-700 uppercase block">Capa Silver (Clean)</span>
-                  <div className="text-lg font-black text-slate-900 font-mono mt-0.5">
-                    {detalleLog.filas_silver_ventas} <span className="text-xs font-medium">limpias</span>
+                <div className="p-4 bg-surface-container-low rounded-2xl border border-surface-container-high/40">
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Capa Silver (Clean)</span>
+                  <div className="font-headline-md text-title-lg font-black text-on-surface font-mono">
+                    {detalleLog.filas_silver_ventas} <span className="text-body-sm font-medium font-sans text-on-surface-variant">limpias</span>
                   </div>
-                  <span className="text-[10px] text-slate-600 mt-0.5 block">Tablas: silver.venta_limpia, silver.producto_activo</span>
+                  <span className="font-mono text-[10px] text-outline mt-1 block">silver.venta_limpia, silver.producto_activo</span>
                 </div>
               </div>
 
-              <div className="p-4 bg-quantix-50/70 rounded-xl border border-quantix-200">
-                <span className="text-[10px] font-bold text-quantix-800 uppercase block mb-1">
+              <div className="p-4 bg-surface-container-low rounded-2xl border border-surface-container-high/40">
+                <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1.5">
                   Capa Gold (Modelo Dimensional Analítico en DuckDB)
                 </span>
-                <div className="grid grid-cols-2 gap-2 text-xs font-mono font-bold text-quantix-900">
-                  <div>gold.fact_ventas: <span className="text-quantix-600 font-black">{detalleLog.filas_gold_ventas}</span> filas</div>
-                  <div>gold.dim_producto: <span className="text-quantix-600 font-black">{detalleLog.filas_gold_productos}</span> filas</div>
+                <div className="grid grid-cols-2 gap-2 font-mono text-body-sm font-bold text-on-surface">
+                  <div>gold.fact_ventas: <span className="text-primary font-black">{detalleLog.filas_gold_ventas}</span> filas</div>
+                  <div>gold.dim_producto: <span className="text-primary font-black">{detalleLog.filas_gold_productos}</span> filas</div>
                 </div>
               </div>
 
               {/* Metadatos de Auditoría */}
-              <div className="grid grid-cols-3 gap-2 text-[11px] bg-gray-50 p-3 rounded-xl border border-gray-100">
+              <div className="grid grid-cols-3 gap-3 bg-surface-container-low p-4 rounded-2xl border border-surface-container-high/40">
                 <div>
-                  <span className="text-gray-400 block font-bold">Disparador</span>
-                  <span className="font-semibold text-gray-800">{detalleLog.tipo_disparo}</span>
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Disparador</span>
+                  <span className="font-title-md text-body-sm font-bold text-on-surface">{detalleLog.tipo_disparo}</span>
                 </div>
                 <div>
-                  <span className="text-gray-400 block font-bold">Duración</span>
-                  <span className="font-mono font-bold text-gray-800">{detalleLog.duracion_ms} ms</span>
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Duración</span>
+                  <span className="font-mono text-body-sm font-bold text-on-surface">{detalleLog.duracion_ms} ms</span>
                 </div>
                 <div>
-                  <span className="text-gray-400 block font-bold">Tamaño Archivo</span>
-                  <span className="font-mono font-bold text-gray-800">{detalleLog.tamano_duckdb_kb || 0} KB</span>
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Tamaño Archivo</span>
+                  <span className="font-mono text-body-sm font-bold text-on-surface">{detalleLog.tamano_duckdb_kb || 0} KB</span>
                 </div>
               </div>
 
               {detalleLog.error && (
-                <div className="p-3 bg-red-50 rounded-xl border border-red-200 text-red-800 text-[11px]">
+                <div className="p-4 bg-error-container text-on-error-container rounded-2xl border border-error/20 text-body-sm">
                   <strong>Error reportado:</strong> {detalleLog.error}
                 </div>
               )}
 
-              <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-100 text-blue-900 leading-relaxed text-[11px]">
-                <ShieldCheck className="w-4 h-4 inline mr-1 text-blue-600" />
-                <strong>Garantía de Trazabilidad:</strong> Cada sincronización registra origen, transformación y destino inmutable para auditoría y BI.
+              <div className="p-4 bg-surface-container-low rounded-2xl border border-surface-container-high/40 text-on-surface leading-relaxed text-body-sm flex items-start gap-2.5">
+                <ShieldCheck className="w-4 h-4 shrink-0 text-primary mt-0.5" />
+                <span>
+                  <strong>Garantía de Trazabilidad:</strong> Cada sincronización registra origen, transformación y destino inmutable para auditoría y BI.
+                </span>
               </div>
             </div>
 
             {/* Footer Modal */}
-            <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end shrink-0">
+            <div className="p-4 bg-surface-container-low/50 border-t border-surface-container-low flex justify-end shrink-0">
               <button
                 onClick={() => setDetalleLog(null)}
-                className="px-4 py-2 text-xs font-bold text-gray-700 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer"
+                className="px-4 py-2 font-title-md text-body-sm font-bold text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors"
               >
                 Cerrar Trazabilidad
               </button>

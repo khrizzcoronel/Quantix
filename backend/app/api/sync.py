@@ -1,4 +1,5 @@
 import datetime
+import json
 import logging
 from decimal import Decimal, ROUND_HALF_UP
 from typing import List, Optional
@@ -14,7 +15,7 @@ from app.api.ws import notif_manager
 from app.db.oltp import get_db
 from app.models.inventario import EstadoLote, LoteInventario, Producto
 from app.models.sync import IncidenciaSync, VentaOfflineRecibida
-from app.models.usuarios import EstadoSesionCaja, SesionCaja, Usuario
+from app.models.usuarios import EstadoSesionCaja, SesionCaja, Usuario, AuditoriaEvento
 from app.models.ventas import DetalleVenta, EstadoVenta, PagoVenta, Venta
 from app.schemas.sync import (
     IncidenciaSyncResponse,
@@ -226,11 +227,34 @@ async def sincronizar_ventas_offline(
                         .with_for_update()
                     )
                     lotes_res = await db.execute(lotes_stmt)
-                    lotes_disponibles = lotes_res.scalars().all()
+                    lotes_disponibles = list(lotes_res.scalars().all())
 
                     stock_total_lotes = sum(
                         Decimal(str(l.cantidad_disponible)) for l in lotes_disponibles
                     )
+                    if stock_total_lotes < Decimal(str(item.cantidad)):
+                        # Si los lotes activos no cubren la cantidad requerida, buscar si existen otros lotes activos
+                        # del mismo producto (incluso sin filtrar por fecha estricta o lote inicial) para absorber la diferencia.
+                        ids_ya_incluidos = [l.id for l in lotes_disponibles]
+                        lotes_extra_stmt = (
+                            select(LoteInventario)
+                            .where(
+                                LoteInventario.producto_id == item.producto_id,
+                                LoteInventario.estado == EstadoLote.ACTIVO,
+                                LoteInventario.cantidad_disponible > 0,
+                                LoteInventario.id.not_in(ids_ya_incluidos) if ids_ya_incluidos else True,
+                            )
+                            .order_by(LoteInventario.fecha_vencimiento.asc().nulls_last())
+                            .with_for_update()
+                        )
+                        lotes_extra_res = await db.execute(lotes_extra_stmt)
+                        lotes_extra = lotes_extra_res.scalars().all()
+                        if lotes_extra:
+                            lotes_disponibles.extend(lotes_extra)
+                            stock_total_lotes = sum(
+                                Decimal(str(l.cantidad_disponible)) for l in lotes_disponibles
+                            )
+
                     if stock_total_lotes < Decimal(str(item.cantidad)):
                         hay_conflicto_stock = True
                         tipo_conflicto = "STOCK_INSUFICIENTE"
@@ -473,6 +497,192 @@ async def resolver_conflicto(
         raise HTTPException(status_code=404, detail="Incidencia de sincronización no encontrada")
 
     inc, id_local = fila
+    accion = req.accion or "AJUSTE_AUTOMATICO"
+
+    # Cargar VentaOfflineRecibida con select(VentaOfflineRecibida).where(...)
+    vo_stmt = select(VentaOfflineRecibida).where(VentaOfflineRecibida.id == inc.venta_offline_id)
+    vo_res = await db.execute(vo_stmt)
+    venta_offline = vo_res.scalar_one_or_none()
+
+    if accion in ["AJUSTE_AUTOMATICO", "FORZAR_VENTA"]:
+        if venta_offline and venta_offline.estado == "PENDIENTE_REVISION":
+            payload = venta_offline.payload_original
+            if isinstance(payload, str):
+                try:
+                    payload = json.loads(payload)
+                except Exception:
+                    payload = {}
+
+            items_raw = payload.get("items", [])
+            total_bruto = Decimal("0.00")
+            detalles_venta_db = []
+
+            for it in items_raw:
+                prod_id = UUID(str(it["producto_id"]))
+                cant_necesaria = Decimal(str(it["cantidad"]))
+                prod = await db.get(Producto, prod_id)
+                if not prod:
+                    continue
+
+                precio_servidor = Decimal(str(prod.precio_venta))
+
+                # Buscar lotes activos disponibles
+                lotes_stmt = (
+                    select(LoteInventario)
+                    .where(
+                        LoteInventario.producto_id == prod_id,
+                        LoteInventario.estado == EstadoLote.ACTIVO,
+                        LoteInventario.cantidad_disponible > 0,
+                    )
+                    .order_by(LoteInventario.fecha_vencimiento.asc().nulls_last())
+                    .with_for_update()
+                )
+                lotes_res = await db.execute(lotes_stmt)
+                lotes = list(lotes_res.scalars().all())
+
+                stock_disponible = sum(Decimal(str(l.cantidad_disponible)) for l in lotes)
+                if stock_disponible < cant_necesaria:
+                    faltante = cant_necesaria - stock_disponible
+                    codigo_ajuste = f"AJUSTE-SYNC-{id_local[:8]}"
+                    stmt_ajuste = select(LoteInventario).where(
+                        LoteInventario.producto_id == prod_id,
+                        LoteInventario.codigo_lote == codigo_ajuste,
+                    )
+                    res_ajuste = await db.execute(stmt_ajuste)
+                    lote_ajuste = res_ajuste.scalar_one_or_none()
+
+                    if not lote_ajuste:
+                        lote_ajuste = LoteInventario(
+                            producto_id=prod_id,
+                            codigo_lote=codigo_ajuste,
+                            cantidad_inicial=faltante,
+                            cantidad_disponible=faltante,
+                            costo_unitario=Decimal(str(prod.costo_base)),
+                            fecha_ingreso=datetime.datetime.utcnow(),
+                            fecha_vencimiento=None,
+                            estado=EstadoLote.ACTIVO,
+                            sucursal_id=UUID("00000000-0000-0000-0000-000000000001"),
+                        )
+                        db.add(lote_ajuste)
+                        await db.flush()
+                    else:
+                        lote_ajuste.cantidad_disponible = Decimal(str(lote_ajuste.cantidad_disponible)) + faltante
+                        lote_ajuste.cantidad_inicial = Decimal(str(lote_ajuste.cantidad_inicial)) + faltante
+                        lote_ajuste.estado = EstadoLote.ACTIVO
+
+                    lotes.append(lote_ajuste)
+
+                cant_restante = cant_necesaria
+                for lote in lotes:
+                    if cant_restante <= 0:
+                        break
+                    disponible = Decimal(str(lote.cantidad_disponible))
+                    if disponible <= 0:
+                        continue
+                    a_tomar = min(disponible, cant_restante)
+                    lote.cantidad_disponible = disponible - a_tomar
+                    cant_restante -= a_tomar
+
+                    if lote.cantidad_disponible <= 0:
+                        lote.cantidad_disponible = Decimal("0.00")
+                        lote.estado = EstadoLote.AGOTADO
+
+                    subtotal_linea = redondear_moneda(precio_servidor * a_tomar)
+                    costo_unitario = Decimal(str(lote.costo_unitario))
+                    margen_linea = redondear_moneda(subtotal_linea - (costo_unitario * a_tomar))
+                    total_bruto += subtotal_linea
+
+                    detalles_venta_db.append(
+                        DetalleVenta(
+                            producto_id=prod.id,
+                            lote_id=lote.id,
+                            cantidad=a_tomar,
+                            costo_unitario_lote=costo_unitario,
+                            precio_unitario_venta=precio_servidor,
+                            subtotal=subtotal_linea,
+                            margen_ganancia=margen_linea,
+                        )
+                    )
+
+            total_bruto = redondear_moneda(total_bruto)
+            total_descuento = Decimal("0.00")
+            base_gravable = total_bruto
+            total_impuestos = redondear_moneda(base_gravable * IVA_RATE)
+            total_pagar = redondear_moneda(base_gravable + total_impuestos)
+
+            nuevo_folio = f"TKT-{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}-{str(uuid4())[:4].upper()}"
+
+            fecha_local_val = payload.get("fecha_local")
+            if isinstance(fecha_local_val, str):
+                try:
+                    fecha_hora = datetime.datetime.fromisoformat(fecha_local_val.replace("Z", "+00:00")).replace(tzinfo=None)
+                except Exception:
+                    fecha_hora = datetime.datetime.utcnow()
+            elif isinstance(fecha_local_val, datetime.datetime):
+                fecha_hora = fecha_local_val.replace(tzinfo=None)
+            else:
+                fecha_hora = datetime.datetime.utcnow()
+
+            sesion_caja_id = UUID(str(payload["sesion_caja_id"])) if "sesion_caja_id" in payload else venta_offline.sesion_caja_id
+
+            nueva_venta = Venta(
+                sesion_caja_id=sesion_caja_id,
+                cliente_id=None,
+                folio_ticket=nuevo_folio,
+                idempotency_key=venta_offline.id_local,
+                fecha_hora=fecha_hora,
+                total_bruto=total_bruto,
+                total_descuento=total_descuento,
+                total_impuestos=total_impuestos,
+                total_pagar=total_pagar,
+                estado="PAGADO",
+            )
+            db.add(nueva_venta)
+            await db.flush()
+
+            for d in detalles_venta_db:
+                d.venta_id = nueva_venta.id
+                db.add(d)
+
+            pago = PagoVenta(
+                venta_id=nueva_venta.id,
+                metodo_pago="EFECTIVO",
+                monto=total_pagar,
+                referencia_pasarela=None,
+            )
+            db.add(pago)
+
+            venta_offline.venta_id = nueva_venta.id
+            venta_offline.estado = "SINCRONIZADA"
+
+            auditoria = AuditoriaEvento(
+                usuario_id=current_user.id,
+                tipo_evento="RESOLUCION_CONFLICTO_SYNC",
+                descripcion=(
+                    f"Resolución de conflicto de venta offline '{id_local}' mediante {accion}. "
+                    f"Autorizado por el supervisor {current_user.nombre}."
+                ),
+                gravedad="INFO",
+                ip_terminal=venta_offline.terminal_id,
+                venta_referencia_id=nueva_venta.id,
+                usuario_autorizador_id=current_user.id,
+                detalle_json={
+                    "incidencia_id": str(inc.id),
+                    "venta_offline_id": str(venta_offline.id),
+                    "id_local": id_local,
+                    "accion": accion,
+                    "venta_id": str(nueva_venta.id),
+                    "folio_ticket": nuevo_folio,
+                    "total": float(total_pagar),
+                    "nota_resolucion": req.nota_resolucion,
+                },
+            )
+            db.add(auditoria)
+
+    elif accion == "DESCARTAR":
+        if venta_offline:
+            venta_offline.estado = "RECHAZADA"
+
     inc.resuelto = True
     inc.resuelto_por = current_user.id
     inc.resuelto_en = datetime.datetime.utcnow()

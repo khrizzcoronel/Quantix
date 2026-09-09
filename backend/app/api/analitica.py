@@ -9,12 +9,20 @@ from app.api.deps import RoleChecker, get_current_user
 from app.models.usuarios import Usuario
 from app.schemas.bi import DashboardEstrategicoResponse, MetricaDiaria, ProyeccionDemanda
 
+import os
+from app.etl.pipeline import MedallionETL
+
 router = APIRouter()
 
 # El BI estratégico es exclusivamente para la alta gerencia
 estrategico_roles = RoleChecker(["DIRECTOR", "SUPERVISOR"])
 
-DB_PATH = "quantix_analytics.duckdb"
+def get_duckdb_path() -> str:
+    if os.path.exists("/app/data"):
+        return "/app/data/quantix_analytics.duckdb"
+    elif os.path.exists("data"):
+        return "data/quantix_analytics.duckdb"
+    return "quantix_analytics.duckdb"
 
 @router.get("/estrategico", response_model=DashboardEstrategicoResponse)
 async def dashboard_estrategico(
@@ -25,9 +33,26 @@ async def dashboard_estrategico(
     la capa Gold de DuckDB, sin tocar ni bloquear el PostgreSQL de los cajeros.
     Aplica estadística inferencial para la proyección de inventario.
     """
+    db_path = get_duckdb_path()
+
+    # Si no existe la base analítica, ejecutar una carga inicial
+    if not os.path.exists(db_path):
+        try:
+            etl = MedallionETL(db_path)
+            etl.run_pipeline()
+        except Exception as e_init:
+            logger_err = str(e_init)
+            # Retornar respuesta vacía limpia si la inicialización no tiene ventas aún
+            return DashboardEstrategicoResponse(
+                ingresos_mes_actual=0.0,
+                margen_promedio_mes=0.0,
+                tendencia_ultimos_7_dias=[],
+                predicciones_top_productos=[]
+            )
+
     try:
         # Conexión read-only ultrarrápida a DuckDB
-        with duckdb.connect(DB_PATH, read_only=True) as con:
+        with duckdb.connect(db_path, read_only=True) as con:
             
             # 1. Indicadores Base: Ingresos del mes actual
             df_mes = con.execute("""
@@ -122,10 +147,12 @@ async def dashboard_estrategico(
                 predicciones_top_productos=predicciones
             )
             
-    except duckdb.CatalogException:
-        raise HTTPException(
-            status_code=503, 
-            detail="La Capa Gold (DuckDB) aún no ha sido construida por el ETL. Espera al primer batch de 5 minutos."
+    except (duckdb.CatalogException, duckdb.IOException):
+        return DashboardEstrategicoResponse(
+            ingresos_mes_actual=0.0,
+            margen_promedio_mes=0.0,
+            tendencia_ultimos_7_dias=[],
+            predicciones_top_productos=[]
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

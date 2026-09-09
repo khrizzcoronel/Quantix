@@ -12,6 +12,7 @@ import {
   contarPendientes
 } from './queueService';
 import type { ColaSyncItem, ItemVentaOffline } from './db';
+import { mostrarToast } from '../../hooks/useWebSocket';
 
 export interface SyncWorkerStatus {
   isSyncing: boolean;
@@ -175,6 +176,22 @@ export async function procesarColaSync(): Promise<void> {
 
       // Reiniciar contador de reintentos fallidos tras respuesta exitosa del backend
       reintentosFallidos = 0;
+
+      if (data && data.exitosas > 0) {
+        mostrarToast({
+          titulo: 'Sincronización Offline Completada',
+          mensaje: `Se sincronizaron exitosamente ${data.exitosas} ${data.exitosas === 1 ? 'venta offline' : 'ventas offline'} con el servidor central.`,
+          severidad: 'SUCCESS',
+        });
+      }
+
+      if (data && data.conflictos > 0) {
+        mostrarToast({
+          titulo: 'Conflicto de Sincronización',
+          mensaje: `${data.conflictos} ${data.conflictos === 1 ? 'venta requiere' : 'ventas requieren'} revisión en el módulo de Operaciones.`,
+          severidad: 'WARNING',
+        });
+      }
 
       // Notificar al sistema para actualizar contador de pendientes
       const restantes = await contarPendientes();

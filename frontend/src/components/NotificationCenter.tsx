@@ -1,9 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { 
-  Bell, CheckCheck, Trash2, X, AlertOctagon, 
-  AlertTriangle, CheckCircle2, Info 
-} from 'lucide-react';
-import { useWebSocket, type SeveridadAlerta } from '../hooks/useWebSocket';
+import { useWebSocket, mostrarToast, type SeveridadAlerta } from '../hooks/useWebSocket';
 
 export default function NotificationCenter() {
   const [renderedAt] = useState(() => Date.now());
@@ -63,31 +59,31 @@ export default function NotificationCenter() {
     switch (sev) {
       case 'CRITICO':
         return {
-          bg: 'bg-red-50 border-red-200 text-red-700',
-          dot: 'bg-red-500',
-          icon: <AlertOctagon className="w-4 h-4 text-red-600 shrink-0" />,
+          bg: 'bg-error-container text-on-error-container border-error/30',
+          dot: 'bg-error',
+          iconName: 'warning',
           label: 'Crítico',
         };
       case 'WARNING':
         return {
-          bg: 'bg-amber-50 border-amber-200 text-amber-800',
-          dot: 'bg-amber-500',
-          icon: <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />,
+          bg: 'bg-amber-100 text-amber-900 border-amber-300',
+          dot: 'bg-amber-600',
+          iconName: 'error_outline',
           label: 'Alerta',
         };
       case 'SUCCESS':
         return {
-          bg: 'bg-emerald-50 border-emerald-200 text-emerald-800',
-          dot: 'bg-emerald-500',
-          icon: <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />,
+          bg: 'bg-primary-fixed text-on-primary-fixed border-primary/20',
+          dot: 'bg-primary',
+          iconName: 'check_circle',
           label: 'Éxito',
         };
       case 'INFO':
       default:
         return {
-          bg: 'bg-blue-50 border-blue-200 text-blue-800',
-          dot: 'bg-blue-500',
-          icon: <Info className="w-4 h-4 text-blue-600 shrink-0" />,
+          bg: 'bg-surface-container-high text-on-surface border-outline-variant/30',
+          dot: 'bg-outline',
+          iconName: 'info',
           label: 'Info',
         };
     }
@@ -114,17 +110,17 @@ export default function NotificationCenter() {
         ref={botonRef}
         onClick={() => setAbierto(!abierto)}
         aria-label="Abrir centro de notificaciones"
-        className={`relative p-2 rounded-xl transition-all border ${
+        className={`w-10 h-10 rounded-full transition-all flex items-center justify-center relative cursor-pointer ${
           abierto
-            ? 'bg-quantix-50 border-quantix-300 text-quantix-700 shadow-sm ring-2 ring-quantix-500/20'
-            : 'bg-white border-gray-200/80 text-gray-600 hover:text-gray-900 hover:bg-gray-50 shadow-2xs'
+            ? 'bg-surface-container-high text-primary ring-2 ring-primary/30 shadow-xs'
+            : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
         }`}
       >
-        <Bell className="w-5 h-5" />
+        <span className="material-symbols-outlined text-xl">notifications</span>
         
         {/* Badge contador de no leídas */}
         {noLeidasCount > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 bg-red-600 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-md animate-pulse">
+          <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-error text-on-error font-label-numeric-md text-[10px] font-black rounded-full flex items-center justify-center shadow-md animate-pulse">
             {noLeidasCount > 99 ? '99+' : noLeidasCount}
           </span>
         )}
@@ -134,80 +130,81 @@ export default function NotificationCenter() {
       {abierto && (
         <div
           ref={popoverRef}
-          className="absolute right-0 mt-2.5 w-96 max-w-[92vw] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150"
+          className="absolute right-0 mt-3 w-96 max-w-[92vw] bg-surface-container-lowest rounded-3xl shadow-2xl border border-outline-variant/30 z-50 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150"
           style={{ maxHeight: 'calc(100vh - 120px)' }}
         >
           {/* Encabezado del Popover */}
-          <div className="p-4 border-b border-gray-100 bg-gray-50/70 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 bg-quantix-100 text-quantix-700 rounded-xl">
-                <Bell className="w-4 h-4" />
+          <div className="p-4 border-b border-outline-variant/20 bg-surface-container-low/50 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-primary-container text-on-primary-container flex items-center justify-center shadow-xs">
+                <span className="material-symbols-outlined text-lg">notifications</span>
               </div>
               <div>
-                <h3 className="text-sm font-black text-gray-900 leading-tight">
+                <h3 className="font-headline-md text-body-md text-on-surface leading-tight">
                   Notificaciones y Alertas
                 </h3>
-                <p className="text-[11px] text-gray-500 font-medium">
+                <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
                   {noLeidasCount > 0 ? `${noLeidasCount} sin leer` : 'Bandeja al día'}
                 </p>
               </div>
             </div>
 
-            {/* Botón estándar de cierre 'X' */}
+            {/* Botón de cierre 'X' */}
             <button
+              type="button"
               onClick={() => setAbierto(false)}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-200/60 transition-colors"
+              className="w-8 h-8 rounded-full bg-surface-container-low hover:bg-surface-container text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer"
               aria-label="Cerrar popover"
             >
-              <X className="w-4 h-4" />
+              <span className="material-symbols-outlined text-lg">close</span>
             </button>
           </div>
 
           {/* Barra de Acciones y Filtros */}
-          <div className="px-4 py-2.5 border-b border-gray-100 bg-white flex flex-col gap-2">
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-1">
-                {(['TODAS', 'CRITICO', 'WARNING', 'SUCCESS'] as const).map((filtro) => (
-                  <button
-                    key={filtro}
-                    onClick={() => setFiltroSeveridad(filtro)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
-                      filtroSeveridad === filtro
-                        ? 'bg-gray-900 text-white shadow-xs'
-                        : 'text-gray-500 hover:bg-gray-100'
-                    }`}
-                  >
-                    {filtro === 'TODAS' && 'Todas'}
-                    {filtro === 'CRITICO' && 'Críticas'}
-                    {filtro === 'WARNING' && 'Alertas'}
-                    {filtro === 'SUCCESS' && 'Éxito'}
-                  </button>
-                ))}
-              </div>
-
-              {/* Botón marcar todas como leídas */}
-              {noLeidasCount > 0 && (
+          <div className="px-4 py-2.5 border-b border-outline-variant/15 bg-surface-container-lowest flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1 overflow-x-auto">
+              {(['TODAS', 'CRITICO', 'WARNING', 'SUCCESS'] as const).map((filtro) => (
                 <button
-                  onClick={marcarTodasComoLeidas}
-                  className="flex items-center gap-1 text-[11px] font-bold text-quantix-700 hover:text-quantix-800 transition-colors"
-                  title="Marcar todas como leídas"
+                  key={filtro}
+                  type="button"
+                  onClick={() => setFiltroSeveridad(filtro)}
+                  className={`px-3 py-1 rounded-full font-headline-md text-label-caps transition-all cursor-pointer whitespace-nowrap ${
+                    filtroSeveridad === filtro
+                      ? 'bg-inverse-surface text-inverse-on-surface shadow-xs'
+                      : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
+                  }`}
                 >
-                  <CheckCheck className="w-3.5 h-3.5" />
-                  Leídas
+                  {filtro === 'TODAS' && 'Todas'}
+                  {filtro === 'CRITICO' && 'Críticas'}
+                  {filtro === 'WARNING' && 'Alertas'}
+                  {filtro === 'SUCCESS' && 'Éxito'}
                 </button>
-              )}
+              ))}
             </div>
+
+            {/* Botón marcar todas como leídas */}
+            {noLeidasCount > 0 && (
+              <button
+                type="button"
+                onClick={marcarTodasComoLeidas}
+                className="h-7 px-2.5 rounded-full bg-surface-container hover:bg-surface-container-high text-primary font-headline-md text-label-caps flex items-center gap-1 transition-all cursor-pointer whitespace-nowrap shadow-2xs"
+                title="Marcar todas como leídas"
+              >
+                <span className="material-symbols-outlined text-sm">done_all</span>
+                <span>Leídas</span>
+              </button>
+            )}
           </div>
 
           {/* Lista de Notificaciones */}
-          <div className="flex-1 overflow-y-auto divide-y divide-gray-100 max-h-[380px]">
+          <div className="flex-1 overflow-y-auto p-3 space-y-2 max-h-[380px]">
             {notificacionesFiltradas.length === 0 ? (
               <div className="py-12 px-6 text-center flex flex-col items-center justify-center">
-                <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-400 mb-3">
-                  <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+                <div className="w-12 h-12 rounded-2xl bg-surface-container-low flex items-center justify-center text-primary mb-3">
+                  <span className="material-symbols-outlined text-2xl">check_circle</span>
                 </div>
-                <h4 className="text-xs font-bold text-gray-800">No hay notificaciones</h4>
-                <p className="text-[11px] text-gray-400 mt-1 max-w-[220px]">
+                <h4 className="font-headline-md text-title-md text-on-surface">No hay notificaciones</h4>
+                <p className="font-body-sm text-body-sm text-on-surface-variant mt-1 max-w-[220px]">
                   No se registran eventos pendientes en esta categoría.
                 </p>
               </div>
@@ -218,41 +215,49 @@ export default function NotificationCenter() {
                   <div
                     key={notif.id}
                     onClick={() => marcarComoLeida(notif.id)}
-                    className={`p-3.5 transition-all cursor-pointer flex items-start gap-3 hover:bg-gray-50 relative ${
-                      !notif.leida ? 'bg-amber-50/30' : 'bg-white'
+                    className={`p-3.5 rounded-2xl transition-all cursor-pointer flex items-start gap-3 relative border ${
+                      !notif.leida 
+                        ? 'bg-surface-container-low/70 border-outline-variant/30 shadow-2xs' 
+                        : 'bg-surface-container-lowest border-outline-variant/15 hover:bg-surface-container-low/40'
                     }`}
                   >
-                    {/* Indicador visual lateral de no leída */}
+                    {/* Indicador visual lateral pill de no leída */}
                     {!notif.leida && (
-                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-quantix-600 rounded-r-md" />
+                      <div className="w-1.5 h-6 rounded-full bg-primary shrink-0 mt-1" />
                     )}
 
                     {/* Icono de severidad */}
-                    <div className="mt-0.5">
-                      {config.icon}
+                    <div className="mt-0.5 shrink-0">
+                      <span className={`material-symbols-outlined text-lg ${
+                        notif.severidad === 'CRITICO' ? 'text-error' :
+                        notif.severidad === 'WARNING' ? 'text-amber-600' :
+                        notif.severidad === 'SUCCESS' ? 'text-primary' : 'text-on-surface-variant'
+                      }`}>
+                        {config.iconName}
+                      </span>
                     </div>
 
                     {/* Contenido */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1 mb-0.5">
-                        <span className="text-xs font-bold text-gray-900 truncate">
+                        <span className="font-headline-md text-body-md text-on-surface truncate">
                           {notif.titulo}
                         </span>
-                        <span className="text-[10px] text-gray-400 font-medium shrink-0">
+                        <span className="font-body-sm text-body-sm text-on-surface-variant shrink-0">
                           {formatearTiempoRelativo(notif.timestamp)}
                         </span>
                       </div>
                       
-                      <p className="text-[11px] text-gray-600 leading-snug break-words">
+                      <p className="font-body-sm text-body-sm text-on-surface-variant leading-snug break-words">
                         {notif.mensaje}
                       </p>
 
                       {/* Metadatos / Badges */}
                       <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border ${config.bg}`}>
+                        <span className={`px-2.5 py-0.5 rounded-full font-label-caps text-label-caps uppercase border ${config.bg}`}>
                           {config.label}
                         </span>
-                        <span className="text-[9px] font-mono text-gray-400 uppercase bg-gray-100 px-1.5 py-0.5 rounded">
+                        <span className="px-2 py-0.5 rounded-full font-mono text-[10px] text-on-surface-variant uppercase bg-surface-container">
                           {notif.tipo}
                         </span>
                       </div>
@@ -260,15 +265,16 @@ export default function NotificationCenter() {
 
                     {/* Botón 'X' para descartar individual */}
                     <button
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         eliminarNotificacion(notif.id);
                       }}
-                      className="p-1 text-gray-300 hover:text-red-500 rounded-md hover:bg-gray-100 transition-colors"
+                      className="w-7 h-7 rounded-full hover:bg-surface-container text-on-surface-variant hover:text-error flex items-center justify-center transition-colors cursor-pointer shrink-0"
                       title="Descartar notificación"
                       aria-label="Descartar notificación"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <span className="material-symbols-outlined text-base">close</span>
                     </button>
                   </div>
                 );
@@ -276,21 +282,35 @@ export default function NotificationCenter() {
             )}
           </div>
 
-          {/* Footer del Popover con botón Limpiar */}
-          {notificaciones.length > 0 && (
-            <div className="p-3 border-t border-gray-100 bg-gray-50/70 flex items-center justify-between">
-              <span className="text-[11px] font-medium text-gray-400">
-                {notificaciones.length} en total
-              </span>
+          {/* Footer del Popover con botón Probar Toast y Limpiar */}
+          <div className="p-3.5 border-t border-outline-variant/20 bg-surface-container-low/50 flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                mostrarToast({
+                  titulo: 'Alerta Emergente Activa',
+                  mensaje: 'Las notificaciones tipo toast de Quantix Retail OS están operativas en tiempo real.',
+                  severidad: 'SUCCESS',
+                });
+              }}
+              className="px-3 py-1 bg-surface-container hover:bg-surface-container-high text-primary font-title-md text-[11px] font-bold rounded-full transition-colors cursor-pointer flex items-center gap-1 shadow-xs"
+              title="Disparar notificación emergente de prueba"
+            >
+              <span className="material-symbols-outlined text-sm">notifications_active</span>
+              <span>Probar Toast</span>
+            </button>
+
+            {notificaciones.length > 0 && (
               <button
+                type="button"
                 onClick={limpiarNotificaciones}
-                className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                className="h-8 px-3.5 rounded-full bg-error-container hover:bg-error text-on-error-container hover:text-on-error font-headline-md text-label-caps flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
               >
-                <Trash2 className="w-3.5 h-3.5" />
-                Limpiar Historial
+                <span className="material-symbols-outlined text-sm">delete</span>
+                <span>Limpiar</span>
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
     </div>

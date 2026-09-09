@@ -231,10 +231,11 @@ async def job_alertas_predictivas() -> dict:
     from app.models.usuarios import Usuario, RolUsuario, SesionCaja, ArqueoCaja, EstadoSesionCaja, AuditoriaEvento
 
     logger.info("Scheduler: Ejecutando job de Alertas Predictivas en Background...")
-    ahora = datetime.now(timezone.utc)
+    ahora_naive = datetime.utcnow()
+    ahora_aware = datetime.now(timezone.utc)
     res_summary = {
         "status": "EXITOSO",
-        "timestamp": ahora.isoformat(),
+        "timestamp": ahora_aware.isoformat(),
         "sobrestock_detectados": 0,
         "cupones_reactivacion_emitidos": 0,
         "descuadres_repetidos_detectados": 0,
@@ -257,7 +258,7 @@ async def job_alertas_predictivas() -> dict:
             # -------------------------------------------------------------
             # REGLA 1: SOBRESTOCK (Stock > 0 y 0 ventas en últimos 60 días)
             # -------------------------------------------------------------
-            hace_60_dias = ahora - timedelta(days=60)
+            hace_60_dias_naive = ahora_naive - timedelta(days=60)
             
             # Productos con stock disponible activo
             q_stock = (
@@ -273,13 +274,13 @@ async def job_alertas_predictivas() -> dict:
             res_stock = await session.execute(q_stock)
             prods_con_stock = res_stock.all()
 
-            # Productos que SI tuvieron ventas en últimos 60 días
+            # Productos que SI tuvieron ventas en últimos 60 días (fecha_hora es naive)
             q_vendidos = (
                 select(DetalleVenta.producto_id)
                 .join(Venta, DetalleVenta.venta_id == Venta.id)
                 .where(
                     Venta.estado == EstadoVenta.COMPLETADA,
-                    Venta.fecha_hora >= hace_60_dias
+                    Venta.fecha_hora >= hace_60_dias_naive
                 )
                 .distinct()
             )
@@ -287,12 +288,12 @@ async def job_alertas_predictivas() -> dict:
             vendidos_ids = set(res_vendidos.scalars().all())
 
             # Evitar alertar productos ya alertados en los últimos 7 días
-            hace_7_dias = ahora - timedelta(days=7)
+            hace_7_dias_aware = ahora_aware - timedelta(days=7)
             q_alertas_prev = (
                 select(AuditoriaEvento)
                 .where(
                     AuditoriaEvento.tipo_evento == 'ALERTA_SOBRESTOCK',
-                    AuditoriaEvento.fecha_evento >= hace_7_dias
+                    AuditoriaEvento.fecha_evento >= hace_7_dias_aware
                 )
             )
             res_alertas_prev = await session.execute(q_alertas_prev)
@@ -327,7 +328,7 @@ async def job_alertas_predictivas() -> dict:
             # -------------------------------------------------------------
             # REGLA 2: CLIENTES INACTIVOS (>45 días) -> CUPÓN REACTIVACIÓN
             # -------------------------------------------------------------
-            hace_45_dias = ahora - timedelta(days=45)
+            hace_45_dias_aware = ahora_aware - timedelta(days=45)
             
             # Última compra por cliente
             q_ultimas_compras = (
@@ -349,13 +350,16 @@ async def job_alertas_predictivas() -> dict:
                     fecha_compra = mapa_ultimas_compras[cli.id]
                     if fecha_compra.tzinfo is None:
                         fecha_compra = fecha_compra.replace(tzinfo=timezone.utc)
-                    if fecha_compra < hace_45_dias:
+                    if fecha_compra < hace_45_dias_aware:
                         es_inactivo = True
                 else:
                     fecha_reg = cli.fecha_registro
-                    if fecha_reg.tzinfo is None:
-                        fecha_reg = fecha_reg.replace(tzinfo=timezone.utc)
-                    if fecha_reg < hace_45_dias:
+                    if fecha_reg is not None:
+                        if fecha_reg.tzinfo is None:
+                            fecha_reg = fecha_reg.replace(tzinfo=timezone.utc)
+                        if fecha_reg < hace_45_dias_aware:
+                            es_inactivo = True
+                    else:
                         es_inactivo = True
 
                 if es_inactivo:
@@ -411,7 +415,7 @@ async def job_alertas_predictivas() -> dict:
                 .join(Usuario, SesionCaja.usuario_id == Usuario.id)
                 .join(ArqueoCaja, ArqueoCaja.sesion_caja_id == SesionCaja.id)
                 .where(
-                    SesionCaja.fecha_apertura >= hace_7_dias,
+                    SesionCaja.fecha_apertura >= hace_7_dias_aware,
                     or_(
                         ArqueoCaja.estado != 'OK',
                         func.abs(ArqueoCaja.diferencia) > Decimal("5.00"),
@@ -427,12 +431,12 @@ async def job_alertas_predictivas() -> dict:
                 clave = (u_item.id, u_item.nombre, s_item.terminal_id)
                 conteo_por_operador[clave] = conteo_por_operador.get(clave, 0) + 1
 
-            hace_24_horas = ahora - timedelta(hours=24)
+            hace_24_horas_aware = ahora_aware - timedelta(hours=24)
             q_alertas_desc_prev = (
                 select(AuditoriaEvento)
                 .where(
                     AuditoriaEvento.tipo_evento == 'ALERTA_DESCUADRES_REPETIDOS',
-                    AuditoriaEvento.fecha_evento >= hace_24_horas
+                    AuditoriaEvento.fecha_evento >= hace_24_horas_aware
                 )
             )
             res_desc_prev = await session.execute(q_alertas_desc_prev)

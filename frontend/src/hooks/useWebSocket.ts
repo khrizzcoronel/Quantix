@@ -5,6 +5,15 @@ import { useAuthStore } from '../store/authStore';
 
 export type SeveridadAlerta = 'INFO' | 'SUCCESS' | 'WARNING' | 'CRITICO';
 
+export interface ToastNotificacion {
+  id: string;
+  titulo: string;
+  mensaje: string;
+  severidad: SeveridadAlerta;
+  duracionMs?: number;
+  timestamp: string;
+}
+
 export interface NotificacionWS {
   id: string;
   tipo: string;
@@ -31,14 +40,18 @@ export type EstadoConexion = 'conectado' | 'conectando' | 'desconectado' | 'erro
 interface NotificacionesState {
   notificaciones: NotificacionWS[];
   eventosEnVivo: EventoActividad[];
+  toasts: ToastNotificacion[];
   estadoConexion: EstadoConexion;
   ultimoLatido: string | null;
   latenciaMs: number | null;
   
   // Acciones
   setEstadoConexion: (estado: EstadoConexion) => void;
-  agregarNotificacion: (notif: Omit<NotificacionWS, 'leida'> & { leida?: boolean }) => void;
+  agregarNotificacion: (notif: Omit<NotificacionWS, 'leida'> & { leida?: boolean; silenciarToast?: boolean }) => void;
   agregarEventoEnVivo: (evento: EventoActividad) => void;
+  agregarToast: (toast: Omit<ToastNotificacion, 'id' | 'timestamp'> & { id?: string; timestamp?: string }) => void;
+  descartarToast: (id: string) => void;
+  limpiarToasts: () => void;
   marcarComoLeida: (id: string) => void;
   marcarTodasComoLeidas: () => void;
   eliminarNotificacion: (id: string) => void;
@@ -52,6 +65,7 @@ export const useNotificationStore = create<NotificacionesState>()(
     (set) => ({
       notificaciones: [],
       eventosEnVivo: [],
+      toasts: [],
       estadoConexion: 'desconectado',
       ultimoLatido: null,
       latenciaMs: null,
@@ -68,10 +82,46 @@ export const useNotificationStore = create<NotificacionesState>()(
             ...notif,
             leida: notif.leida ?? false,
           };
+
+          const nuevoToast: ToastNotificacion = {
+            id: notif.id,
+            titulo: notif.titulo,
+            mensaje: notif.mensaje,
+            severidad: notif.severidad,
+            duracionMs: notif.severidad === 'CRITICO' ? 8000 : 5000,
+            timestamp: notif.timestamp || new Date().toISOString(),
+          };
+
           return {
             notificaciones: [nueva, ...state.notificaciones].slice(0, 100),
+            toasts: notif.silenciarToast
+              ? state.toasts
+              : [nuevoToast, ...state.toasts.filter((t) => t.id !== notif.id)].slice(0, 5),
           };
         }),
+
+      agregarToast: (toast) =>
+        set((state) => {
+          const id = toast.id || `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+          const nuevoToast: ToastNotificacion = {
+            id,
+            titulo: toast.titulo,
+            mensaje: toast.mensaje,
+            severidad: toast.severidad || 'INFO',
+            duracionMs: toast.duracionMs ?? (toast.severidad === 'CRITICO' ? 8000 : 5000),
+            timestamp: toast.timestamp || new Date().toISOString(),
+          };
+          return {
+            toasts: [nuevoToast, ...state.toasts.filter((t) => t.id !== id)].slice(0, 5),
+          };
+        }),
+
+      descartarToast: (id) =>
+        set((state) => ({
+          toasts: state.toasts.filter((t) => t.id !== id),
+        })),
+
+      limpiarToasts: () => set({ toasts: [] }),
 
       agregarEventoEnVivo: (evento) =>
         set((state) => {
@@ -315,12 +365,20 @@ export const useWebSocket = () => {
 
   const noLeidasCount = notificaciones.filter((n) => !n.leida).length;
 
+  const {
+    toasts,
+    agregarToast,
+    descartarToast,
+    limpiarToasts,
+  } = useNotificationStore();
+
   return {
     estadoConexion,
     estaConectado: estadoConexion === 'conectado',
     notificaciones,
     noLeidasCount,
     eventosEnVivo,
+    toasts,
     ultimoLatido,
     latenciaMs,
     marcarComoLeida,
@@ -330,6 +388,14 @@ export const useWebSocket = () => {
     limpiarEventos,
     agregarNotificacion,
     agregarEventoEnVivo,
+    agregarToast,
+    descartarToast,
+    limpiarToasts,
     enviarMensaje,
   };
 };
+
+export const mostrarToast = (toast: Omit<ToastNotificacion, 'id' | 'timestamp'> & { id?: string; timestamp?: string }) => {
+  useNotificationStore.getState().agregarToast(toast);
+};
+

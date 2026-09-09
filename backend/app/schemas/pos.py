@@ -33,6 +33,7 @@ class CheckoutRequest(BaseModel):
     metodo_pago: Optional[str] = None
     codigo_cupon: Optional[str] = None
     idempotency_key: Optional[str] = Field(default=None, min_length=8, max_length=64)
+    puntos_canjeados: Optional[int] = Field(default=0, ge=0, description="Puntos de lealtad a canjear como descuento")
 
 class CheckoutResponse(BaseModel):
     venta_id: UUID
@@ -43,6 +44,11 @@ class CheckoutResponse(BaseModel):
     total_pagar: Decimal
     estado: str
     mensaje: str
+    puntos_canjeados: int = 0
+    descuento_puntos: Decimal = Decimal("0.00")
+
+class EnviarTicketRequest(BaseModel):
+    email: Optional[str] = Field(default=None, description="Correo electrónico de destino")
 
 class DetalleVentaItemResponse(BaseModel):
     id: UUID
@@ -71,8 +77,10 @@ class VentaResumenResponse(BaseModel):
     id: UUID
     sesion_caja_id: UUID
     cliente_id: Optional[UUID] = None
+    cliente_cedula: Optional[str] = None
     cliente_nombre: Optional[str] = None
     cliente_telefono: Optional[str] = None
+    cliente_email: Optional[str] = None
     folio_ticket: str
     fecha_hora: datetime
     total_bruto: Decimal
@@ -88,8 +96,10 @@ class VentaDetalleResponse(BaseModel):
     id: UUID
     sesion_caja_id: UUID
     cliente_id: Optional[UUID] = None
+    cliente_cedula: Optional[str] = None
     cliente_nombre: Optional[str] = None
     cliente_telefono: Optional[str] = None
+    cliente_email: Optional[str] = None
     folio_ticket: str
     fecha_hora: datetime
     total_bruto: Decimal

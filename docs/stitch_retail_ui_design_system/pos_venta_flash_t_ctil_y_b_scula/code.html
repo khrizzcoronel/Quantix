@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+
+<html lang="es"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "on-primary-fixed-variant": "#005236", "surface-container-lowest": "#ffffff", "error": "#ba1a1a", "on-secondary": "#ffffff", "on-tertiary-fixed": "#25005a", "error-container": "#ffdad6", "tertiary-fixed": "#eaddff", "primary-fixed-dim": "#4edea3", "primary-container": "#10b981", "on-surface": "#131b2e", "on-error": "#ffffff", "on-surface-variant": "#3c4a42", "surface-dim": "#d2d9f4", "on-tertiary-fixed-variant": "#5a00c6", "background": "#faf8ff", "surface-bright": "#faf8ff", "surface-container-high": "#e2e7ff", "surface-tint": "#006c49", "inverse-surface": "#283044", "secondary-container": "#316bf3", "tertiary-container": "b48fff", "on-background": "#131b2e", "tertiary-fixed-dim": "#d2bbff", "secondary-fixed": "#dbe1ff", "on-primary": "#ffffff", "inverse-primary": "#4edea3", "on-secondary-container": "#fefcff", "on-primary-container": "#00422b", "outline": "#6c7a71", "surface-variant": "#dae2fd", "surface": "#faf8ff", "on-secondary-fixed-variant": "#003ea8", "on-tertiary-container": "#4900a4", "surface-container": "#eaedff", "on-primary-fixed": "#002113", "surface-container-low": "#f2f3ff", "surface-container-highest": "#dae2fd", "on-secondary-fixed": "#00174b", "on-tertiary": "#ffffff", "inverse-on-surface": "#eef0ff", "primary-fixed": "#6ffbbe", "outline-variant": "#bbcabf", "primary": "#006c49", "secondary-fixed-dim": "#b4c5ff", "tertiary": "#732ee4", "on-error-container": "#93000a", "secondary": "#0051d5" }, "borderRadius": { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" }, "spacing": { "pad-card-sm": "1rem", "touch-min": "3rem", "pad-terminal": "1.5rem", "touch-large": "4.5rem", "gap-standard": "1rem", "touch-standard": "3.5rem", "pad-card-lg": "1.75rem", "gap-compact": "0.5rem", "gap-spacious": "1.5rem", "gutter-split": "1.5rem" }, "fontFamily": { "label-numeric-lg": [ "Space Grotesk" ], "display-lg": [ "Space Grotesk" ], "headline-md": [ "Space Grotesk" ], "title-md": [ "Geist" ], "title-lg": [ "Space Grotesk" ], "label-caps": [ "Space Grotesk" ], "label-numeric-md": [ "Space Grotesk" ], "body-lg": [ "Geist" ], "display-lg-mobile": [ "Space Grotesk" ], "headline-xl-mobile": [ "Space Grotesk" ], "body-sm": [ "Geist" ], "body-md": [ "Geist" ], "headline-xl": [ "Space Grotesk" ] }, "fontSize": { "label-numeric-lg": [ "32px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "700" } ], "display-lg": [ "48px", { "lineHeight": "56px", "letterSpacing": "-0.03em", "fontWeight": "700" } ], "headline-md": [ "24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" } ], "title-md": [ "16px", { "lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "600" } ], "title-lg": [ "20px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" } ], "label-caps": [ "11px", { "lineHeight": "14px", "letterSpacing": "0.08em", "fontWeight": "700" } ], "label-numeric-md": [ "18px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" } ], "body-lg": [ "16px", { "lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "400" } ], "display-lg-mobile": [ "32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" } ], "headline-xl-mobile": [ "28px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "600" } ], "body-sm": [ "12px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "400" } ], "body-md": [ "14px", { "lineHeight": "20px", "letterSpacing": "0em", "fontWeight": "400" } ], "headline-xl": [ "36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "600" } ] } } } }</script></head><body class="bg-background font-body-md text-on-surface antialiased"><aside class="fixed left-0 top-0 h-full w-72 bg-surface-container-lowest z-50 flex flex-col justify-between p-pad-terminal shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex flex-col gap-gap-spacious"><div class="flex items-center gap-gap-compact"><img alt="Quantix Retail OS Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1VE-3_bnWGL8smsZAPyYO1-GEW49eAmPw7A6GIATlLaj81HtxALpAkAswdd0YlnaC5qdiVB9RRiZXLQKnkd_GOllraNp77m88u8waRd1PL3CpTneqanJBavEzkD9WVtNQjBjQLBd2Fb9hQYBCQjr110oFrmESQRr7xt3yDsmvlv0anyyaqdQUgAyeB3-cwAg3cYjFvBP_XFE2XoRqchk8CQ33V2bKF80cgqgSpcMETAxPfxNsXzlKxMxXGd"/><div class="flex flex-col"><span class="font-headline-md text-title-md text-on-surface tracking-tight leading-none">Quantix POS</span><span class="font-body-sm text-body-sm text-on-surface-variant font-medium">Retail OS v4.2</span></div></div><div class="bg-surface-container-low p-pad-card-sm rounded-lg flex items-center justify-between"><div class="flex flex-col"><span class="font-label-caps text-label-caps uppercase text-on-surface-variant">Rol Activo</span><span class="font-title-md text-title-md text-on-surface font-semibold">Cajero Principal</span></div><span class="px-2 py-1 bg-surface-container-high text-primary rounded-full font-label-caps text-label-caps uppercase tracking-wider font-bold">Piso &amp; Venta</span></div><nav class="flex flex-col gap-gap-compact" data-active-classes="bg-primary-container text-on-primary-container font-bold shadow-sm"><a aria-current="page" class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all group bg-primary-container text-on-primary-container font-bold shadow-sm" data-path="punto-de-venta" href="#"><span class="material-symbols-outlined text-title-lg transition-transform group-hover:scale-110">point_of_sale</span><span class="font-title-md text-title-md">Punto de Venta</span></a><a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="clientes-y-fidelizacion" href="#"><span class="material-symbols-outlined text-title-lg transition-transform group-hover:scale-110">loyalty</span><span class="font-title-md text-title-md">Clientes &amp; Fidelización</span></a><a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="control-de-inventario" href="#"><span class="material-symbols-outlined text-title-lg transition-transform group-hover:scale-110">inventory_2</span><span class="font-title-md text-title-md">Control de Inventario</span></a><a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="supervision-de-cajas" href="#"><span class="material-symbols-outlined text-title-lg transition-transform group-hover:scale-110">monitoring</span><span class="font-title-md text-title-md">Supervisión de Cajas</span></a><a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="dashboard-bi" href="#"><span class="material-symbols-outlined text-title-lg transition-transform group-hover:scale-110">analytics</span><span class="font-title-md text-title-md">Dashboard BI</span></a></nav></div><div class="bg-surface-container-low p-pad-card-sm rounded-lg flex flex-col gap-gap-compact"><div class="flex items-center gap-3"><img alt="Profile" class="w-10 h-10 rounded-full object-cover ring-2 ring-primary-container" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmPS9YJDOkoYLSwOXk9ulsSPpQkBaUXnHU7F2K8_oaqKWglUYwxWPnW13n_2LMK5v3DrttX3_Jk_ZzwWlER4PftL5nxchDpPlz3bcTIXyGy5yFLgZdCI0lkdaCiZQPcYtDuqpnc7Lr6G4lCPc23_SkeNCLQNhvgVHew2q6n9KdW8V2nKgg2x_jtd9CABmouURHEoVy1qKESUjtJNpz3XIqpdEdHiy1UWdKcrwZ8xFbuRjQ4veX5ozWpQ"/><div class="flex flex-col min-w-0 flex-1"><span class="font-title-md text-title-md text-on-surface truncate">María Elena Morales</span><span class="font-label-caps text-label-caps uppercase text-primary font-bold tracking-wider">CAJERO EN TURNO</span></div></div><div class="flex items-center justify-between pt-2"><span class="font-body-sm text-body-sm text-on-surface-variant">Turno #3 Matutino</span><button class="flex items-center justify-center p-2 rounded-full hover:bg-error-container hover:text-on-error-container text-on-surface-variant transition-colors" title="Cerrar Turno"><span class="material-symbols-outlined text-title-md">logout</span></button></div></div></aside><div class="pl-72 flex flex-col min-h-screen"><header class="fixed top-0 left-72 right-0 h-20 bg-surface-container-lowest/90 backdrop-blur-xl z-40 px-pad-terminal flex items-center justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex items-center gap-gap-spacious"><div class="flex items-center gap-2"><span class="font-body-sm text-body-sm text-on-surface-variant">Quantix OS</span><span class="material-symbols-outlined text-body-sm text-outline">chevron_right</span><span class="font-title-md text-title-md text-on-surface font-semibold">Terminal Operativo</span></div><div class="hidden xl:flex items-center gap-2 px-3 py-1.5 bg-surface-container-low rounded-full"><span class="relative flex h-2.5 w-2.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-container opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span></span><span class="font-label-caps text-label-caps uppercase text-on-surface font-bold">ONLINE 18ms</span></div><div class="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-surface-container rounded-full text-on-surface"><span class="material-symbols-outlined text-body-md text-secondary">point_of_sale</span><span class="font-body-sm text-body-sm font-medium">CAJA-01 • Fondo: <strong class="font-label-numeric-md text-body-sm">$1,500.00</strong></span></div></div><div class="flex items-center gap-gap-standard"><div class="hidden 2xl:flex flex-col w-48"><div class="flex justify-between items-center mb-1"><span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Meta de Turno</span><span class="font-label-caps text-label-caps text-on-surface font-bold">$2,140 / $2,500</span></div><div class="w-full h-2 bg-surface-container rounded-full overflow-hidden"><div class="h-full bg-primary-container rounded-full" style="width: 85.6%"></div></div></div><button class="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-low hover:bg-surface-container rounded-full text-on-surface-variant text-body-sm transition-colors"><span class="material-symbols-outlined text-body-md">keyboard</span><span class="font-label-caps text-label-caps uppercase">Atajos [F1-F12]</span></button><button class="relative p-2.5 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"><span class="material-symbols-outlined">notifications</span><span class="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-error text-[10px] font-bold text-on-error">3</span></button><button class="p-2.5 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"><span class="material-symbols-outlined">dark_mode</span></button></div></header><main class="w-full pt-20 p-pad-terminal bg-background flex-1"><div class="flex flex-col w-full">
+<!-- Status & Quick Bar -->
+<div class="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-gap-standard mb-gap-spacious">
+<!-- Flash Mode Badge & Metrics -->
+<div class="flex flex-wrap items-center gap-gap-standard">
+<div class="inline-flex items-center gap-2.5 px-4 py-2 bg-secondary-container text-on-secondary-container rounded-full shadow-md">
+<span class="material-symbols-outlined text-title-lg text-primary-fixed animate-pulse" style="font-variation-settings: 'FILL' 1;">bolt</span>
+<span class="font-headline-md text-title-md tracking-wider uppercase">MODO VENTA FLASH ACTIVO</span>
+<span class="px-2 py-0.5 bg-surface-container-lowest/30 rounded-full font-label-caps text-label-caps font-bold">HORA PICO</span>
+</div>
+<div class="flex items-center gap-2 bg-surface-container-low px-4 py-2 rounded-full shadow-sm">
+<span class="material-symbols-outlined text-primary text-title-md">speed</span>
+<span class="font-body-md text-body-sm text-on-surface">Ritmo: <strong class="font-label-numeric-md text-body-md text-primary">24 trans/hr</strong></span>
+<span class="text-outline text-body-sm">•</span>
+<span class="font-body-md text-body-sm text-on-surface-variant">Prom. Ticket: <strong class="font-label-numeric-md text-body-md text-on-surface">$114.50</strong></span>
+</div>
+</div>
+<!-- Active Hardware Sensors -->
+<div class="flex items-center gap-gap-compact">
+<div class="flex items-center gap-2 bg-surface-container-lowest px-3.5 py-1.5 rounded-full shadow-sm">
+<span class="w-2.5 h-2.5 rounded-full bg-primary-container animate-ping"></span>
+<span class="material-symbols-outlined text-body-md text-on-surface">scale</span>
+<span class="font-label-caps text-label-caps text-on-surface uppercase">Báscula Toledo USB • Sincronizada</span>
+</div>
+<div class="hidden sm:flex items-center gap-2 bg-surface-container-lowest px-3.5 py-1.5 rounded-full shadow-sm">
+<span class="material-symbols-outlined text-body-md text-secondary">barcode_scanner</span>
+<span class="font-label-caps text-label-caps text-on-surface uppercase">Óptico Zebra 2D Listo</span>
+</div>
+</div>
+</div>
+<!-- Main POS Grid: 2 Primary Columns (Left Catalog/Scale + Right Express Drawer) -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter-split items-start">
+<!-- LEFT PANEL: Quick-Keys Grid + Industrial Scale & Keypad (Cols 7 or 8 on desktop) -->
+<div class="lg:col-span-7 xl:col-span-7 flex flex-col gap-gap-spacious">
+<!-- Quick Keys Matrix by Family -->
+<div class="bg-surface-container-lowest p-pad-card-lg rounded-3xl shadow-sm flex flex-col gap-gap-standard">
+<!-- Category Pill Tabs -->
+<div class="flex items-center justify-between overflow-x-auto pb-1 gap-2">
+<div class="flex items-center gap-2">
+<button class="px-4 py-2 bg-on-surface text-surface-container-lowest rounded-full font-label-caps text-label-caps uppercase tracking-wider shadow-sm transition-transform active:scale-95">
+              ⭐ Más Vendidos (F1)
+            </button>
+<button class="px-4 py-2 bg-surface-container-low text-on-surface-variant hover:bg-surface-container rounded-full font-label-caps text-label-caps uppercase tracking-wider transition-colors">
+              🥤 Bebidas
+            </button>
+<button class="px-4 py-2 bg-surface-container-low text-on-surface-variant hover:bg-surface-container rounded-full font-label-caps text-label-caps uppercase tracking-wider transition-colors">
+              🥖 Panadería
+            </button>
+<button class="px-4 py-2 bg-surface-container-low text-on-surface-variant hover:bg-surface-container rounded-full font-label-caps text-label-caps uppercase tracking-wider transition-colors">
+              🥑 Granel Fresco
+            </button>
+</div>
+<span class="font-label-caps text-label-caps text-outline uppercase hidden sm:block">16 Accesos Rápidos</span>
+</div>
+<!-- 4x4 High-Hit Area Quick Grid -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+<!-- BEBIDAS (Soft Aqua / Sky Tint) -->
+<button class="group flex flex-col justify-between p-3.5 h-28 bg-surface-container-low hover:bg-surface-container text-left rounded-2xl shadow-sm transition-all active:scale-95" onclick="addItem('Agua Purificada 1L', 15.00, false)">
+<div class="flex items-start justify-between w-full">
+<span class="w-8 h-8 rounded-full bg-secondary/10 text-secondary flex items-center justify-center font-bold text-title-md">
+<span class="material-symbols-outlined text-body-md">water_drop</span>
+</span>
+<span class="px-2 py-0.5 bg-surface-container text-on-surface-variant rounded-full font-label-caps text-label-caps">B1</span>
+</div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface leading-tight group-hover:text-secondary transition-colors line-clamp-1">Agua 1L</span>
+<span class="font-label-numeric-lg text-title-lg text-secondary">$15.00</span>
+</div>
+</button>
+<button class="group flex flex-col justify-between p-3.5 h-28 bg-surface-container-low hover:bg-surface-container text-left rounded-2xl shadow-sm transition-all active:scale-95" onclick="addItem('Refresco Cola 600ml', 19.50, false)">
+<div class="flex items-start justify-between w-full">
+<span class="w-8 h-8 rounded-full bg-secondary/10 text-secondary flex items-center justify-center font-bold text-title-md">
+<span class="material-symbols-outlined text-body-md">local_cafe</span>
+</span>
+<span class="px-2 py-0.5 bg-surface-container text-on-surface-variant rounded-full font-label-caps text-label-caps">B2</span>
+</div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface leading-tight group-hover:text-secondary transition-colors line-clamp-1">Refresco 600ml</span>
+<span class="font-label-numeric-lg text-title-lg text-secondary">$19.50</span>
+</div>
+</button>
+<button class="group flex flex-col justify-between p-3.5 h-28 bg-surface-container-low hover:bg-surface-container text-left rounded-2xl shadow-sm transition-all active:scale-95" onclick="addItem('Jugo Naranja Natural', 24.00, false)">
+<div class="flex items-start justify-between w-full">
+<span class="w-8 h-8 rounded-full bg-secondary/10 text-secondary flex items-center justify-center font-bold text-title-md">
+<span class="material-symbols-outlined text-body-md">nutrition</span>
+</span>
+<span class="px-2 py-0.5 bg-surface-container text-on-surface-variant rounded-full font-label-caps text-label-caps">B3</span>
+</div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface leading-tight group-hover:text-secondary transition-colors line-clamp-1">Jugo Naranja</span>
+<span class="font-label-numeric-lg text-title-lg text-secondary">$24.00</span>
+</div>
+</button>
+<button class="group flex flex-col justify-between p-3.5 h-28 bg-surface-container-low hover:bg-surface-container text-left rounded-2xl shadow-sm transition-all active:scale-95" onclick="addItem('Bebida Energizante 473ml', 38.00, false)">
+<div class="flex items-start justify-between w-full">
+<span class="w-8 h-8 rounded-full bg-secondary/10 text-secondary flex items-center justify-center font-bold text-title-md">
+<span class="material-symbols-outlined text-body-md">bolt</span>
+</span>
+<span class="px-2 py-0.5 bg-surface-container text-on-surface-variant rounded-full font-label-caps text-label-caps">B4</span>
+</div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface leading-tight group-hover:text-secondary transition-colors line-clamp-1">Energizante</span>
+<span class="font-label-numeric-lg text-title-lg text-secondary">$38.00</span>
+</div>
+</button>
+<!-- PANADERÍA (Warm Amber / Biscuit Tint) -->
+<button class="group flex flex-col justify-between p-3.5 h-28 bg-surface-container-high hover:bg-surface-container-highest text-left rounded-2xl shadow-sm transition-all active:scale-95" onclick="addItem('Bolillo Tradicional', 3.50, false)">
+<div class="flex items-start justify-between w-full">
+<span class="w-8 h-8 rounded-full bg-tertiary-fixed text-on-tertiary-fixed flex items-center justify-center font-bold text-title-md">
+<span class="material-symbols-outlined text-body-md">bakery_dining</span>
+</span>
+<span class="px-2 py-0.5 bg-surface-container-lowest text-on-surface-variant rounded-full font-label-caps text-label-caps">P1</span>
+</div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface leading-tight group-hover:text-tertiary transition-colors line-clamp-1">Bolillo Pza</span>
+<span class="font-label-numeric-lg text-title-lg text-tertiary">$3.50</span>
+</div>
+</button>
+<button class="group flex flex-col justify-between p-3.5 h-28 bg-surface-container-high hover:bg-surface-container-highest text-left rounded-2xl shadow-sm transition-all active:scale-95" onclick="addItem('Dona Glaseada Azúcar', 12.00, false)">
+<div class="flex items-start justify-between w-full">
+<span class="w-8 h-8 rounded-full bg-tertiary-fixed text-on-tertiary-fixed flex items-center justify-center font-bold text-title-md">
+<span class="material-symbols-outlined text-body-md">cookie</span>
+</span>
+<span class="px-2 py-0.5 bg-surface-container-lowest text-on-surface-variant rounded-full font-label-caps text-label-caps">P2</span>
+</div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface leading-tight group-hover:text-tertiary transition-colors line-clamp-1">Dona Azúcar</span>
+<span class="font-label-numeric-lg text-title-lg text-tertiary">$12.00</span>
+</div>
+</button>
+<button class="group flex flex-col justify-between p-3.5 h-28 bg-surface-container-high hover:bg-surface-container-highest text-left rounded-2xl shadow-sm transition-all active:scale-95" onclick="addItem('Empanada Horneada Carne', 25.00, false)">
+<div class="flex items-start justify-between w-full">
+<span class="w-8 h-8 rounded-full bg-tertiary-fixed text-on-tertiary-fixed flex items-center justify-center font-bold text-title-md">
+<span class="material-symbols-outlined text-body-md">lunch_dining</span>
+</span>
+<span class="px-2 py-0.5 bg-surface-container-lowest text-on-surface-variant rounded-full font-label-caps text-label-caps">P3</span>
+</div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface leading-tight group-hover:text-tertiary transition-colors line-clamp-1">Empanada Carne</span>
+<span class="font-label-numeric-lg text-title-lg text-tertiary">$25.00</span>
+</div>
+</button>
+<button class="group flex flex-col justify-between p-3.5 h-28 bg-surface-container-high hover:bg-surface-container-highest text-left rounded-2xl shadow-sm transition-all active:scale-95" onclick="addItem('Croissant Mantequilla', 22.00, false)">
+<div class="flex items-start justify-between w-full">
+<span class="w-8 h-8 rounded-full bg-tertiary-fixed text-on-tertiary-fixed flex items-center justify-center font-bold text-title-md">
+<span class="material-symbols-outlined text-body-md">breakfast_dining</span>
+</span>
+<span class="px-2 py-0.5 bg-surface-container-lowest text-on-surface-variant rounded-full font-label-caps text-label-caps">P4</span>
+</div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface leading-tight group-hover:text-tertiary transition-colors line-clamp-1">Croissant Mant.</span>
+<span class="font-label-numeric-lg text-title-lg text-tertiary">$22.00</span>
+</div>
+</button>
+<!-- GRANEL FRESCO (Emerald / Botanical Tint) -->
+<button class="group flex flex-col justify-between p-3.5 h-28 bg-surface-container-low hover:bg-surface-container text-left rounded-2xl shadow-sm transition-all active:scale-95" onclick="addWeightItem('Huevo Blanco Seleccionado', 48.00)">
+<div class="flex items-start justify-between w-full">
+<span class="w-8 h-8 rounded-full bg-primary-container/20 text-primary flex items-center justify-center font-bold text-title-md">
+<span class="material-symbols-outlined text-body-md">egg</span>
+</span>
+<span class="px-2 py-0.5 bg-primary/10 text-primary rounded-full font-label-caps text-label-caps">BÁSCULA</span>
+</div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface leading-tight group-hover:text-primary transition-colors line-clamp-1">Huevo x Kg</span>
+<span class="font-label-numeric-lg text-title-lg text-primary">$48.00<span class="text-body-sm font-normal text-on-surface-variant">/kg</span></span>
+</div>
+</button>
+<button class="group flex flex-col justify-between p-3.5 h-28 bg-surface-container-low hover:bg-surface-container text-left rounded-2xl shadow-sm transition-all active:scale-95" onclick="addWeightItem('Plátano Tabasco Fresco', 26.00)">
+<div class="flex items-start justify-between w-full">
+<span class="w-8 h-8 rounded-full bg-primary-container/20 text-primary flex items-center justify-center font-bold text-title-md">
+<span class="material-symbols-outlined text-body-md">grocery</span>
+</span>
+<span class="px-2 py-0.5 bg-primary/10 text-primary rounded-full font-label-caps text-label-caps">BÁSCULA</span>
+</div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface leading-tight group-hover:text-primary transition-colors line-clamp-1">Plátano x Kg</span>
+<span class="font-label-numeric-lg text-title-lg text-primary">$26.00<span class="text-body-sm font-normal text-on-surface-variant">/kg</span></span>
+</div>
+</button>
+<button class="group flex flex-col justify-between p-3.5 h-28 bg-surface-container-low hover:bg-surface-container text-left rounded-2xl shadow-sm transition-all active:scale-95" onclick="addWeightItem('Aguacate Hass Extra', 75.00)">
+<div class="flex items-start justify-between w-full">
+<span class="w-8 h-8 rounded-full bg-primary-container/20 text-primary flex items-center justify-center font-bold text-title-md">
+<span class="material-symbols-outlined text-body-md">eco</span>
+</span>
+<span class="px-2 py-0.5 bg-primary/10 text-primary rounded-full font-label-caps text-label-caps">BÁSCULA</span>
+</div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface leading-tight group-hover:text-primary transition-colors line-clamp-1">Aguacate x Kg</span>
+<span class="font-label-numeric-lg text-title-lg text-primary">$75.00<span class="text-body-sm font-normal text-on-surface-variant">/kg</span></span>
+</div>
+</button>
+<button class="group flex flex-col justify-between p-3.5 h-28 bg-surface-container-low hover:bg-surface-container text-left rounded-2xl shadow-sm transition-all active:scale-95" onclick="addWeightItem('Manzana Gala Importada', 42.00)">
+<div class="flex items-start justify-between w-full">
+<span class="w-8 h-8 rounded-full bg-primary-container/20 text-primary flex items-center justify-center font-bold text-title-md">
+<span class="material-symbols-outlined text-body-md">nutrition</span>
+</span>
+<span class="px-2 py-0.5 bg-primary/10 text-primary rounded-full font-label-caps text-label-caps">BÁSCULA</span>
+</div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface leading-tight group-hover:text-primary transition-colors line-clamp-1">Manzana Gala</span>
+<span class="font-label-numeric-lg text-title-lg text-primary">$42.00<span class="text-body-sm font-normal text-on-surface-variant">/kg</span></span>
+</div>
+</button>
+<!-- SERVICIOS & VARIOS EXPRESS (Slate / Technical Tint) -->
+<button class="group flex flex-col justify-between p-3.5 h-28 bg-surface-container-low hover:bg-surface-container text-left rounded-2xl shadow-sm transition-all active:scale-95" onclick="addItem('Bolsa Reutilizable Ecológica', 5.00, false)">
+<div class="flex items-start justify-between w-full">
+<span class="w-8 h-8 rounded-full bg-on-surface/10 text-on-surface flex items-center justify-center font-bold text-title-md">
+<span class="material-symbols-outlined text-body-md">shopping_bag</span>
+</span>
+<span class="px-2 py-0.5 bg-surface-container text-on-surface-variant rounded-full font-label-caps text-label-caps">V1</span>
+</div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface leading-tight group-hover:text-secondary transition-colors line-clamp-1">Bolsa Eco</span>
+<span class="font-label-numeric-lg text-title-lg text-on-surface">$5.00</span>
+</div>
+</button>
+<button class="group flex flex-col justify-between p-3.5 h-28 bg-surface-container-low hover:bg-surface-container text-left rounded-2xl shadow-sm transition-all active:scale-95" onclick="addItem('Recarga Telefónica $50', 50.00, false)">
+<div class="flex items-start justify-between w-full">
+<span class="w-8 h-8 rounded-full bg-on-surface/10 text-on-surface flex items-center justify-center font-bold text-title-md">
+<span class="material-symbols-outlined text-body-md">cell_tower</span>
+</span>
+<span class="px-2 py-0.5 bg-surface-container text-on-surface-variant rounded-full font-label-caps text-label-caps">V2</span>
+</div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface leading-tight group-hover:text-secondary transition-colors line-clamp-1">Recarga $50</span>
+<span class="font-label-numeric-lg text-title-lg text-on-surface">$50.00</span>
+</div>
+</button>
+<button class="group flex flex-col justify-between p-3.5 h-28 bg-surface-container-low hover:bg-surface-container text-left rounded-2xl shadow-sm transition-all active:scale-95" onclick="addItem('Recarga Telefónica $100', 100.00, false)">
+<div class="flex items-start justify-between w-full">
+<span class="w-8 h-8 rounded-full bg-on-surface/10 text-on-surface flex items-center justify-center font-bold text-title-md">
+<span class="material-symbols-outlined text-body-md">signal_cellular_alt</span>
+</span>
+<span class="px-2 py-0.5 bg-surface-container text-on-surface-variant rounded-full font-label-caps text-label-caps">V3</span>
+</div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface leading-tight group-hover:text-secondary transition-colors line-clamp-1">Recarga $100</span>
+<span class="font-label-numeric-lg text-title-lg text-on-surface">$100.00</span>
+</div>
+</button>
+<button class="group flex flex-col justify-between p-3.5 h-28 bg-surface-container-low hover:bg-surface-container text-left rounded-2xl shadow-sm transition-all active:scale-95" onclick="addItem('Cigarrillos Clásicos 20s', 78.00, false)">
+<div class="flex items-start justify-between w-full">
+<span class="w-8 h-8 rounded-full bg-on-surface/10 text-on-surface flex items-center justify-center font-bold text-title-md">
+<span class="material-symbols-outlined text-body-md">smoking_rooms</span>
+</span>
+<span class="px-2 py-0.5 bg-surface-container text-on-surface-variant rounded-full font-label-caps text-label-caps">V4</span>
+</div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface leading-tight group-hover:text-secondary transition-colors line-clamp-1">Cigarros 20s</span>
+<span class="font-label-numeric-lg text-title-lg text-on-surface">$78.00</span>
+</div>
+</button>
+</div>
+</div>
+<!-- Integrated Scale Visor + Ergonomic Keypad Matrix -->
+<div class="bg-surface-container-lowest p-pad-card-lg rounded-3xl shadow-sm flex flex-col gap-gap-standard">
+<!-- Live Scale Readout & Quick Operations -->
+<div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-4 bg-surface-container-low rounded-2xl">
+<div class="flex items-center gap-4">
+<div class="w-14 h-14 rounded-2xl bg-primary/15 text-primary flex items-center justify-center shadow-inner">
+<span class="material-symbols-outlined text-display-lg-mobile" style="font-variation-settings: 'FILL' 1;">scale</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Báscula Toledo Digital #01</span>
+<div class="flex items-baseline gap-2">
+<span class="font-headline-xl text-headline-xl text-primary leading-none" id="scaleWeight">1.450</span>
+<span class="font-headline-md text-title-lg text-primary font-bold">KG</span>
+<span class="px-2 py-0.5 bg-primary-container/20 text-on-primary-container rounded-full font-label-caps text-label-caps uppercase font-bold">ESTABLE</span>
+</div>
+</div>
+</div>
+<!-- Fast Weighing Calibration Actions -->
+<div class="flex items-center gap-2">
+<button class="flex-1 sm:flex-initial px-4 py-3 bg-surface-container-lowest hover:bg-surface-container-high rounded-xl text-on-surface font-title-md text-title-md shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1.5" onclick="zeroScale()">
+<span class="material-symbols-outlined text-body-md">restart_alt</span>
+<span>Tara / Cero</span>
+</button>
+<button class="flex-1 sm:flex-initial px-4 py-3 bg-secondary text-on-secondary rounded-xl font-title-md text-title-md shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1.5" onclick="randomScale()">
+<span class="material-symbols-outlined text-body-md">sync</span>
+<span>Capturar Peso</span>
+</button>
+</div>
+</div>
+<!-- Keypad & Register Operations Matrix -->
+<div class="grid grid-cols-12 gap-3 pt-1">
+<!-- 3x4 Large Ergonomic Number Matrix (Cols 8) -->
+<div class="col-span-8 grid grid-cols-3 gap-2.5">
+<button class="h-16 bg-surface-container-low hover:bg-surface-container text-on-surface rounded-2xl font-label-numeric-lg text-label-numeric-lg shadow-sm transition-all active:scale-95 flex items-center justify-center" onclick="pressKey('7')">7</button>
+<button class="h-16 bg-surface-container-low hover:bg-surface-container text-on-surface rounded-2xl font-label-numeric-lg text-label-numeric-lg shadow-sm transition-all active:scale-95 flex items-center justify-center" onclick="pressKey('8')">8</button>
+<button class="h-16 bg-surface-container-low hover:bg-surface-container text-on-surface rounded-2xl font-label-numeric-lg text-label-numeric-lg shadow-sm transition-all active:scale-95 flex items-center justify-center" onclick="pressKey('9')">9</button>
+<button class="h-16 bg-surface-container-low hover:bg-surface-container text-on-surface rounded-2xl font-label-numeric-lg text-label-numeric-lg shadow-sm transition-all active:scale-95 flex items-center justify-center" onclick="pressKey('4')">4</button>
+<button class="h-16 bg-surface-container-low hover:bg-surface-container text-on-surface rounded-2xl font-label-numeric-lg text-label-numeric-lg shadow-sm transition-all active:scale-95 flex items-center justify-center" onclick="pressKey('5')">5</button>
+<button class="h-16 bg-surface-container-low hover:bg-surface-container text-on-surface rounded-2xl font-label-numeric-lg text-label-numeric-lg shadow-sm transition-all active:scale-95 flex items-center justify-center" onclick="pressKey('6')">6</button>
+<button class="h-16 bg-surface-container-low hover:bg-surface-container text-on-surface rounded-2xl font-label-numeric-lg text-label-numeric-lg shadow-sm transition-all active:scale-95 flex items-center justify-center" onclick="pressKey('1')">1</button>
+<button class="h-16 bg-surface-container-low hover:bg-surface-container text-on-surface rounded-2xl font-label-numeric-lg text-label-numeric-lg shadow-sm transition-all active:scale-95 flex items-center justify-center" onclick="pressKey('2')">2</button>
+<button class="h-16 bg-surface-container-low hover:bg-surface-container text-on-surface rounded-2xl font-label-numeric-lg text-label-numeric-lg shadow-sm transition-all active:scale-95 flex items-center justify-center" onclick="pressKey('3')">3</button>
+<button class="h-16 bg-surface-container-low hover:bg-surface-container text-on-surface rounded-2xl font-label-numeric-lg text-label-numeric-lg shadow-sm transition-all active:scale-95 flex items-center justify-center" onclick="pressKey('0')">0</button>
+<button class="h-16 bg-surface-container-low hover:bg-surface-container text-on-surface rounded-2xl font-label-numeric-lg text-label-numeric-lg shadow-sm transition-all active:scale-95 flex items-center justify-center" onclick="pressKey('00')">00</button>
+<button class="h-16 bg-surface-container-low hover:bg-surface-container text-on-surface rounded-2xl font-label-numeric-lg text-label-numeric-lg shadow-sm transition-all active:scale-95 flex items-center justify-center" onclick="pressKey('.')">.</button>
+</div>
+<!-- Function Pad (Cols 4) -->
+<div class="col-span-4 flex flex-col gap-2.5">
+<button class="h-16 bg-error-container text-on-error-container hover:opacity-90 rounded-2xl font-title-lg text-title-lg shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1 font-bold" onclick="clearKeypad()">
+<span class="material-symbols-outlined text-title-lg">backspace</span>
+<span>BORRAR (C)</span>
+</button>
+<button class="h-16 bg-surface-container-high hover:bg-surface-container-highest text-on-surface rounded-2xl font-title-lg text-title-lg shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1 font-bold" onclick="pressMultiplier()">
+<span class="material-symbols-outlined text-title-lg">close</span>
+<span>MULT. (X)</span>
+</button>
+<button class="flex-1 bg-tertiary text-on-tertiary hover:opacity-90 rounded-2xl font-title-lg text-title-lg shadow-sm transition-all active:scale-95 flex flex-col items-center justify-center leading-tight font-bold" onclick="searchPLU()">
+<span class="material-symbols-outlined text-title-lg mb-0.5">manage_search</span>
+<span>PLU / CÓD</span>
+</button>
+</div>
+</div>
+<!-- Manual Value Entry Monitor -->
+<div class="flex items-center justify-between px-4 py-2.5 bg-surface-container-lowest rounded-xl shadow-inner">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-body-md text-outline">dialpad</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Entrada de Teclado / Multiplicador:</span>
+</div>
+<span class="font-label-numeric-md text-title-md text-on-surface font-bold tracking-widest" id="keypadValue">---</span>
+</div>
+</div>
+</div>
+<!-- RIGHT PANEL: Ultra-Simplified Express Drawer (Col 5) -->
+<div class="lg:col-span-5 xl:col-span-5 flex flex-col gap-gap-spacious">
+<!-- Cart Card -->
+<div class="bg-surface-container-lowest p-pad-card-lg rounded-3xl shadow-sm flex flex-col justify-between min-h-[620px]">
+<!-- Cart Header -->
+<div>
+<div class="flex items-center justify-between pb-3 border-b-0">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-full bg-primary-container/20 text-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-body-md">receipt_long</span>
+</div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface font-bold">Ticket Express #0482</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Cliente General • Mostrador</span>
+</div>
+</div>
+<button class="text-error hover:bg-error-container/30 px-2.5 py-1.5 rounded-full font-label-caps text-label-caps uppercase font-bold transition-colors flex items-center gap-1" onclick="clearCart()">
+<span class="material-symbols-outlined text-body-sm">delete_sweep</span>
+<span>Vaciar</span>
+</button>
+</div>
+<!-- Itemized Rows List -->
+<div class="flex flex-col gap-2 mt-3 overflow-y-auto max-h-[260px] pr-1" id="cartItemsContainer">
+<!-- Default Item 1 (Bulk) -->
+<div class="flex items-center justify-between p-3 bg-surface-container-low rounded-2xl hover:bg-surface-container transition-colors">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-label-caps text-label-caps font-bold shrink-0">
+                  KG
+                </div>
+<div class="flex flex-col min-w-0">
+<span class="font-title-md text-title-md text-on-surface truncate">Plátano Tabasco x Kg</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">1.450 kg × $26.00/kg</span>
+</div>
+</div>
+<div class="flex items-center gap-3 shrink-0">
+<span class="font-label-numeric-lg text-title-lg text-on-surface font-bold">$37.70</span>
+<button class="w-7 h-7 rounded-full text-outline hover:text-error hover:bg-surface-container-high flex items-center justify-center transition-colors" onclick="removeItem(this, 37.70)">
+<span class="material-symbols-outlined text-body-md">close</span>
+</button>
+</div>
+</div>
+<!-- Default Item 2 (Unit) -->
+<div class="flex items-center justify-between p-3 bg-surface-container-low rounded-2xl hover:bg-surface-container transition-colors">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-8 h-8 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center font-label-numeric-md text-body-md font-bold shrink-0">
+                  2×
+                </div>
+<div class="flex flex-col min-w-0">
+<span class="font-title-md text-title-md text-on-surface truncate">Refresco Cola 600ml</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">2 unidades × $19.50</span>
+</div>
+</div>
+<div class="flex items-center gap-3 shrink-0">
+<span class="font-label-numeric-lg text-title-lg text-on-surface font-bold">$39.00</span>
+<button class="w-7 h-7 rounded-full text-outline hover:text-error hover:bg-surface-container-high flex items-center justify-center transition-colors" onclick="removeItem(this, 39.00)">
+<span class="material-symbols-outlined text-body-md">close</span>
+</button>
+</div>
+</div>
+<!-- Default Item 3 (Unit) -->
+<div class="flex items-center justify-between p-3 bg-surface-container-low rounded-2xl hover:bg-surface-container transition-colors">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-8 h-8 rounded-xl bg-surface-container-highest text-on-surface flex items-center justify-center font-label-numeric-md text-body-md font-bold shrink-0">
+                  1×
+                </div>
+<div class="flex flex-col min-w-0">
+<span class="font-title-md text-title-md text-on-surface truncate">Bolsa Ecológica</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">1 unidad × $5.00</span>
+</div>
+</div>
+<div class="flex items-center gap-3 shrink-0">
+<span class="font-label-numeric-lg text-title-lg text-on-surface font-bold">$5.00</span>
+<button class="w-7 h-7 rounded-full text-outline hover:text-error hover:bg-surface-container-high flex items-center justify-center transition-colors" onclick="removeItem(this, 5.00)">
+<span class="material-symbols-outlined text-body-md">close</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Express Cash Tender Shortcuts -->
+<div class="flex flex-col gap-gap-compact pt-4">
+<div class="flex items-center justify-between">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Pago Rápido en Efectivo</span>
+<span class="font-label-caps text-label-caps text-secondary uppercase font-bold">Sin Espera</span>
+</div>
+<!-- Fast Bills Array -->
+<div class="grid grid-cols-5 gap-2">
+<button class="tender-bill-btn h-12 bg-surface-container-low hover:bg-primary/20 text-on-surface rounded-xl font-label-numeric-lg text-title-md font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center" onclick="tenderCash(50)">
+              $50
+            </button>
+<button class="tender-bill-btn h-12 bg-primary/20 text-primary rounded-xl font-label-numeric-lg text-title-md font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center ring-2 ring-primary" onclick="tenderCash(100)">
+              $100
+            </button>
+<button class="tender-bill-btn h-12 bg-surface-container-low hover:bg-primary/20 text-on-surface rounded-xl font-label-numeric-lg text-title-md font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center" onclick="tenderCash(200)">
+              $200
+            </button>
+<button class="tender-bill-btn h-12 bg-surface-container-low hover:bg-primary/20 text-on-surface rounded-xl font-label-numeric-lg text-title-md font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center" onclick="tenderCash(500)">
+              $500
+            </button>
+<button class="tender-bill-btn h-12 bg-secondary-fixed text-on-secondary-fixed-variant rounded-xl font-label-caps text-label-caps uppercase font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center" onclick="tenderExact()">
+              Exacto
+            </button>
+</div>
+<!-- Total & Live Change Display Card -->
+<div class="p-4 bg-surface-container rounded-2xl mt-1 flex flex-col gap-2">
+<div class="flex items-baseline justify-between">
+<span class="font-body-md text-body-md text-on-surface-variant font-medium">TOTAL A COBRAR</span>
+<span class="font-display-lg text-display-lg text-on-surface tracking-tight leading-none" id="totalAmount">$81.70</span>
+</div>
+<div class="flex items-center justify-between pt-2 bg-surface-container-lowest px-3 py-2 rounded-xl">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary text-title-md">payments</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Efectivo Recibido:</span>
+<span class="font-label-numeric-md text-title-md text-on-surface font-bold" id="tenderDisplay">$100.00</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Cambio:</span>
+<span class="font-headline-md text-title-lg text-primary font-bold" id="changeDisplay">$18.30</span>
+</div>
+</div>
+</div>
+<!-- Massive Dispatch Button -->
+<button class="w-full h-16 bg-primary hover:bg-on-primary-fixed-variant text-on-primary rounded-full font-headline-md text-title-lg shadow-lg flex items-center justify-center gap-3 transition-transform active:scale-[0.98] mt-1" onclick="completeSale()">
+<span class="material-symbols-outlined text-headline-md" style="font-variation-settings: 'FILL' 1;">point_of_sale</span>
+<span class="tracking-wide font-bold">FINALIZAR Y ABRIR GAVETA (F4)</span>
+</button>
+<!-- Alternative Payment Types -->
+<div class="grid grid-cols-2 gap-2 mt-1">
+<button class="py-2.5 px-3 bg-surface-container-low hover:bg-surface-container text-on-surface rounded-xl font-title-md text-body-md flex items-center justify-center gap-2 shadow-sm transition-colors" onclick="cardPayment()">
+<span class="material-symbols-outlined text-title-md text-secondary">credit_card</span>
+<span>Tarjeta / Pinpad (F2)</span>
+</button>
+<button class="py-2.5 px-3 bg-surface-container-low hover:bg-surface-container text-on-surface rounded-xl font-title-md text-body-md flex items-center justify-center gap-2 shadow-sm transition-colors" onclick="qrPayment()">
+<span class="material-symbols-outlined text-title-md text-tertiary">qr_code_2</span>
+<span>CoDi / Transfer (F3)</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Live Shift Productivity Meter -->
+<div class="bg-surface-container-lowest p-4 rounded-3xl shadow-sm flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-2xl bg-secondary-container/20 text-secondary flex items-center justify-center">
+<span class="material-symbols-outlined text-title-lg">trending_up</span>
+</div>
+<div class="flex flex-col">
+<span class="font-title-md text-body-md text-on-surface font-semibold">Rendimiento en Hora Pico</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Meta de turno al 85% completada</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-24 bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="bg-secondary-container h-full rounded-full" style="width: 85%;"></div>
+</div>
+<span class="font-label-numeric-md text-body-md text-secondary font-bold">85%</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Fullscreen Success Modal Overlay (Hidden initially) -->
+<div class="fixed inset-0 bg-inverse-surface/60 backdrop-blur-sm z-50 flex items-center justify-center hidden" id="saleSuccessDialog">
+<div class="bg-surface-container-lowest p-pad-card-lg rounded-3xl max-w-md w-full shadow-2xl flex flex-col items-center text-center gap-gap-standard">
+<div class="w-20 h-20 rounded-full bg-primary-container/20 text-primary flex items-center justify-center mb-1">
+<span class="material-symbols-outlined text-display-lg" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div class="flex flex-col">
+<span class="font-headline-xl text-headline-md text-on-surface">¡Venta Registrada!</span>
+<span class="font-body-md text-body-md text-on-surface-variant">Gaveta abierta correctamente. Ticket impreso.</span>
+</div>
+<div class="w-full bg-surface-container-low p-4 rounded-2xl flex flex-col gap-2">
+<div class="flex justify-between items-center text-body-md">
+<span class="text-on-surface-variant">Total Cobrado:</span>
+<span class="font-label-numeric-md font-bold text-on-surface" id="modalTotal">$81.70</span>
+</div>
+<div class="flex justify-between items-center text-title-md text-primary">
+<span class="font-bold">CAMBIO A ENTREGAR:</span>
+<span class="font-label-numeric-lg font-bold" id="modalChange">$18.30</span>
+</div>
+</div>
+<button class="w-full h-14 bg-primary text-on-primary rounded-full font-headline-md text-title-md font-bold shadow-md transition-transform active:scale-95" onclick="closeSuccessDialog()">
+        SIGUIENTE VENTA (ESPACIO)
+      </button>
+</div>
+</div>
+</div>
+<script>
+  // Retail Flash POS State Management
+  let cart = [
+    { name: 'Plátano Tabasco x Kg', qtyText: '1.450 kg', price: 37.70, isKg: true },
+    { name: 'Refresco Cola 600ml', qtyText: '2×', price: 39.00, isKg: false },
+    { name: 'Bolsa Ecológica', qtyText: '1×', price: 5.00, isKg: false }
+  ];
+
+  let currentTotal = 81.70;
+  let currentTender = 100.00;
+  let currentScaleKg = 1.450;
+  let keypadBuffer = '';
+
+  function renderCart() {
+    const container = document.getElementById('cartItemsContainer');
+    container.innerHTML = '';
+    let total = 0;
+
+    cart.forEach((item, index) => {
+      total += item.price;
+      const row = document.createElement('div');
+      row.className = 'flex items-center justify-between p-3 bg-surface-container-low rounded-2xl hover:bg-surface-container transition-colors';
+      
+      const badgeClass = item.isKg ? 'bg-primary/10 text-primary' : 'bg-secondary/10 text-secondary';
+      
+      row.innerHTML = `
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-8 h-8 rounded-xl ${badgeClass} flex items-center justify-center font-label-numeric-md text-body-md font-bold shrink-0">
+            ${item.qtyText}
+          </div>
+          <div class="flex flex-col min-w-0">
+            <span class="font-title-md text-title-md text-on-surface truncate">${item.name}</span>
+            <span class="font-body-sm text-body-sm text-on-surface-variant">${item.isKg ? 'Pesaje granel' : 'Unidad'}</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-3 shrink-0">
+          <span class="font-label-numeric-lg text-title-lg text-on-surface font-bold">$${item.price.toFixed(2)}</span>
+          <button onclick="removeByIndex(${index})" class="w-7 h-7 rounded-full text-outline hover:text-error hover:bg-surface-container-high flex items-center justify-center transition-colors">
+            <span class="material-symbols-outlined text-body-md">close</span>
+          </button>
+        </div>
+      `;
+      container.appendChild(row);
+    });
+
+    currentTotal = total;
+    document.getElementById('totalAmount').textContent = `$${currentTotal.toFixed(2)}`;
+    updateChangeDisplay();
+  }
+
+  function addItem(name, unitPrice, isKg = false) {
+    let multiplier = 1;
+    if (keypadBuffer && !isNaN(keypadBuffer) && parseFloat(keypadBuffer) > 0) {
+      multiplier = parseFloat(keypadBuffer);
+      keypadBuffer = '';
+      document.getElementById('keypadValue').textContent = '---';
+    }
+
+    const price = unitPrice * multiplier;
+    const qtyText = multiplier > 1 ? `${multiplier}×` : '1×';
+    
+    cart.unshift({ name, qtyText, price, isKg });
+    renderCart();
+  }
+
+  function addWeightItem(name, pricePerKg) {
+    const calculatedPrice = currentScaleKg * pricePerKg;
+    cart.unshift({
+      name,
+      qtyText: `${currentScaleKg.toFixed(3)}kg`,
+      price: calculatedPrice,
+      isKg: true
+    });
+    renderCart();
+  }
+
+  function removeByIndex(index) {
+    cart.splice(index, 1);
+    renderCart();
+  }
+
+  function removeItem(btn, amount) {
+    const parent = btn.closest('.flex.items-center.justify-between');
+    if (parent) {
+      parent.remove();
+      currentTotal = Math.max(0, currentTotal - amount);
+      document.getElementById('totalAmount').textContent = `$${currentTotal.toFixed(2)}`;
+      updateChangeDisplay();
+    }
+  }
+
+  function clearCart() {
+    cart = [];
+    renderCart();
+  }
+
+  function tenderCash(amount) {
+    currentTender = amount;
+    updateChangeDisplay();
+  }
+
+  function tenderExact() {
+    currentTender = currentTotal;
+    updateChangeDisplay();
+  }
+
+  function updateChangeDisplay() {
+    document.getElementById('tenderDisplay').textContent = `$${currentTender.toFixed(2)}`;
+    const change = Math.max(0, currentTender - currentTotal);
+    document.getElementById('changeDisplay').textContent = `$${change.toFixed(2)}`;
+  }
+
+  function pressKey(char) {
+    if (keypadBuffer.length < 8) {
+      keypadBuffer += char;
+      document.getElementById('keypadValue').textContent = keypadBuffer;
+    }
+  }
+
+  function clearKeypad() {
+    keypadBuffer = '';
+    document.getElementById('keypadValue').textContent = '---';
+  }
+
+  function pressMultiplier() {
+    if (!keypadBuffer) {
+      keypadBuffer = '2';
+      document.getElementById('keypadValue').textContent = keypadBuffer + '×';
+    } else {
+      document.getElementById('keypadValue').textContent = keypadBuffer + '×';
+    }
+  }
+
+  function searchPLU() {
+    const code = keypadBuffer || '750';
+    addItem(`Producto PLU #${code}`, 29.90, false);
+    clearKeypad();
+  }
+
+  function zeroScale() {
+    currentScaleKg = 0.000;
+    document.getElementById('scaleWeight').textContent = '0.000';
+  }
+
+  function randomScale() {
+    const weights = [0.450, 0.820, 1.250, 1.450, 2.100, 3.250];
+    const picked = weights[Math.floor(Math.random() * weights.length)];
+    currentScaleKg = picked;
+    document.getElementById('scaleWeight').textContent = currentScaleKg.toFixed(3);
+  }
+
+  function completeSale() {
+    if (cart.length === 0) return;
+    const change = Math.max(0, currentTender - currentTotal);
+    document.getElementById('modalTotal').textContent = `$${currentTotal.toFixed(2)}`;
+    document.getElementById('modalChange').textContent = `$${change.toFixed(2)}`;
+    document.getElementById('saleSuccessDialog').classList.remove('hidden');
+  }
+
+  function closeSuccessDialog() {
+    document.getElementById('saleSuccessDialog').classList.add('hidden');
+    clearCart();
+    tenderCash(100);
+  }
+
+  function cardPayment() {
+    alert('Iniciando cobro con terminal bancaria integrada / Pinpad...');
+  }
+
+  function qrPayment() {
+    alert('Generando código QR dinámico CoDi / Mercado Pago...');
+  }
+
+  // Keyboard shortcut triggers (F4 for checkout, Escape for clear)
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'F4') {
+      e.preventDefault();
+      completeSale();
+    } else if (e.key === 'Escape') {
+      const dialog = document.getElementById('saleSuccessDialog');
+      if (!dialog.classList.contains('hidden')) {
+        closeSuccessDialog();
+      }
+    }
+  });
+</script></main></div></body></html>

@@ -142,6 +142,27 @@ Los requisitos funcionales se priorizan mediante la metodología **MoSCoW**:
 
 ---
 
+### 3.7 Módulo 7: Análisis Estadístico & Reportes Avanzados (OLAP)
+
+*Documento detallado de especificación:* [especificacion_modulo_analisis_reportes.md](file:///c:/Users/kacor/OneDrive/Desktop/Quantix/docs/requisitos/especificacion_modulo_analisis_reportes.md)
+
+| Código | Nombre del Requisito | Prioridad | Descripción |
+| :--- | :--- | :--- | :--- |
+| **RF-REP-01** | KPIs Ejecutivos Multidimensionales | **MUST** | Visualización consolidada de Ingresos Netos, Margen Bruto %, Ticket Medio, Transacciones Totales, Clientes Únicos y Unidades con variación porcentual contra el período anterior. |
+| **RF-REP-02** | Tendencias Temporales Interactivas | **MUST** | Gráficos de área y línea interactivos comparando Ingresos vs. Margen con selector de periodicidad (Día, Semana, Mes) y tooltips enriquecidos. |
+| **RF-REP-03** | Matriz Pareto ABC de Catálogo | **MUST** | Clasificación algorítmica acumulada de artículos (80% A, 15% B, 5% C) con visualización de curva de concentración y porcentaje de contribución. |
+| **RF-REP-04** | Segmentación Algorítmica RFM | **MUST** | Agrupación dinámica de compradores en 5 grupos de valor (Campeones, Leales, Potenciales, En Riesgo, Inactivos) con scores de Recencia, Frecuencia y Monetario. |
+| **RF-REP-05** | Heatmap de Estacionalidad | **MUST** | Matriz cromática 7×24 de transacciones y afluencia por día de la semana y franja horaria para optimización de personal y apertura de cajas. |
+| **RF-REP-06** | Inferencia Predictiva Z / Student-t | **MUST** | Proyección de demanda con intervalos al 95% calculados automáticamente según el Teorema del Límite Central (Z para $n \ge 30$, Student-t para $n < 30$). |
+| **RF-REP-07** | Constructor Dinámico de Reportes | **MUST** | Motor OLAP interactivo con 15 columnas predeterminadas configurables, reordenables y con toggles de visibilidad. |
+| **RF-REP-08** | Filtros Cruzados y Agrupación Dinámica | **MUST** | Agregación dinámica por Día, Producto, Categoría, Cajero, Sucursal o Método de Pago con filtros multidimensionales. |
+| **RF-REP-09** | Fila Fija de Totales y Paginación | **MUST** | Tabla de reportes con ordenación por cabeceras, paginación configurable y cálculo de totales acumulados fijos al pie. |
+| **RF-REP-10** | Motor de Plantillas de Reporte Persistente | **SHOULD** | Almacenamiento y recuperación en un clic de configuraciones de reporte en base de datos (`plantillas_reporte`) con aislamiento por usuario. |
+| **RF-REP-11** | Exportación Multiformato Profesional | **MUST** | Exportación de datos a CSV (UTF-8 con BOM para Microsoft Excel) y generación de PDF formal / impresión con membrete corporativo de Quantix. |
+| **RF-REP-12** | Aislamiento de Sucursales RBAC | **MUST** | Los supervisores solo pueden consultar y reportar datos de su sucursal asignada (`current_user.sucursal_id`); los directores tienen acceso irrestricto multi-sucursal. |
+
+---
+
 ## 4. Requisitos No Funcionales (RNF)
 
 Siguiendo el estándar de calidad de software **ISO/IEC 25010**:
@@ -198,3 +219,4 @@ Los agentes de implementación deben manejar los siguientes escenarios de excepc
 | **4. Hábitos del Cliente y LTV** | `RF-CRM-03`, `RF-CRM-04`, `RF-CRM-05`, `RF-BI-03` | `RNF-ESC-01` |
 | **5. Inventario y Demanda** | `RF-INV-01`, `RF-INV-02`, `RF-INV-03`, `RF-INV-04`, `RF-INV-05`, `RF-BI-04` | `RNF-PERF-02`, `RNF-DISP-02` |
 | **6. Control de Merma y Seguridad** | `RF-SEG-01`, `RF-SEG-02`, `RF-SEG-03`, `RF-SEG-04`, `RF-BI-01` | `RNF-SEG-01`, `RNF-SEG-02` |
+| **7. Analítica Avanzada y Reportes** | `RF-REP-01`, `RF-REP-02`, `RF-REP-03`, `RF-REP-04`, `RF-REP-05`, `RF-REP-06`, `RF-REP-07`, `RF-REP-08`, `RF-REP-09`, `RF-REP-10`, `RF-REP-11`, `RF-REP-12` | `RNF-PERF-03`, `RNF-ESC-01`, `RNF-ESC-02` |

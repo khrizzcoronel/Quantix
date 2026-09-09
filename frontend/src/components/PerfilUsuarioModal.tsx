@@ -1,9 +1,4 @@
 import { useState, useRef, type ChangeEvent, type FormEvent } from 'react';
-import { 
-  X, User as UserIcon, Mail, Phone, Lock, Eye, EyeOff, 
-  Camera, Trash2, Loader2, CheckCircle2, AlertCircle, 
-  ChevronDown, ChevronUp, UserCircle 
-} from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
 
@@ -45,14 +40,14 @@ function PerfilUsuarioModalDialog({ onClose }: { onClose: () => void }) {
   const getRoleColorBadge = (r: string) => {
     switch (r) {
       case 'DIRECTOR':
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300 border-purple-200 dark:border-purple-800';
+        return 'bg-tertiary-fixed text-on-tertiary-fixed border border-tertiary-fixed-dim/30';
       case 'SUPERVISOR':
-        return 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border-amber-200 dark:border-amber-800';
+        return 'bg-secondary-fixed text-on-secondary-fixed border border-secondary-fixed-dim/30';
       case 'BODEGUERO':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300 border-blue-200 dark:border-blue-800';
+        return 'bg-surface-container-high text-on-surface border border-outline-variant/30';
       case 'CAJERO':
       default:
-        return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800';
+        return 'bg-primary-fixed text-on-primary-fixed border border-primary-fixed-dim/30';
     }
   };
 
@@ -197,21 +192,21 @@ function PerfilUsuarioModalDialog({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 my-8">
+    <div className="fixed inset-0 z-50 bg-inverse-surface/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl max-w-lg w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200 my-8">
         
         {/* Header Modal */}
-        <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-800">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-quantix-50 dark:bg-quantix-900/30 text-quantix-600 dark:text-quantix-400 rounded-xl">
-              <UserIcon className="w-5 h-5" />
+        <div className="flex items-center justify-between pb-4 border-b border-outline-variant/20">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-primary-container text-on-primary-container flex items-center justify-center shadow-xs">
+              <span className="material-symbols-outlined text-2xl">account_circle</span>
             </div>
             <div>
-              <h3 className="text-base font-black text-gray-900 dark:text-white">
+              <h3 className="font-headline-md text-title-lg text-on-surface">
                 Editar Perfil de Usuario
               </h3>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                Actualiza tus datos personales, foto y credenciales
+              <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+                Actualiza tus datos personales, foto y credenciales de acceso
               </p>
             </div>
           </div>
@@ -219,33 +214,33 @@ function PerfilUsuarioModalDialog({ onClose }: { onClose: () => void }) {
             type="button"
             onClick={onClose}
             disabled={isSaving}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+            className="w-10 h-10 rounded-full bg-surface-container-low hover:bg-surface-container text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer"
             aria-label="Cerrar modal"
           >
-            <X className="w-5 h-5" />
+            <span className="material-symbols-outlined text-xl">close</span>
           </button>
         </div>
 
         {/* Notificaciones de Éxito / Error */}
         {errorMessage && (
-          <div className="mt-4 p-3.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs rounded-xl flex items-start gap-2.5 animate-in fade-in">
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <div className="mt-4 p-3.5 bg-error-container text-on-error-container border border-error/20 text-body-sm rounded-2xl flex items-start gap-2.5 animate-in fade-in">
+            <span className="material-symbols-outlined text-lg shrink-0 mt-0.5 text-error">warning</span>
             <span className="flex-1 font-medium leading-relaxed">{errorMessage}</span>
           </div>
         )}
 
         {successMessage && (
-          <div className="mt-4 p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs rounded-xl flex items-center gap-2.5 animate-in fade-in">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <div className="mt-4 p-3.5 bg-primary/10 text-primary border border-primary/20 text-body-sm rounded-2xl flex items-center gap-2.5 animate-in fade-in">
+            <span className="material-symbols-outlined text-lg shrink-0 text-primary">check_circle</span>
             <span className="flex-1 font-bold">{successMessage}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="mt-5 space-y-5">
           {/* Subida de foto de perfil con vista previa circular e indicador de rol */}
-          <div className="flex flex-col items-center justify-center gap-3 py-2 bg-gray-50/70 dark:bg-gray-800/40 rounded-xl p-4 border border-gray-100 dark:border-gray-800">
+          <div className="flex flex-col items-center justify-center gap-3 py-3 bg-surface-container-low/50 rounded-2xl p-4 border border-outline-variant/20">
             <div className="relative group/avatar">
-              <div className="w-24 h-24 rounded-full border-3 border-quantix-500 shadow-md overflow-hidden bg-gray-100 dark:bg-gray-800 flex items-center justify-center relative">
+              <div className="w-24 h-24 rounded-full ring-4 ring-primary-container shadow-md overflow-hidden bg-surface-container flex items-center justify-center relative">
                 {avatar ? (
                   <img
                     src={avatar}
@@ -253,7 +248,7 @@ function PerfilUsuarioModalDialog({ onClose }: { onClose: () => void }) {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <UserCircle className="w-20 h-20 text-gray-400 dark:text-gray-500" />
+                  <span className="material-symbols-outlined text-6xl text-on-surface-variant">person</span>
                 )}
               </div>
 
@@ -262,17 +257,17 @@ function PerfilUsuarioModalDialog({ onClose }: { onClose: () => void }) {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isSaving}
-                className="absolute bottom-0 right-0 bg-quantix-600 hover:bg-quantix-700 text-white p-2 rounded-full shadow-lg cursor-pointer transition-transform hover:scale-110 active:scale-95"
+                className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary hover:opacity-95 text-on-primary flex items-center justify-center shadow-md cursor-pointer transition-transform hover:scale-110 active:scale-95"
                 title="Subir foto de perfil"
                 aria-label="Subir foto de perfil"
               >
-                <Camera className="w-3.5 h-3.5" />
+                <span className="material-symbols-outlined text-sm">photo_camera</span>
               </button>
             </div>
 
-            {/* Indicador de Rol */}
+            {/* Indicador de Rol en Pill */}
             <div className="flex items-center gap-2">
-              <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-md border ${getRoleColorBadge(rol)}`}>
+              <span className={`px-3 py-1 rounded-full text-label-caps font-label-caps uppercase tracking-wider ${getRoleColorBadge(rol)}`}>
                 Rol: {rol}
               </span>
             </div>
@@ -290,9 +285,9 @@ function PerfilUsuarioModalDialog({ onClose }: { onClose: () => void }) {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isSaving}
-                className="px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-quantix-500 dark:hover:border-quantix-500 text-gray-700 dark:text-gray-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                className="h-9 px-4 rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-headline-md text-body-sm flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
               >
-                <Camera className="w-3.5 h-3.5 text-quantix-600 dark:text-quantix-400" />
+                <span className="material-symbols-outlined text-base text-primary">photo_camera</span>
                 <span>Cambiar Foto</span>
               </button>
 
@@ -301,16 +296,16 @@ function PerfilUsuarioModalDialog({ onClose }: { onClose: () => void }) {
                   type="button"
                   onClick={handleQuitarFoto}
                   disabled={isSaving}
-                  className="px-3 py-1.5 bg-white dark:bg-gray-800 border border-red-200 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className="h-9 px-4 rounded-full bg-error-container hover:bg-error text-on-error-container hover:text-on-error font-headline-md text-body-sm flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
                   title="Quitar foto actual"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <span className="material-symbols-outlined text-base">delete</span>
                   <span>Quitar Foto</span>
                 </button>
               )}
             </div>
 
-            <span className="text-[10px] text-gray-400 dark:text-gray-500 text-center">
+            <span className="text-body-sm text-on-surface-variant text-center">
               Compresión automática optimizada a 200 × 200 px (JPEG)
             </span>
           </div>
@@ -319,13 +314,11 @@ function PerfilUsuarioModalDialog({ onClose }: { onClose: () => void }) {
           <div className="space-y-3.5">
             {/* Nombre Completo */}
             <div>
-              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                Nombre Completo <span className="text-red-500">*</span>
+              <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1.5">
+                Nombre Completo <span className="text-error">*</span>
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                  <UserIcon className="w-4 h-4" />
-                </div>
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg pointer-events-none">person</span>
                 <input
                   type="text"
                   required
@@ -333,20 +326,18 @@ function PerfilUsuarioModalDialog({ onClose }: { onClose: () => void }) {
                   onChange={(e) => setNombre(e.target.value)}
                   disabled={isSaving}
                   placeholder="Ej. Juan Pérez"
-                  className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-quantix-500 focus:border-transparent transition-all"
+                  className="w-full h-11 pl-11 pr-4 rounded-full bg-surface-container-low text-on-surface font-body-md placeholder:text-on-surface-variant focus:bg-surface-container focus:outline-none transition-all"
                 />
               </div>
             </div>
 
             {/* Correo Electrónico */}
             <div>
-              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                Correo Electrónico <span className="text-red-500">*</span>
+              <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1.5">
+                Correo Electrónico <span className="text-error">*</span>
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                  <Mail className="w-4 h-4" />
-                </div>
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg pointer-events-none">mail</span>
                 <input
                   type="email"
                   required
@@ -354,34 +345,32 @@ function PerfilUsuarioModalDialog({ onClose }: { onClose: () => void }) {
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isSaving}
                   placeholder="ejemplo@quantix.com"
-                  className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-quantix-500 focus:border-transparent transition-all font-mono"
+                  className="w-full h-11 pl-11 pr-4 rounded-full bg-surface-container-low text-on-surface font-mono text-body-md placeholder:text-on-surface-variant focus:bg-surface-container focus:outline-none transition-all"
                 />
               </div>
             </div>
 
             {/* Teléfono / Celular */}
             <div>
-              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+              <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1.5">
                 Teléfono / Celular
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                  <Phone className="w-4 h-4" />
-                </div>
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg pointer-events-none">call</span>
                 <input
                   type="tel"
                   value={telefono}
                   onChange={(e) => setTelefono(e.target.value)}
                   disabled={isSaving}
                   placeholder="+52 55 1234 5678"
-                  className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-quantix-500 focus:border-transparent transition-all"
+                  className="w-full h-11 pl-11 pr-4 rounded-full bg-surface-container-low text-on-surface font-body-md placeholder:text-on-surface-variant focus:bg-surface-container focus:outline-none transition-all"
                 />
               </div>
             </div>
           </div>
 
           {/* Sección Colapsable: Cambiar Contraseña */}
-          <div className="border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden bg-gray-50/40 dark:bg-gray-800/30">
+          <div className="border border-outline-variant/20 rounded-2xl overflow-hidden bg-surface-container-low/40">
             <button
               type="button"
               onClick={() => {
@@ -393,30 +382,28 @@ function PerfilUsuarioModalDialog({ onClose }: { onClose: () => void }) {
                 }
               }}
               disabled={isSaving}
-              className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-100/60 dark:hover:bg-gray-800/60 transition-colors cursor-pointer"
+              className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-surface-container transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-2">
-                <Lock className="w-4 h-4 text-quantix-600 dark:text-quantix-400" />
-                <span className="text-xs font-bold text-gray-800 dark:text-gray-200">
+                <span className="material-symbols-outlined text-primary text-lg">lock</span>
+                <span className="font-headline-md text-body-md text-on-surface">
                   Cambiar Contraseña
                 </span>
-                <span className="text-[10px] text-gray-400">
+                <span className="text-body-sm text-on-surface-variant">
                   (Opcional)
                 </span>
               </div>
-              {cambiarPassword ? (
-                <ChevronUp className="w-4 h-4 text-gray-400" />
-              ) : (
-                <ChevronDown className="w-4 h-4 text-gray-400" />
-              )}
+              <span className="material-symbols-outlined text-on-surface-variant text-lg">
+                {cambiarPassword ? 'expand_less' : 'expand_more'}
+              </span>
             </button>
 
             {cambiarPassword && (
-              <div className="p-4 pt-2 space-y-3 border-t border-gray-200 dark:border-gray-800 animate-in fade-in duration-150">
+              <div className="p-4 pt-2 space-y-3 border-t border-outline-variant/15 animate-in fade-in duration-150">
                 {/* Contraseña Actual */}
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
-                    Contraseña Actual <span className="text-red-500">*</span>
+                  <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1">
+                    Contraseña Actual <span className="text-error">*</span>
                   </label>
                   <div className="relative">
                     <input
@@ -425,22 +412,24 @@ function PerfilUsuarioModalDialog({ onClose }: { onClose: () => void }) {
                       onChange={(e) => setPasswordActual(e.target.value)}
                       disabled={isSaving}
                       placeholder="Ingresa tu contraseña actual"
-                      className="w-full px-3 py-2 pr-9 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-quantix-500 focus:border-transparent transition-all"
+                      className="w-full h-10 px-4 pr-10 rounded-full bg-surface-container-lowest text-on-surface font-body-md placeholder:text-on-surface-variant focus:bg-surface-container focus:outline-none transition-all border-0 shadow-xs"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPasswordActual(!showPasswordActual)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
+                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-on-surface-variant hover:text-on-surface cursor-pointer"
                     >
-                      {showPasswordActual ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      <span className="material-symbols-outlined text-lg">
+                        {showPasswordActual ? 'visibility_off' : 'visibility'}
+                      </span>
                     </button>
                   </div>
                 </div>
 
                 {/* Nueva Contraseña */}
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
-                    Nueva Contraseña <span className="text-red-500">* (mín. 6 caracteres)</span>
+                  <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1">
+                    Nueva Contraseña <span className="text-error">* (mín. 6 caracteres)</span>
                   </label>
                   <div className="relative">
                     <input
@@ -449,22 +438,24 @@ function PerfilUsuarioModalDialog({ onClose }: { onClose: () => void }) {
                       onChange={(e) => setPasswordNuevo(e.target.value)}
                       disabled={isSaving}
                       placeholder="Mínimo 6 caracteres"
-                      className="w-full px-3 py-2 pr-9 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-quantix-500 focus:border-transparent transition-all"
+                      className="w-full h-10 px-4 pr-10 rounded-full bg-surface-container-lowest text-on-surface font-body-md placeholder:text-on-surface-variant focus:bg-surface-container focus:outline-none transition-all border-0 shadow-xs"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPasswordNuevo(!showPasswordNuevo)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
+                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-on-surface-variant hover:text-on-surface cursor-pointer"
                     >
-                      {showPasswordNuevo ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      <span className="material-symbols-outlined text-lg">
+                        {showPasswordNuevo ? 'visibility_off' : 'visibility'}
+                      </span>
                     </button>
                   </div>
                 </div>
 
                 {/* Confirmar Nueva Contraseña */}
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
-                    Confirmar Nueva Contraseña <span className="text-red-500">*</span>
+                  <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1">
+                    Confirmar Nueva Contraseña <span className="text-error">*</span>
                   </label>
                   <div className="relative">
                     <input
@@ -473,14 +464,16 @@ function PerfilUsuarioModalDialog({ onClose }: { onClose: () => void }) {
                       onChange={(e) => setPasswordConfirmar(e.target.value)}
                       disabled={isSaving}
                       placeholder="Repite la nueva contraseña"
-                      className="w-full px-3 py-2 pr-9 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-quantix-500 focus:border-transparent transition-all"
+                      className="w-full h-10 px-4 pr-10 rounded-full bg-surface-container-lowest text-on-surface font-body-md placeholder:text-on-surface-variant focus:bg-surface-container focus:outline-none transition-all border-0 shadow-xs"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPasswordConfirmar(!showPasswordConfirmar)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
+                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-on-surface-variant hover:text-on-surface cursor-pointer"
                     >
-                      {showPasswordConfirmar ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      <span className="material-symbols-outlined text-lg">
+                        {showPasswordConfirmar ? 'visibility_off' : 'visibility'}
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -489,21 +482,21 @@ function PerfilUsuarioModalDialog({ onClose }: { onClose: () => void }) {
           </div>
 
           {/* Footer de Acciones */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-outline-variant/20">
             <button
               type="button"
               onClick={onClose}
               disabled={isSaving}
-              className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 font-bold text-xs transition-colors cursor-pointer"
+              className="h-11 px-6 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface font-headline-md text-body-md transition-all cursor-pointer disabled:opacity-50"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isSaving}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-quantix-600 hover:bg-quantix-700 disabled:opacity-50 text-white font-bold text-xs shadow-md shadow-quantix-600/20 transition-all cursor-pointer active:scale-95"
+              className="h-11 px-6 rounded-full bg-primary text-on-primary hover:opacity-95 active:scale-98 font-headline-md text-body-md transition-all shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
-              {isSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              {isSaving && <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>}
               <span>{isSaving ? 'Guardando...' : 'Guardar Cambios'}</span>
             </button>
           </div>

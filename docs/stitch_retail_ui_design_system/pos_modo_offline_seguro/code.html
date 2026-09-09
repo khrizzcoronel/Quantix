@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+
+<html lang="es"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "on-primary-fixed-variant": "#005236", "surface-container-lowest": "#ffffff", "error": "#ba1a1a", "on-secondary": "#ffffff", "on-tertiary-fixed": "#25005a", "error-container": "#ffdad6", "tertiary-fixed": "#eaddff", "primary-fixed-dim": "#4edea3", "primary-container": "#10b981", "on-surface": "#131b2e", "on-error": "#ffffff", "on-surface-variant": "#3c4a42", "surface-dim": "#d2d9f4", "on-tertiary-fixed-variant": "#5a00c6", "background": "#faf8ff", "surface-bright": "#faf8ff", "surface-container-high": "#e2e7ff", "surface-tint": "#006c49", "inverse-surface": "#283044", "secondary-container": "#316bf3", "tertiary-container": "b48fff", "on-background": "#131b2e", "tertiary-fixed-dim": "#d2bbff", "secondary-fixed": "#dbe1ff", "on-primary": "#ffffff", "inverse-primary": "#4edea3", "on-secondary-container": "#fefcff", "on-primary-container": "#00422b", "outline": "#6c7a71", "surface-variant": "#dae2fd", "surface": "#faf8ff", "on-secondary-fixed-variant": "#003ea8", "on-tertiary-container": "#4900a4", "surface-container": "#eaedff", "on-primary-fixed": "#002113", "surface-container-low": "#f2f3ff", "surface-container-highest": "#dae2fd", "on-secondary-fixed": "#00174b", "on-tertiary": "#ffffff", "inverse-on-surface": "#eef0ff", "primary-fixed": "#6ffbbe", "outline-variant": "#bbcabf", "primary": "#006c49", "secondary-fixed-dim": "#b4c5ff", "tertiary": "#732ee4", "on-error-container": "#93000a", "secondary": "#0051d5" }, "borderRadius": { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" }, "spacing": { "pad-card-sm": "1rem", "touch-min": "3rem", "pad-terminal": "1.5rem", "touch-large": "4.5rem", "gap-standard": "1rem", "touch-standard": "3.5rem", "pad-card-lg": "1.75rem", "gap-compact": "0.5rem", "gap-spacious": "1.5rem", "gutter-split": "1.5rem" }, "fontFamily": { "label-numeric-lg": [ "Space Grotesk" ], "display-lg": [ "Space Grotesk" ], "headline-md": [ "Space Grotesk" ], "title-md": [ "Geist" ], "title-lg": [ "Space Grotesk" ], "label-caps": [ "Space Grotesk" ], "label-numeric-md": [ "Space Grotesk" ], "body-lg": [ "Geist" ], "display-lg-mobile": [ "Space Grotesk" ], "headline-xl-mobile": [ "Space Grotesk" ], "body-sm": [ "Geist" ], "body-md": [ "Geist" ], "headline-xl": [ "Space Grotesk" ] }, "fontSize": { "label-numeric-lg": [ "32px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "700" } ], "display-lg": [ "48px", { "lineHeight": "56px", "letterSpacing": "-0.03em", "fontWeight": "700" } ], "headline-md": [ "24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" } ], "title-md": [ "16px", { "lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "600" } ], "title-lg": [ "20px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" } ], "label-caps": [ "11px", { "lineHeight": "14px", "letterSpacing": "0.08em", "fontWeight": "700" } ], "label-numeric-md": [ "18px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" } ], "body-lg": [ "16px", { "lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "400" } ], "display-lg-mobile": [ "32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" } ], "headline-xl-mobile": [ "28px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "600" } ], "body-sm": [ "12px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "400" } ], "body-md": [ "14px", { "lineHeight": "20px", "letterSpacing": "0em", "fontWeight": "400" } ], "headline-xl": [ "36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "600" } ] } } } }</script></head><body class="bg-background font-body-md text-on-surface antialiased"><aside class="fixed left-0 top-0 h-full w-72 bg-surface-container-lowest z-50 flex flex-col justify-between p-pad-terminal shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex flex-col gap-gap-spacious"><div class="flex items-center gap-gap-compact"><img alt="Quantix Retail OS Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1VE-3_bnWGL8smsZAPyYO1-GEW49eAmPw7A6GIATlLaj81HtxALpAkAswdd0YlnaC5qdiVB9RRiZXLQKnkd_GOllraNp77m88u8waRd1PL3CpTneqanJBavEzkD9WVtNQjBjQLBd2Fb9hQYBCQjr110oFrmESQRr7xt3yDsmvlv0anyyaqdQUgAyeB3-cwAg3cYjFvBP_XFE2XoRqchk8CQ33V2bKF80cgqgSpcMETAxPfxNsXzlKxMxXGd"/><div class="flex flex-col"><span class="font-headline-md text-title-md text-on-surface tracking-tight leading-none">Quantix POS</span><span class="font-body-sm text-body-sm text-on-surface-variant font-medium">Retail OS v4.2</span></div></div><div class="bg-surface-container-low p-pad-card-sm rounded-lg flex items-center justify-between"><div class="flex flex-col"><span class="font-label-caps text-label-caps uppercase text-on-surface-variant">Rol Activo</span><span class="font-title-md text-title-md text-on-surface font-semibold">Cajero Principal</span></div><span class="px-2 py-1 bg-surface-container-high text-primary rounded-full font-label-caps text-label-caps uppercase tracking-wider font-bold">Piso &amp; Venta</span></div><nav class="flex flex-col gap-gap-compact" data-active-classes="bg-primary-container text-on-primary-container font-bold shadow-sm"><a aria-current="page" class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all group bg-primary-container text-on-primary-container font-bold shadow-sm" data-path="punto-de-venta" href="#"><span class="material-symbols-outlined text-title-lg transition-transform group-hover:scale-110">point_of_sale</span><span class="font-title-md text-title-md">Punto de Venta</span></a><a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="clientes-y-fidelizacion" href="#"><span class="material-symbols-outlined text-title-lg transition-transform group-hover:scale-110">loyalty</span><span class="font-title-md text-title-md">Clientes &amp; Fidelización</span></a><a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="control-de-inventario" href="#"><span class="material-symbols-outlined text-title-lg transition-transform group-hover:scale-110">inventory_2</span><span class="font-title-md text-title-md">Control de Inventario</span></a><a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="supervision-de-cajas" href="#"><span class="material-symbols-outlined text-title-lg transition-transform group-hover:scale-110">monitoring</span><span class="font-title-md text-title-md">Supervisión de Cajas</span></a><a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="dashboard-bi" href="#"><span class="material-symbols-outlined text-title-lg transition-transform group-hover:scale-110">analytics</span><span class="font-title-md text-title-md">Dashboard BI</span></a></nav></div><div class="bg-surface-container-low p-pad-card-sm rounded-lg flex flex-col gap-gap-compact"><div class="flex items-center gap-3"><img alt="Profile" class="w-10 h-10 rounded-full object-cover ring-2 ring-primary-container" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmPS9YJDOkoYLSwOXk9ulsSPpQkBaUXnHU7F2K8_oaqKWglUYwxWPnW13n_2LMK5v3DrttX3_Jk_ZzwWlER4PftL5nxchDpPlz3bcTIXyGy5yFLgZdCI0lkdaCiZQPcYtDuqpnc7Lr6G4lCPc23_SkeNCLQNhvgVHew2q6n9KdW8V2nKgg2x_jtd9CABmouURHEoVy1qKESUjtJNpz3XIqpdEdHiy1UWdKcrwZ8xFbuRjQ4veX5ozWpQ"/><div class="flex flex-col min-w-0 flex-1"><span class="font-title-md text-title-md text-on-surface truncate">María Elena Morales</span><span class="font-label-caps text-label-caps uppercase text-primary font-bold tracking-wider">CAJERO EN TURNO</span></div></div><div class="flex items-center justify-between pt-2"><span class="font-body-sm text-body-sm text-on-surface-variant">Turno #3 Matutino</span><button class="flex items-center justify-center p-2 rounded-full hover:bg-error-container hover:text-on-error-container text-on-surface-variant transition-colors" title="Cerrar Turno"><span class="material-symbols-outlined text-title-md">logout</span></button></div></div></aside><div class="pl-72 flex flex-col min-h-screen"><header class="fixed top-0 left-72 right-0 h-20 bg-surface-container-lowest/90 backdrop-blur-xl z-40 px-pad-terminal flex items-center justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex items-center gap-gap-spacious"><div class="flex items-center gap-2"><span class="font-body-sm text-body-sm text-on-surface-variant">Quantix OS</span><span class="material-symbols-outlined text-body-sm text-outline">chevron_right</span><span class="font-title-md text-title-md text-on-surface font-semibold">Terminal Operativo</span></div><div class="hidden xl:flex items-center gap-2 px-3 py-1.5 bg-surface-container-low rounded-full"><span class="relative flex h-2.5 w-2.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-container opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span></span><span class="font-label-caps text-label-caps uppercase text-on-surface font-bold">ONLINE 18ms</span></div><div class="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-surface-container rounded-full text-on-surface"><span class="material-symbols-outlined text-body-md text-secondary">point_of_sale</span><span class="font-body-sm text-body-sm font-medium">CAJA-01 • Fondo: <strong class="font-label-numeric-md text-body-sm">$1,500.00</strong></span></div></div><div class="flex items-center gap-gap-standard"><div class="hidden 2xl:flex flex-col w-48"><div class="flex justify-between items-center mb-1"><span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Meta de Turno</span><span class="font-label-caps text-label-caps text-on-surface font-bold">$2,140 / $2,500</span></div><div class="w-full h-2 bg-surface-container rounded-full overflow-hidden"><div class="h-full bg-primary-container rounded-full" style="width: 85.6%"></div></div></div><button class="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-low hover:bg-surface-container rounded-full text-on-surface-variant text-body-sm transition-colors"><span class="material-symbols-outlined text-body-md">keyboard</span><span class="font-label-caps text-label-caps uppercase">Atajos [F1-F12]</span></button><button class="relative p-2.5 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"><span class="material-symbols-outlined">notifications</span><span class="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-error text-[10px] font-bold text-on-error">3</span></button><button class="p-2.5 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"><span class="material-symbols-outlined">dark_mode</span></button></div></header><main class="w-full pt-20 p-pad-terminal bg-background flex-1"><div class="flex flex-col w-full gap-gap-spacious">
+<!-- BANNER GLOBAL SUPERIOR: CONTINGENCIA OFFLINE SEGURO -->
+<section class="w-full bg-surface-container-high rounded-lg p-pad-card-sm shadow-sm">
+<div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-gap-standard">
+<div class="flex items-center gap-gap-standard min-w-0">
+<div class="flex items-center justify-center w-12 h-12 rounded-full bg-surface-container-lowest text-on-surface shadow-sm shrink-0">
+<span class="material-symbols-outlined text-headline-md text-error">cloud_off</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-2 flex-wrap">
+<span class="font-headline-md text-title-md text-on-surface">Modo Offline Seguro Activo</span>
+<span class="px-2.5 py-0.5 rounded-full bg-surface-container-lowest font-label-caps text-label-caps text-on-surface font-bold uppercase tracking-wider">IndexedDB v4.2 Local</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant truncate">
+            Operando sin conexión a servidor central. Transacciones seguras con firma criptográfica local.
+          </p>
+</div>
+</div>
+<!-- Telemetría & Acciones Rápidas -->
+<div class="flex items-center gap-gap-compact flex-wrap w-full lg:w-auto justify-end">
+<div class="flex items-center gap-2 px-3 py-2 rounded-full bg-surface-container-lowest">
+<span class="material-symbols-outlined text-title-md text-secondary">database</span>
+<span class="font-body-sm text-body-sm text-on-surface">Caché SQLite: <strong>2.4h atrás</strong></span>
+</div>
+<div class="flex items-center gap-2 px-3 py-2 rounded-full bg-surface-container-lowest">
+<span class="relative flex h-2.5 w-2.5">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-error opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-error"></span>
+</span>
+<span class="font-body-sm text-body-sm text-on-surface">Reintentando en <strong class="font-label-numeric-md text-body-sm" id="retry-timer">12s</strong></span>
+</div>
+<button class="flex items-center gap-2 px-4 py-2 rounded-full bg-on-surface text-surface hover:opacity-90 transition-opacity active:scale-95 shadow-sm" id="btn-health-check">
+<span class="material-symbols-outlined text-title-md" id="sync-icon">sync</span>
+<span class="font-label-caps text-label-caps uppercase tracking-wider">Forzar Health Check</span>
+</button>
+</div>
+</div>
+</section>
+<!-- WORKSPACE PRINCIPAL: SPLIT-SCREEN POS (CATÁLOGO + TAPE COBRO + COLA LATERAL) -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-gap-spacious items-start">
+<!-- COLUMNA IZQUIERDA: CATÁLOGO EN CACHÉ & QUICK-KEYS (7 COLUMNS) -->
+<div class="xl:col-span-7 flex flex-col gap-gap-standard">
+<!-- Barra de Filtros y Búsqueda Inset -->
+<div class="bg-surface-container-lowest rounded-lg p-pad-card-sm shadow-sm flex flex-col sm:flex-row gap-gap-compact items-center justify-between">
+<div class="relative w-full sm:w-80">
+<span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline">barcode_scanner</span>
+<input class="w-full pl-11 pr-24 py-2.5 rounded-full bg-surface-container-low text-on-surface font-body-md text-body-md placeholder-outline focus:outline-none" placeholder="Escanear o buscar en caché local..." type="text" value="750103049102"/>
+<span class="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-caps text-label-caps uppercase">F1 ESCAN</span>
+</div>
+<!-- Chips de Categoría Local -->
+<div class="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
+<button class="px-4 py-2 rounded-full bg-on-surface text-surface font-title-md text-body-sm shrink-0">Todos (1,420)</button>
+<button class="px-4 py-2 rounded-full bg-surface-container-low text-on-surface font-title-md text-body-sm shrink-0 hover:bg-surface-container">Abarrotes</button>
+<button class="px-4 py-2 rounded-full bg-surface-container-low text-on-surface font-title-md text-body-sm shrink-0 hover:bg-surface-container">Bebidas</button>
+<button class="px-4 py-2 rounded-full bg-surface-container-low text-on-surface font-title-md text-body-sm shrink-0 hover:bg-surface-container">Lácteos</button>
+</div>
+</div>
+<!-- Grid de Productos Validados en Caché Local -->
+<div class="grid grid-cols-2 md:grid-cols-3 gap-gap-compact">
+<!-- Tarjeta 1: Producto con badge de caché -->
+<div class="bg-surface-container-lowest rounded-lg p-pad-card-sm flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+<div>
+<div class="flex justify-between items-start mb-2">
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-caps text-label-caps flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px] text-primary">verified</span>
+                Validado en Caché
+              </span>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Stock: 48</span>
+</div>
+<div class="w-full h-24 rounded-lg bg-surface-container-low overflow-hidden mb-2 relative">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Fotografía de estudio minimalista de un paquete de café tostado premium artesanal sobre fondo neutro liso, iluminación suave de estudio con paleta slate y toques ámbar." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAvfZX8U83KImewP0Sx3xx_rCgYzmWHVjx8JHnMLU2i9vdwDJ5s2qelprl8YYXP2CQW02fponlpVW2HNNE5BvH_KFByc2556iF7wS_wWofpSlEAzPCMdgz4aRZsNwKyg4emtAlNG4VABWEkRLocWo8xTt_1cd5oChhcgOlx7w79bdm4QX2-ed8OxaBAT15Rye-MpQlnmci3WxbneY8skUJVTufZZMHFUhct-K_sOHUeC1E9J8PRs5fIpA"/>
+</div>
+<h4 class="font-title-md text-body-md text-on-surface font-semibold line-clamp-1">Café Tostado Espresso 500g</h4>
+<span class="font-body-sm text-body-sm text-outline">SKU: 7509-CAFE</span>
+</div>
+<div class="mt-3 flex items-center justify-between pt-2">
+<span class="font-label-numeric-lg text-title-lg text-on-surface">$185.00</span>
+<button class="w-9 h-9 rounded-full bg-surface-container-high text-on-surface flex items-center justify-center hover:bg-primary-container hover:text-on-primary-container transition-colors">
+<span class="material-symbols-outlined text-title-md">add</span>
+</button>
+</div>
+</div>
+<!-- Tarjeta 2 -->
+<div class="bg-surface-container-lowest rounded-lg p-pad-card-sm flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+<div>
+<div class="flex justify-between items-start mb-2">
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-caps text-label-caps flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px] text-primary">verified</span>
+                Validado en Caché
+              </span>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Stock: 112</span>
+</div>
+<div class="w-full h-24 rounded-lg bg-surface-container-low overflow-hidden mb-2 relative">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Fotografía estética de botella de leche entera orgánica de granja de cristal transparente con tapa dorada, fondo neutro beige claro, estética limpia y comercial." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAbpZTG-uChPGfFEvecq_UQR63bk_LU_vVLsOMkBg6bWYSyise5RL2MhV6OTZEUsYbD4X6E3qATErDFTi5OUFLXib4few1mr7GsN-1qT3mgw-F6HPPJMzkODJp-I7opOR3RyZhmePx1-3hLnBtEgJQpFSfCFMCB-Br4WiTk6rqnrh3iJLdtMn05P0vlOzIUUBR0-81MekEyiWogBzzFciZ4fsYcHTcbI2_7DJTbm6h3pyiqQE27RQ95-Q"/>
+</div>
+<h4 class="font-title-md text-body-md text-on-surface font-semibold line-clamp-1">Leche Entera Orgánica 1L</h4>
+<span class="font-body-sm text-body-sm text-outline">SKU: 3218-LECH</span>
+</div>
+<div class="mt-3 flex items-center justify-between pt-2">
+<span class="font-label-numeric-lg text-title-lg text-on-surface">$34.50</span>
+<button class="w-9 h-9 rounded-full bg-surface-container-high text-on-surface flex items-center justify-center hover:bg-primary-container hover:text-on-primary-container transition-colors">
+<span class="material-symbols-outlined text-title-md">add</span>
+</button>
+</div>
+</div>
+<!-- Tarjeta 3 -->
+<div class="bg-surface-container-lowest rounded-lg p-pad-card-sm flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+<div>
+<div class="flex justify-between items-start mb-2">
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-caps text-label-caps flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px] text-primary">verified</span>
+                Validado en Caché
+              </span>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Stock: 85</span>
+</div>
+<div class="w-full h-24 rounded-lg bg-surface-container-low overflow-hidden mb-2 relative">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Pan baguette artesanal de masa madre recién horneado sobre superficie pulida de concreto claro, iluminación cálida de panadería contemporánea, alta definición." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB1P4HCTepcYQIE3b7mr2iCVYV_DQUcwSGF45JYNrfeNVdTVD98adlMEf2tvgS5mZdjxtB119KvEBkuYMFtMj7fyCZrxQ7UT-xkBfpcNbXURcJJBaPBmbZsuq0a_g1mIIqonK9UGGD6GVIJuH1PdyfbpmastGbFsMIxNvkW02WI-p6jMA722JOdAZuX7QQts6LdwL689o34XtU4HIHRpy9yz_rZhHhsZuBl2GRZvu14xyHQGGNDzJ5Idw"/>
+</div>
+<h4 class="font-title-md text-body-md text-on-surface font-semibold line-clamp-1">Baguette Tradicional Masa Madre</h4>
+<span class="font-body-sm text-body-sm text-outline">SKU: 4902-PAN</span>
+</div>
+<div class="mt-3 flex items-center justify-between pt-2">
+<span class="font-label-numeric-lg text-title-lg text-on-surface">$45.00</span>
+<button class="w-9 h-9 rounded-full bg-surface-container-high text-on-surface flex items-center justify-center hover:bg-primary-container hover:text-on-primary-container transition-colors">
+<span class="material-symbols-outlined text-title-md">add</span>
+</button>
+</div>
+</div>
+<!-- Tarjeta 4 -->
+<div class="bg-surface-container-lowest rounded-lg p-pad-card-sm flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+<div>
+<div class="flex justify-between items-start mb-2">
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-caps text-label-caps flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px] text-primary">verified</span>
+                Validado en Caché
+              </span>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Stock: 220</span>
+</div>
+<div class="w-full h-24 rounded-lg bg-surface-container-low overflow-hidden mb-2 relative">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Lata de agua mineral gasificada con diseño botánico moderno, condensación fresca en la superficie exterior, iluminación de estudio suave, minimalismo comercial." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBZa0sd3EqmKYzEKYhw_FWS-aKnxQA-7dqeyROgRgvoUoYFIacDPFJGJwtN20WPO3krqN1ho9_klB75jaPvqVRbvQhKfCmOcgJfqDGJsCkZrI9OD20DqumarQt1bJac4M26inLWSOb7Geu0dcuGDQGmE1MERIsd1ytD538lyaYpdFk3Kk-Ne-_zbOJoxxWeAHEw33KSPTe52cUjomit32O003JwhCmxeJXnK4Yy89pv9X0V3EEcVV4h0Q"/>
+</div>
+<h4 class="font-title-md text-body-md text-on-surface font-semibold line-clamp-1">Agua Mineral Gasificada 355ml</h4>
+<span class="font-body-sm text-body-sm text-outline">SKU: 8193-AGUA</span>
+</div>
+<div class="mt-3 flex items-center justify-between pt-2">
+<span class="font-label-numeric-lg text-title-lg text-on-surface">$22.00</span>
+<button class="w-9 h-9 rounded-full bg-surface-container-high text-on-surface flex items-center justify-center hover:bg-primary-container hover:text-on-primary-container transition-colors">
+<span class="material-symbols-outlined text-title-md">add</span>
+</button>
+</div>
+</div>
+<!-- Tarjeta 5 -->
+<div class="bg-surface-container-lowest rounded-lg p-pad-card-sm flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+<div>
+<div class="flex justify-between items-start mb-2">
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-caps text-label-caps flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px] text-primary">verified</span>
+                Validado en Caché
+              </span>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Stock: 64</span>
+</div>
+<div class="w-full h-24 rounded-lg bg-surface-container-low overflow-hidden mb-2 relative">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Tableta de chocolate negro 85% cacao empaquetada en papel kraft elegante con detalles tipográficos geométricos, plano cenital nítido sobre mesa de madera clara." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCc8N1ZMdlb0OAV0GFZtiVkx_Ud2c8rI-ZMgDLGnfO21KNcZDHxc_u810Nd7dE5buJuC8qC1692XGmX6kxlavpFJoFwgo8PgbP3-Y9dCFL3MCYRwLAkGxSNZgoyPF5IzdnHnED7kzpDxLNuoRQ1kh7dQzyUX9L4fMRUaUlEOnk33zt7NjF77ZFnru6nZJNAzr9Ri-jxmgKJ-cG8CZIXbwrE0-lDdBEB7Tp6xzTNNltqeN1Gc2YdpjXzOg"/>
+</div>
+<h4 class="font-title-md text-body-md text-on-surface font-semibold line-clamp-1">Chocolate Amargo 85% Criollo</h4>
+<span class="font-body-sm text-body-sm text-outline">SKU: 6712-CHOC</span>
+</div>
+<div class="mt-3 flex items-center justify-between pt-2">
+<span class="font-label-numeric-lg text-title-lg text-on-surface">$68.00</span>
+<button class="w-9 h-9 rounded-full bg-surface-container-high text-on-surface flex items-center justify-center hover:bg-primary-container hover:text-on-primary-container transition-colors">
+<span class="material-symbols-outlined text-title-md">add</span>
+</button>
+</div>
+</div>
+<!-- Tarjeta 6 -->
+<div class="bg-surface-container-lowest rounded-lg p-pad-card-sm flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+<div>
+<div class="flex justify-between items-start mb-2">
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-caps text-label-caps flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px] text-primary">verified</span>
+                Validado en Caché
+              </span>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Stock: 90</span>
+</div>
+<div class="w-full h-24 rounded-lg bg-surface-container-low overflow-hidden mb-2 relative">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Frasco de mermelada artesanal de frutos rojos de vidrio transparente con etiqueta tipográfica minimalista, iluminación cálida directa y sombras suaves." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC1-X4aHKGNuW5uDG75fllVS7YUeDWZqSFvtq-Hl-W22b3ZdHm_G_evoQgkhBsRmJNxjRhaxj43LqNFFiTZ4GFU22Cr-wBAgZ0R0VRu4NMOfNO2NwA3RCwwJ-L-eq6XA112KCANFR28xKwijBYspHIZmpte_K5vWAUAGMj4F3PLMv7fncM2SR3aK5v0q2AZ2pzpJKcT6zCs99NITMf0blz_uBb9H7KHU99BOw2ZmlrG6zt5oIUkQ6lsyw"/>
+</div>
+<h4 class="font-title-md text-body-md text-on-surface font-semibold line-clamp-1">Mermelada Silvestre Frutas 280g</h4>
+<span class="font-body-sm text-body-sm text-outline">SKU: 5543-MERM</span>
+</div>
+<div class="mt-3 flex items-center justify-between pt-2">
+<span class="font-label-numeric-lg text-title-lg text-on-surface">$52.00</span>
+<button class="w-9 h-9 rounded-full bg-surface-container-high text-on-surface flex items-center justify-center hover:bg-primary-container hover:text-on-primary-container transition-colors">
+<span class="material-symbols-outlined text-title-md">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- BANNER DE INTEGRIDAD DE DATOS LOCALES -->
+<div class="bg-surface-container-low rounded-lg p-pad-card-sm flex items-center justify-between gap-gap-standard">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-headline-md">enhanced_encryption</span>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface font-semibold">Motor de Reglas y Descuentos Local (Wasm)</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Los precios promocionales y redondeos fiscales se calculan en el cliente según RFC-7519.</span>
+</div>
+</div>
+<span class="px-3 py-1 rounded-full bg-surface-container-lowest font-label-caps text-label-caps uppercase text-on-surface-variant font-bold">HASH: SHA-256 OK</span>
+</div>
+</div>
+<!-- COLUMNA CENTRAL-DERECHA: TAPE DE COMPRAS & REGISTRO DE PAGO (5 COLUMNS) -->
+<div class="xl:col-span-5 flex flex-col gap-gap-standard">
+<!-- CONTENEDOR DEL TICKET ACTIVO -->
+<div class="bg-surface-container-lowest rounded-lg p-pad-card-lg shadow-sm flex flex-col gap-gap-spacious">
+<!-- Header del Ticket -->
+<div class="flex items-center justify-between pb-3">
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Ticket en Curso</span>
+<span class="font-headline-md text-headline-md text-on-surface">LOC-9A20F</span>
+</div>
+<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container-high text-on-surface">
+<span class="material-symbols-outlined text-title-md">receipt_long</span>
+<span class="font-label-caps text-label-caps uppercase font-bold">3 Partidas</span>
+</div>
+</div>
+<!-- Lista de Artículos en Carrito -->
+<div class="flex flex-col gap-gap-compact">
+<!-- Item 1 -->
+<div class="p-3 rounded-lg bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="w-8 h-8 rounded-full bg-surface-container text-on-surface font-label-numeric-md text-title-md flex items-center justify-center font-bold">1</span>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface font-medium">Café Tostado Espresso 500g</span>
+<span class="font-body-sm text-body-sm text-outline">P.U. $185.00 • IVA 16% inc.</span>
+</div>
+</div>
+<span class="font-label-numeric-md text-title-lg text-on-surface font-bold">$185.00</span>
+</div>
+<!-- Item 2 -->
+<div class="p-3 rounded-lg bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="w-8 h-8 rounded-full bg-surface-container text-on-surface font-label-numeric-md text-title-md flex items-center justify-center font-bold">2</span>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface font-medium">Leche Entera Orgánica 1L</span>
+<span class="font-body-sm text-body-sm text-outline">P.U. $34.50 • Promo 2x $60.00</span>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-label-numeric-md text-title-lg text-on-surface font-bold">$60.00</span>
+<span class="font-body-sm text-body-sm text-primary font-medium">Ahorro -$9.00</span>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="p-3 rounded-lg bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="w-8 h-8 rounded-full bg-surface-container text-on-surface font-label-numeric-md text-title-md flex items-center justify-center font-bold">1</span>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface font-medium">Chocolate Amargo 85% Criollo</span>
+<span class="font-body-sm text-body-sm text-outline">P.U. $68.00 • Gravado</span>
+</div>
+</div>
+<span class="font-label-numeric-md text-title-lg text-on-surface font-bold">$68.00</span>
+</div>
+</div>
+<!-- Métodos de Pago: Restricción Offline Estricta -->
+<div class="flex flex-col gap-2 pt-2">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Forma de Pago Permitida en Offline:</span>
+<div class="grid grid-cols-2 gap-gap-compact">
+<!-- Efectivo: Habilitado y Protagonista -->
+<button class="h-14 rounded-lg bg-primary-container text-on-primary-container font-title-md text-title-md font-bold flex items-center justify-center gap-2 shadow-sm transition-transform active:scale-98">
+<span class="material-symbols-outlined text-headline-md">payments</span>
+<span>Efectivo (Activo)</span>
+</button>
+<!-- Tarjeta Bancaria: Deshabilitada con candado de seguridad -->
+<div class="h-14 rounded-lg bg-surface-container text-outline font-title-md text-body-md flex items-center justify-center gap-2 opacity-70 cursor-not-allowed relative group" title="Inhabilitado en modo offline por seguridad bancaria">
+<span class="material-symbols-outlined text-headline-md">credit_card_off</span>
+<div class="flex flex-col text-left">
+<span class="font-bold leading-tight">Tarjeta PinPad</span>
+<span class="font-label-caps text-[10px] text-error font-bold uppercase tracking-wider">Bloqueo Offline</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Tabulador de Cálculo y Cobro -->
+<div class="p-pad-card-sm rounded-lg bg-surface-container-low flex flex-col gap-2">
+<div class="flex justify-between items-center text-body-md text-on-surface-variant">
+<span>Subtotal Bruto:</span>
+<span class="font-label-numeric-md text-body-md">$322.00</span>
+</div>
+<div class="flex justify-between items-center text-body-md text-primary">
+<span>Descuento Promoción Local:</span>
+<span class="font-label-numeric-md text-body-md">-$9.00</span>
+</div>
+<div class="flex justify-between items-center text-body-md text-on-surface-variant">
+<span>Impuestos Estimados (IVA 16%):</span>
+<span class="font-label-numeric-md text-body-md">$43.17</span>
+</div>
+<div class="h-px bg-outline-variant/30 my-1"></div>
+<div class="flex justify-between items-baseline">
+<span class="font-title-lg text-title-lg text-on-surface font-bold">Total a Cobrar:</span>
+<span class="font-label-numeric-lg text-display-lg text-on-surface tracking-tight">$313.00</span>
+</div>
+<!-- Input Monto Recibido y Cálculo de Cambio -->
+<div class="mt-3 pt-3 flex flex-col gap-2">
+<div class="flex items-center justify-between gap-3">
+<label class="font-title-md text-body-md text-on-surface font-medium shrink-0">Efectivo Recibido:</label>
+<div class="relative flex-1 max-w-[180px]">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 font-label-numeric-md text-title-md text-on-surface">$</span>
+<input class="w-full pl-8 pr-3 py-2 rounded-lg bg-surface-container-lowest text-right font-label-numeric-md text-title-lg text-on-surface font-bold focus:outline-none" id="cash-input" type="text" value="500.00"/>
+</div>
+</div>
+<div class="flex items-center justify-between p-3 rounded-lg bg-surface-container-lowest">
+<span class="font-title-md text-title-md text-on-surface-variant">Cambio a Entregar:</span>
+<span class="font-label-numeric-lg text-label-numeric-lg text-primary font-bold" id="cash-change">$187.00</span>
+</div>
+</div>
+</div>
+<!-- Botón Principal de Emisión de Ticket Offline -->
+<button class="w-full h-16 rounded-full bg-primary-container text-on-primary-container font-headline-md text-title-lg font-bold flex items-center justify-center gap-3 shadow-md hover:brightness-105 transition-all active:scale-98" id="btn-emit-ticket">
+<span class="material-symbols-outlined text-headline-md">lock_clock</span>
+<span>EMITIR TICKET OFFLINE LOCAL (UUID-v4)</span>
+</button>
+<div class="text-center">
+<span class="font-body-sm text-body-sm text-outline">Firma criptográfica local SHA-256 estampada en memoria no volátil.</span>
+</div>
+</div>
+</div>
+</div>
+<!-- SECCIÓN INFERIOR: DRAWER DE COLA DE SINCRONIZACIÓN Y PREVIEW DEL TICKET TÉRMICO 80mm -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gap-spacious items-start">
+<!-- PANEL DE COLA DE SINCRONIZACIÓN LOCAL (7 COLUMNS) -->
+<div class="lg:col-span-7 bg-surface-container-lowest rounded-lg p-pad-card-lg shadow-sm flex flex-col gap-gap-standard">
+<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-surface-container-high text-on-surface flex items-center justify-center">
+<span class="material-symbols-outlined text-title-lg">hourglass_top</span>
+</div>
+<div class="flex flex-col">
+<span class="font-headline-md text-title-lg text-on-surface">Cola de Sincronización Local (14 transacciones)</span>
+<span class="font-body-sm text-body-sm text-outline">Almacenamiento persistente en IndexedDB • Cifrado AES-GCM</span>
+</div>
+</div>
+<span class="px-3 py-1 rounded-full bg-surface-container-low font-label-caps text-label-caps text-on-surface-variant uppercase font-bold">Estado: En espera de enlace</span>
+</div>
+<!-- Barra de progreso visual para sync socket -->
+<div class="flex flex-col gap-1.5">
+<div class="flex justify-between text-body-sm text-on-surface-variant">
+<span>Capacidad de búfer local: 14 / 5,000 folios</span>
+<span class="font-label-numeric-md text-body-sm font-semibold">0.28% ocupado</span>
+</div>
+<div class="w-full h-3 rounded-full bg-surface-container overflow-hidden">
+<div class="h-full bg-primary-container rounded-full transition-all duration-500" style="width: 14%"></div>
+</div>
+</div>
+<!-- Lista de Tickets Pendientes de Transmitir -->
+<div class="flex flex-col gap-gap-compact overflow-y-auto max-h-72 pr-1">
+<!-- Ticket en cola 1 -->
+<div class="p-3 rounded-lg bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-outline text-title-lg">pending</span>
+<div class="flex flex-col">
+<span class="font-title-md text-body-md text-on-surface font-semibold">LOC-8F42A</span>
+<span class="font-body-sm text-body-sm text-outline">12:41:09 PM • Cajero: M. Morales</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="font-label-numeric-md text-title-md text-on-surface font-bold">$240.00</span>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant font-label-caps text-[10px] uppercase">En Cola</span>
+</div>
+</div>
+<!-- Ticket en cola 2 -->
+<div class="p-3 rounded-lg bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-outline text-title-lg">pending</span>
+<div class="flex flex-col">
+<span class="font-title-md text-body-md text-on-surface font-semibold">LOC-8F39D</span>
+<span class="font-body-sm text-body-sm text-outline">12:35:42 PM • Cajero: M. Morales</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="font-label-numeric-md text-title-md text-on-surface font-bold">$582.50</span>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant font-label-caps text-[10px] uppercase">En Cola</span>
+</div>
+</div>
+<!-- Ticket en cola 3 -->
+<div class="p-3 rounded-lg bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-outline text-title-lg">pending</span>
+<div class="flex flex-col">
+<span class="font-title-md text-body-md text-on-surface font-semibold">LOC-8F201</span>
+<span class="font-body-sm text-body-sm text-outline">12:18:15 PM • Cajero: M. Morales</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="font-label-numeric-md text-title-md text-on-surface font-bold">$115.00</span>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant font-label-caps text-[10px] uppercase">En Cola</span>
+</div>
+</div>
+<!-- Ticket en cola 4 -->
+<div class="p-3 rounded-lg bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-outline text-title-lg">pending</span>
+<div class="flex flex-col">
+<span class="font-title-md text-body-md text-on-surface font-semibold">LOC-8F1A9</span>
+<span class="font-body-sm text-body-sm text-outline">12:04:55 PM • Cajero: M. Morales</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="font-label-numeric-md text-title-md text-on-surface font-bold">$1,040.00</span>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant font-label-caps text-[10px] uppercase">En Cola</span>
+</div>
+</div>
+</div>
+<div class="p-3 rounded-lg bg-surface-container-low flex items-center gap-3">
+<span class="material-symbols-outlined text-title-md text-secondary">shield_with_heart</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">
+<strong>Garantía de Cero Pérdida:</strong> Cada transacción local se replica inmediatamente en el Service Worker y SQLite local. No apague el equipo antes de que el socket central confirme la ingesta masiva.
+        </span>
+</div>
+</div>
+<!-- PREVIEW TICKET TÉRMICO 80MM (5 COLUMNS) -->
+<div class="lg:col-span-5 bg-surface-container-lowest rounded-lg p-pad-card-lg shadow-sm flex flex-col gap-gap-compact">
+<div class="flex items-center justify-between">
+<span class="font-title-md text-title-md text-on-surface font-semibold">Vista Previa de Impresión Térmica (80mm)</span>
+<button class="px-3 py-1.5 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface font-label-caps text-label-caps uppercase flex items-center gap-1.5">
+<span class="material-symbols-outlined text-body-md">print</span>
+          Reimprimir
+        </button>
+</div>
+<!-- Papel Térmico Simulado con Marca de Agua Estricta de Contingencia -->
+<div class="relative bg-surface-container-lowest p-pad-card-lg rounded-lg shadow-inner overflow-hidden font-mono text-on-surface text-[12px] leading-relaxed">
+<!-- Marca de Agua Diagonal Continua -->
+<div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10 select-none rotate-[-25deg]">
+<div class="text-center font-bold text-headline-xl text-on-surface leading-snug">
+            COMPROBANTE OFFLINE<br/>PENDIENTE SYNC<br/>VALIDO LOCALMENTE
+          </div>
+</div>
+<!-- Encabezado Ticket Térmico -->
+<div class="text-center flex flex-col items-center gap-1 mb-4">
+<span class="font-bold text-title-md tracking-wider">QUANTIX RETAIL OS</span>
+<span class="text-body-sm">SUCURSAL CENTRO 04 • TERMINAL 01</span>
+<span class="text-body-sm">RFC: QRO-220914-K81</span>
+<div class="w-full h-px bg-outline-variant my-1"></div>
+<!-- LEYENDA OFICIAL OFFLINE DESTACADA -->
+<div class="px-2 py-1 bg-surface-container-high rounded text-on-surface font-bold text-center w-full uppercase">
+            *** COMPROBANTE OFFLINE ***<br/>PENDIENTE DE SINCRONIZACIÓN CENTRAL
+          </div>
+</div>
+<!-- Metadata de la Transacción -->
+<div class="flex justify-between text-body-sm mb-2">
+<span>FOLIO: LOC-9A20F</span>
+<span>12:54:11 PM</span>
+</div>
+<div class="flex justify-between text-body-sm mb-3">
+<span>UUID: 7b8a1c90-482a-431f</span>
+<span>CAJERO: M. MORALES</span>
+</div>
+<div class="w-full h-px bg-outline-variant my-2"></div>
+<!-- Partidas Ticket -->
+<div class="flex flex-col gap-1.5 my-2">
+<div class="flex justify-between">
+<span class="truncate pr-2">1x Café Tostado 500g</span>
+<span class="font-bold shrink-0">$185.00</span>
+</div>
+<div class="flex justify-between">
+<span class="truncate pr-2">2x Leche Orgánica 1L</span>
+<span class="font-bold shrink-0">$60.00</span>
+</div>
+<div class="flex justify-between text-[11px] text-on-surface-variant">
+<span>  * Descuento Local Promo</span>
+<span>-$9.00</span>
+</div>
+<div class="flex justify-between">
+<span class="truncate pr-2">1x Choc Amargo Criollo</span>
+<span class="font-bold shrink-0">$68.00</span>
+</div>
+</div>
+<div class="w-full h-px bg-outline-variant my-2"></div>
+<!-- Resumen Financiero -->
+<div class="flex flex-col gap-1 my-2">
+<div class="flex justify-between">
+<span>SUBTOTAL:</span>
+<span>$313.00</span>
+</div>
+<div class="flex justify-between">
+<span>IVA TRASLADADO (16%):</span>
+<span>$43.17</span>
+</div>
+<div class="flex justify-between font-bold text-title-md mt-1 pt-1">
+<span>TOTAL PAGADO:</span>
+<span>$313.00</span>
+</div>
+<div class="flex justify-between mt-1">
+<span>FORMA DE PAGO:</span>
+<span class="font-bold">EFECTIVO</span>
+</div>
+<div class="flex justify-between">
+<span>RECIBIDO:</span>
+<span>$500.00</span>
+</div>
+<div class="flex justify-between font-bold">
+<span>CAMBIO ENTREGADO:</span>
+<span>$187.00</span>
+</div>
+</div>
+<div class="w-full h-px bg-outline-variant my-3"></div>
+<!-- Hash Criptográfico y Pie de Ticket -->
+<div class="text-center flex flex-col items-center gap-1 text-[10px] text-on-surface-variant">
+<span>FIRMA CRIPTOGRÁFICA OFFLINE:</span>
+<span class="break-all font-mono">e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</span>
+<span class="mt-2 text-on-surface font-semibold">Conserve este comprobante para facturación posterior una vez restablecido el enlace web.</span>
+<span>www.quantix-retail.io/sync-portal</span>
+</div>
+</div>
+</div>
+</div>
+<!-- TOAST / NOTIFICACIÓN MODAL TRANSIENTE DE EMISIÓN -->
+<div class="fixed bottom-6 right-6 z-50 transform translate-y-24 opacity-0 transition-all duration-300 pointer-events-none" id="offline-toast">
+<div class="bg-surface-container-highest text-on-surface px-5 py-4 rounded-lg shadow-xl flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-headline-md">task_alt</span>
+<div class="flex flex-col">
+<span class="font-title-md text-body-md font-bold">Ticket Guardado en Almacén Local</span>
+<span class="font-body-sm text-body-sm text-outline">Folio LOC-9A20F encolado en IndexedDB con éxito.</span>
+</div>
+</div>
+</div>
+</div>
+<script>
+  (function() {
+    // Contador regresivo de reintento de ping
+    let retrySeconds = 12;
+    const retryTimerEl = document.getElementById('retry-timer');
+    if (retryTimerEl) {
+      setInterval(() => {
+        retrySeconds--;
+        if (retrySeconds <= 0) {
+          retrySeconds = 15;
+        }
+        retryTimerEl.textContent = retrySeconds + 's';
+      }, 1000);
+    }
+
+    // Botón de Forzar Health Check con rotación temporal
+    const btnHealthCheck = document.getElementById('btn-health-check');
+    const syncIcon = document.getElementById('sync-icon');
+    if (btnHealthCheck && syncIcon) {
+      btnHealthCheck.addEventListener('click', () => {
+        syncIcon.classList.add('animate-spin');
+        btnHealthCheck.disabled = true;
+        setTimeout(() => {
+          syncIcon.classList.remove('animate-spin');
+          btnHealthCheck.disabled = false;
+          alert('Health Check: Servidor central inaccesible (ERR_NETWORK_DISCONNECTED). El sistema continuará operando en Modo Contingencia Local.');
+        }, 1200);
+      });
+    }
+
+    // Cálculo interactivo de cambio en efectivo
+    const cashInput = document.getElementById('cash-input');
+    const cashChange = document.getElementById('cash-change');
+    const totalAmount = 313.00;
+
+    if (cashInput && cashChange) {
+      cashInput.addEventListener('input', (e) => {
+        const received = parseFloat(e.target.value) || 0;
+        const change = received - totalAmount;
+        if (change >= 0) {
+          cashChange.textContent = '$' + change.toFixed(2);
+          cashChange.classList.remove('text-error');
+          cashChange.classList.add('text-primary');
+        } else {
+          cashChange.textContent = 'Faltan $' + Math.abs(change).toFixed(2);
+          cashChange.classList.remove('text-primary');
+          cashChange.classList.add('text-error');
+        }
+      });
+    }
+
+    // Emisión de ticket offline con notificación feedback
+    const btnEmitTicket = document.getElementById('btn-emit-ticket');
+    const offlineToast = document.getElementById('offline-toast');
+    if (btnEmitTicket && offlineToast) {
+      btnEmitTicket.addEventListener('click', () => {
+        offlineToast.classList.remove('translate-y-24', 'opacity-0', 'pointer-events-none');
+        offlineToast.classList.add('translate-y-0', 'opacity-100');
+        setTimeout(() => {
+          offlineToast.classList.add('translate-y-24', 'opacity-0', 'pointer-events-none');
+          offlineToast.classList.remove('translate-y-0', 'opacity-100');
+        }, 3200);
+      });
+    }
+  })();
+</script></main></div></body></html>

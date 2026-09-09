@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
   ShieldAlert, AlertTriangle, CheckCircle2, Clock, 
-  Layers, KeyRound, Eye, X, Terminal,
+  Layers, KeyRound, Eye, X,
   User, RefreshCw, Ban, Activity, Pause, 
   Play, ShoppingCart, Scale, AlertOctagon, Trash2, Cpu,
   BarChart3, TrendingUp, Receipt, Printer, Download, Award, FileText, Check
@@ -9,6 +9,7 @@ import {
 import api from '../services/api';
 import { useWebSocket, type EventoActividad } from '../hooks/useWebSocket';
 import { exportToCSV, formatDate } from '../utils/exportUtils';
+import CorteXModal from '../components/CorteXModal';
 
 interface AlertaLote {
   id: string;
@@ -90,6 +91,7 @@ export default function Tactico() {
   const [corteZModal, setCorteZModal] = useState<any | null>(null);
   const [loadingCorteZ, setLoadingCorteZ] = useState(false);
   const [descargadoCorteZ, setDescargadoCorteZ] = useState(false);
+  const [corteXSesionId, setCorteXSesionId] = useState<string | null>(null);
 
   // Modales de detalle
   const [detalleSesion, setDetalleSesion] = useState<SesionCaja | null>(null);
@@ -353,28 +355,32 @@ export default function Tactico() {
   };
 
   return (
-    <div className="p-8 h-full overflow-y-auto bg-gray-50">
+    <div className="p-6 md:p-8 h-full overflow-y-auto bg-background text-on-surface select-none">
       
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-surface-container-high/60 pb-6 mb-8">
         <div>
           <div className="flex items-center gap-2">
-            <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-black uppercase tracking-wider">
-              Táctico • Supervisión
+            <span className="px-3 py-1 bg-secondary-fixed text-on-secondary-fixed-variant rounded-full font-label-caps text-[10px] font-bold uppercase tracking-wider">
+              Nivel Táctico • Supervisión de Piso
             </span>
           </div>
-          <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight mt-2">Supervisión de Cajas</h2>
-          <p className="text-gray-500 mt-0.5 font-medium text-sm">Auditoría forense, arqueos ciegos, descuadres de gaveta y control de mermas</p>
+          <h2 className="font-headline-xl text-2xl md:text-3xl font-bold text-on-surface tracking-tight mt-2">
+            Supervisión Táctica & Auditoría
+          </h2>
+          <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+            Auditoría forense en vivo, control de descuadres de gaveta, mermas sanitarias y override supervisor
+          </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 flex-wrap">
           <button
             onClick={cargarDatos}
             disabled={loading}
-            className="flex items-center gap-2 px-3.5 py-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl font-bold text-xs shadow-sm transition-all"
+            className="flex items-center gap-2 px-4 py-2.5 bg-surface-container-lowest border border-surface-container-high text-on-surface hover:bg-surface-container rounded-full font-title-md text-body-sm shadow-xs transition-all cursor-pointer disabled:opacity-50"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            Refrescar
+            <RefreshCw className={`w-3.5 h-3.5 text-primary ${loading ? 'animate-spin' : ''}`} />
+            <span>Refrescar</span>
           </button>
 
           <button
@@ -426,127 +432,127 @@ export default function Tactico() {
                 });
               }
             }}
-            className="flex items-center gap-2 px-3.5 py-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2.5 bg-surface-container-lowest border border-surface-container-high text-on-surface hover:bg-surface-container rounded-full font-title-md text-body-sm shadow-xs transition-all cursor-pointer"
             title="Exportar datos a CSV / Excel"
           >
-            <Download className="w-3.5 h-3.5 text-quantix-600" />
+            <Download className="w-3.5 h-3.5 text-primary" />
             <span>Exportar CSV</span>
           </button>
 
           <button
             onClick={() => setOverrideModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-bold text-sm shadow-md transition-all active:scale-95"
+            className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:opacity-95 text-on-primary rounded-full font-title-md text-body-sm font-bold shadow-xs transition-all active:scale-95 cursor-pointer"
           >
-            <KeyRound className="w-4 h-4 text-amber-400" />
-            Supervisor Override
+            <KeyRound className="w-4 h-4 text-on-primary" />
+            <span>Supervisor Override</span>
           </button>
         </div>
       </div>
 
       {errorDatos && (
-        <div role="alert" className="mb-6 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-800">
-          <AlertTriangle className="h-4 w-4" />
-          {errorDatos}
+        <div role="alert" className="mb-6 flex items-center gap-2.5 rounded-2xl bg-error-container text-on-error-container p-4 text-body-sm font-semibold shadow-xs">
+          <AlertTriangle className="h-5 w-5 text-error shrink-0" />
+          <span>{errorDatos}</span>
         </div>
       )}
 
       {/* KPI Cards Tácticos */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
         <div 
           onClick={() => setActiveTab('ARQUEOS')}
-          className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex items-center justify-between cursor-pointer hover:border-red-300 hover:shadow-md transition-all"
+          className="bg-surface-container-lowest p-6 rounded-3xl shadow-sm border border-surface-container-high/60 flex items-center justify-between cursor-pointer hover:shadow-md transition-all group"
         >
           <div>
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Descuadres de Caja</span>
-            <p className="text-2xl font-black text-red-600 mt-1">
+            <span className="font-label-caps text-[10px] font-bold text-outline uppercase tracking-wider">Descuadres de Caja</span>
+            <p className="font-headline-md text-2xl font-bold text-error mt-1">
               {sesiones.filter(s => s.estado_cuadre === 'DESCUADRE' || (s.diferencia !== null && s.diferencia < -5)).length} Sesiones
             </p>
-            <span className="text-xs text-red-500 font-semibold">Supera tolerancia de $5.00</span>
+            <span className="font-body-sm text-[11px] text-error font-semibold">Supera tolerancia de $5.00</span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center text-red-600">
+          <div className="w-12 h-12 rounded-2xl bg-error-container flex items-center justify-center text-error group-hover:scale-105 transition-transform">
             <ShieldAlert className="w-6 h-6" />
           </div>
         </div>
 
         <div 
           onClick={() => setActiveTab('FEFO')}
-          className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex items-center justify-between cursor-pointer hover:border-amber-300 hover:shadow-md transition-all"
+          className="bg-surface-container-lowest p-6 rounded-3xl shadow-sm border border-surface-container-high/60 flex items-center justify-between cursor-pointer hover:shadow-md transition-all group"
         >
           <div>
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Lotes por Caducar (&lt;30d)</span>
-            <p className="text-2xl font-black text-amber-600 mt-1">{lotesAlerta.length} Lotes</p>
-            <span className="text-xs text-amber-600 font-semibold">Prioritarios en descarga FEFO</span>
+            <span className="font-label-caps text-[10px] font-bold text-outline uppercase tracking-wider">Lotes por Caducar (&lt;30d)</span>
+            <p className="font-headline-md text-2xl font-bold text-on-surface mt-1">{lotesAlerta.length} Lotes</p>
+            <span className="font-body-sm text-[11px] text-amber-600 font-semibold">Prioritarios en rotación FEFO</span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
+          <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-800 group-hover:scale-105 transition-transform">
             <Clock className="w-6 h-6" />
           </div>
         </div>
 
         <div 
           onClick={() => setActiveTab('AUDITORIA')}
-          className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex items-center justify-between cursor-pointer hover:border-blue-300 hover:shadow-md transition-all"
+          className="bg-surface-container-lowest p-6 rounded-3xl shadow-sm border border-surface-container-high/60 flex items-center justify-between cursor-pointer hover:shadow-md transition-all group"
         >
           <div>
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Eventos de Seguridad</span>
-            <p className="text-2xl font-black text-blue-600 mt-1">{auditorias.length} Registros</p>
-            <span className="text-xs text-blue-600 font-semibold">Bitácora inmutable forense</span>
+            <span className="font-label-caps text-[10px] font-bold text-outline uppercase tracking-wider">Eventos de Seguridad</span>
+            <p className="font-headline-md text-2xl font-bold text-secondary mt-1">{auditorias.length} Registros</p>
+            <span className="font-body-sm text-[11px] text-outline font-medium">Bitácora inmutable forense</span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+          <div className="w-12 h-12 rounded-2xl bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed group-hover:scale-105 transition-transform">
             <CheckCircle2 className="w-6 h-6" />
           </div>
         </div>
 
         <div 
           onClick={() => setActiveTab('DESEMPENO')}
-          className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex items-center justify-between cursor-pointer hover:border-emerald-300 hover:shadow-md transition-all"
+          className="bg-surface-container-lowest p-6 rounded-3xl shadow-sm border border-surface-container-high/60 flex items-center justify-between cursor-pointer hover:shadow-md transition-all group"
         >
           <div>
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Precisión de Gaveta</span>
-            <p className="text-2xl font-black text-emerald-600 mt-1">
+            <span className="font-label-caps text-[10px] font-bold text-outline uppercase tracking-wider">Precisión de Gaveta</span>
+            <p className="font-headline-md text-2xl font-bold text-primary mt-1">
               {metricasGlobales?.tasa_precision_gaveta_global !== undefined ? `${metricasGlobales.tasa_precision_gaveta_global.toFixed(1)}%` : '100%'}
             </p>
-            <span className="text-xs text-emerald-600 font-semibold">Exactitud de Arqueos</span>
+            <span className="font-body-sm text-[11px] text-primary font-semibold">Exactitud de Arqueos</span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+          <div className="w-12 h-12 rounded-2xl bg-primary-fixed/30 flex items-center justify-center text-primary group-hover:scale-105 transition-transform">
             <TrendingUp className="w-6 h-6" />
           </div>
         </div>
       </div>
 
       {/* SECCIÓN: MONITOR EN VIVO DE ACTIVIDAD (LIVE TICKER WEBSOCKETS) */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8 transition-all">
+      <div className="bg-surface-container-lowest rounded-3xl shadow-sm border border-surface-container-high/60 overflow-hidden mb-8 transition-all">
         {/* Encabezado del Live Ticker */}
-        <div className="p-4 bg-gray-900 text-white flex flex-wrap items-center justify-between gap-3">
+        <div className="p-4 bg-surface-container-low/70 border-b border-surface-container-high/60 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="relative flex items-center justify-center">
               <span className={`animate-ping absolute inline-flex h-4 w-4 rounded-full opacity-75 ${
-                estaConectado ? 'bg-emerald-400' : 'bg-red-400'
+                estaConectado ? 'bg-primary-container' : 'bg-error'
               }`}></span>
               <span className={`relative inline-flex rounded-full h-3 w-3 ${
-                estaConectado ? 'bg-emerald-500' : 'bg-red-500'
+                estaConectado ? 'bg-primary' : 'bg-error'
               }`}></span>
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-extrabold text-sm tracking-tight text-white flex items-center gap-1.5">
-                  <Activity className="w-4 h-4 text-emerald-400" />
+                <h3 className="font-title-md text-body-md font-bold text-on-surface flex items-center gap-1.5">
+                  <Activity className="w-4 h-4 text-primary" />
                   Monitor en Vivo de Actividad
                 </h3>
-                <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-md text-[10px] font-black uppercase tracking-wider">
+                <span className="px-2.5 py-0.5 bg-primary-fixed/30 text-on-primary-fixed-variant rounded-full font-label-caps text-[10px] font-bold uppercase tracking-wider">
                   Live Ticker WS
                 </span>
-                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                  estaConectado ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-red-950 text-red-300 border border-red-800'
+                <span className={`px-2.5 py-0.5 rounded-full font-label-caps text-[10px] font-bold uppercase ${
+                  estaConectado ? 'bg-primary-container text-on-primary-container' : 'bg-error-container text-on-error-container'
                 }`}>
                   {estaConectado ? 'En línea' : 'Reconectando'}
                 </span>
                 {streamPausado && (
-                  <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-md text-[10px] font-bold">
+                  <span className="px-2.5 py-0.5 bg-secondary-fixed/30 text-on-secondary-fixed-variant rounded-full font-label-caps text-[10px] font-bold uppercase">
                     Pausado
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-gray-400 font-medium mt-0.5">
+              <p className="font-body-sm text-[11px] text-on-surface-variant font-medium mt-0.5">
                 Flujo WebSocket en tiempo real de ventas POS, arqueos ciegos, descuadres y alertas sanitarias
               </p>
             </div>
@@ -555,15 +561,15 @@ export default function Tactico() {
           {/* Controles del Ticker */}
           <div className="flex items-center gap-2 flex-wrap">
             {/* Filtros de Tipo */}
-            <div className="bg-gray-800 p-1 rounded-xl flex items-center gap-1 border border-gray-700 text-xs">
+            <div className="bg-surface-container-lowest p-1 rounded-full flex items-center gap-1 border border-surface-container-high/60 shadow-xs">
               {(['TODOS', 'VENTAS', 'ARQUEOS', 'ALERTAS'] as const).map((filtro) => (
                 <button
                   key={filtro}
                   onClick={() => setFiltroEvento(filtro)}
-                  className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-all cursor-pointer ${
+                  className={`px-3 py-1 rounded-full font-title-md text-[11px] font-bold transition-all cursor-pointer ${
                     filtroEvento === filtro
-                      ? 'bg-quantix-600 text-white shadow-xs'
-                      : 'text-gray-400 hover:text-white hover:bg-gray-700/60'
+                      ? 'bg-primary text-on-primary shadow-xs'
+                      : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low'
                   }`}
                 >
                   {filtro === 'TODOS' && 'Todos'}
@@ -577,16 +583,16 @@ export default function Tactico() {
             {/* Botón Pausa / Reanudar */}
             <button
               onClick={() => setStreamPausado(!streamPausado)}
-              className="p-2 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-xl border border-gray-700 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+              className="p-2 bg-surface-container-lowest hover:bg-surface-container text-on-surface-variant hover:text-on-surface rounded-full border border-surface-container-high/60 transition-all cursor-pointer shadow-xs"
               title={streamPausado ? 'Reanudar stream en vivo' : 'Pausar stream'}
             >
-              {streamPausado ? <Play className="w-3.5 h-3.5 text-emerald-400" /> : <Pause className="w-3.5 h-3.5 text-amber-400" />}
+              {streamPausado ? <Play className="w-3.5 h-3.5 text-primary" /> : <Pause className="w-3.5 h-3.5 text-secondary" />}
             </button>
 
             {/* Botón Limpiar */}
             <button
               onClick={limpiarEventos}
-              className="p-2 bg-gray-800 hover:bg-red-950/40 text-gray-400 hover:text-red-400 rounded-xl border border-gray-700 text-xs transition-all cursor-pointer"
+              className="p-2 bg-surface-container-lowest hover:bg-error-container/30 text-on-surface-variant hover:text-error rounded-full border border-surface-container-high/60 transition-all cursor-pointer shadow-xs"
               title="Limpiar feed de eventos"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -595,9 +601,9 @@ export default function Tactico() {
         </div>
 
         {/* Ticker Tape / Feed de Tarjetas de Eventos */}
-        <div className="p-3.5 bg-gray-50/50 border-b border-gray-100 overflow-x-auto">
+        <div className="p-3.5 bg-surface-container-low/30 border-b border-surface-container-high/50 overflow-x-auto">
           {eventosFiltrados.length === 0 ? (
-            <div className="py-6 text-center text-gray-400 text-xs font-medium">
+            <div className="py-6 text-center text-on-surface-variant text-body-sm font-medium">
               Esperando eventos de actividad en tiempo real...
             </div>
           ) : (
@@ -608,32 +614,32 @@ export default function Tactico() {
                   <div
                     key={evt.id}
                     onClick={() => setDetalleEvento(evt)}
-                    className="w-72 bg-white rounded-xl p-3 border border-gray-200/90 shadow-2xs hover:shadow-md hover:border-gray-300 transition-all cursor-pointer flex flex-col justify-between group"
+                    className="w-72 bg-surface-container-lowest rounded-2xl p-3.5 border border-surface-container-high/60 shadow-xs hover:shadow-md hover:border-primary/40 transition-all cursor-pointer flex flex-col justify-between group"
                   >
                     <div>
                       <div className="flex items-center justify-between gap-1 mb-1.5">
                         <div className="flex items-center gap-1.5">
-                          <span className={`p-1 rounded-lg border ${conf.badgeBg}`}>
+                          <span className={`p-1 rounded-xl border ${conf.badgeBg}`}>
                             {conf.icon}
                           </span>
-                          <span className="text-xs font-bold text-gray-900 group-hover:text-quantix-600 transition-colors truncate">
+                          <span className="font-title-md text-body-sm font-bold text-on-surface group-hover:text-primary transition-colors truncate">
                             {evt.titulo}
                           </span>
                         </div>
-                        <span className="text-[10px] font-medium text-gray-400 shrink-0">
+                        <span className="font-mono text-[10px] text-on-surface-variant shrink-0">
                           {formatearTiempoRelativo(evt.timestamp)}
                         </span>
                       </div>
-                      <p className="text-[11px] text-gray-600 line-clamp-2 leading-relaxed">
+                      <p className="font-body-sm text-[11px] text-on-surface-variant line-clamp-2 leading-relaxed">
                         {evt.mensaje}
                       </p>
                     </div>
 
-                    <div className="mt-2.5 pt-2 border-t border-gray-100 flex items-center justify-between">
-                      <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border ${conf.badgeBg}`}>
+                    <div className="mt-2.5 pt-2 border-t border-surface-container-high/40 flex items-center justify-between">
+                      <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border ${conf.badgeBg}`}>
                         {evt.tipo.replace(/_/g, ' ')}
                       </span>
-                      <span className="text-[10px] font-bold text-quantix-600 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                      <span className="font-label-caps text-[10px] font-bold text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
                         Ver detalle &rarr;
                       </span>
                     </div>
@@ -776,6 +782,15 @@ export default function Tactico() {
                     </td>
                     <td className="py-3.5 px-4 text-center">
                       <div className="flex items-center justify-center gap-1">
+                        {s.estado === 'ABIERTA' && (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setCorteXSesionId(s.id); }}
+                            className="p-1.5 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors cursor-pointer"
+                            title="Ver Corte X (Arqueo Parcial en Tiempo Real)"
+                          >
+                            <Receipt className="w-4 h-4" />
+                          </button>
+                        )}
                         <button 
                           onClick={(e) => { e.stopPropagation(); setDetalleSesion(s); }}
                           className="p-1.5 hover:bg-quantix-100 text-quantix-600 rounded-lg transition-colors cursor-pointer"
@@ -1072,69 +1087,70 @@ export default function Tactico() {
 
       {/* 1. Modal Detalle Sesión de Caja */}
       {detalleSesion && (
-        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-gray-100 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-quantix-50 text-quantix-600 rounded-xl">
-                  <Layers className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900">Detalle de Sesión de Caja</h3>
-                  <span className="text-xs text-gray-400 font-mono">ID: {detalleSesion.id}</span>
-                </div>
+        <div className="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-surface-container-high/40 animate-in zoom-in-95">
+            <div className="p-6 border-b border-surface-container-low flex justify-between items-start bg-surface-container-low/50">
+              <div>
+                <span className="px-2.5 py-0.5 bg-primary text-on-primary rounded-full font-label-caps text-[10px] font-bold uppercase tracking-wider">
+                  Sesión de Caja
+                </span>
+                <h3 className="font-headline-md text-title-lg font-bold text-on-surface mt-1.5">Detalle de Sesión de Caja</h3>
+                <p className="font-body-sm font-mono text-outline">ID: {detalleSesion.id}</p>
               </div>
               <button 
-                onClick={() => setDetalleSesion(null)}
-                className="text-gray-400 hover:text-gray-600 p-1"
+                onClick={() => setDetalleSesion(null)} 
+                className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors"
+                aria-label="Cerrar modal"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="py-4 space-y-3.5 text-sm">
-              <div className="grid grid-cols-2 gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100 text-xs">
+            <div className="p-6 space-y-4 text-body-sm">
+              <div className="grid grid-cols-2 gap-3 bg-surface-container-low p-4 rounded-2xl border border-surface-container-high/40">
                 <div>
-                  <span className="text-gray-400 font-medium">Cajero:</span>
-                  <p className="font-bold text-gray-800">{detalleSesion.usuario_nombre}</p>
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Cajero Asignado</span>
+                  <p className="font-title-md font-bold text-on-surface text-body-sm">{detalleSesion.usuario_nombre}</p>
                 </div>
                 <div>
-                  <span className="text-gray-400 font-medium">Terminal:</span>
-                  <p className="font-bold text-gray-800 font-mono">{detalleSesion.terminal_id}</p>
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Terminal</span>
+                  <span className="font-mono font-bold text-primary bg-primary-fixed/20 px-2 py-0.5 rounded-md text-[11px]">
+                    {detalleSesion.terminal_id}
+                  </span>
                 </div>
                 <div>
-                  <span className="text-gray-400 font-medium">Apertura:</span>
-                  <p className="font-bold text-gray-800">{new Date(detalleSesion.fecha_apertura).toLocaleString()}</p>
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Apertura de Turno</span>
+                  <p className="font-mono text-body-sm text-on-surface">{new Date(detalleSesion.fecha_apertura).toLocaleString()}</p>
                 </div>
                 <div>
-                  <span className="text-gray-400 font-medium">Cierre:</span>
-                  <p className="font-bold text-gray-800">
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Cierre de Turno</span>
+                  <p className="font-mono text-body-sm text-on-surface">
                     {detalleSesion.fecha_cierre ? new Date(detalleSesion.fecha_cierre).toLocaleString() : 'Sesión en curso'}
                   </p>
                 </div>
               </div>
 
-              <div className="border border-gray-200 rounded-xl p-3.5 space-y-2">
-                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Desglose Financiero</h4>
-                <div className="flex justify-between text-xs text-gray-600">
+              <div className="bg-surface-container-low p-4 rounded-2xl border border-surface-container-high/40 space-y-2.5">
+                <span className="font-label-caps text-[10px] text-outline font-bold uppercase block tracking-wider">Desglose Financiero</span>
+                <div className="flex justify-between text-body-sm text-on-surface-variant">
                   <span>Fondo Inicial en Gaveta:</span>
-                  <span className="font-bold text-gray-800">${Number(detalleSesion.fondo_inicial).toFixed(2)}</span>
+                  <span className="font-bold font-mono text-on-surface">${Number(detalleSesion.fondo_inicial).toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-xs text-gray-600">
+                <div className="flex justify-between text-body-sm text-on-surface-variant">
                   <span>Saldo Teórico Calculado:</span>
-                  <span className="font-bold text-gray-800">${Number(detalleSesion.total_teorico || detalleSesion.fondo_inicial).toFixed(2)}</span>
+                  <span className="font-bold font-mono text-on-surface">${Number(detalleSesion.total_teorico || detalleSesion.fondo_inicial).toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-xs text-gray-600">
+                <div className="flex justify-between text-body-sm text-on-surface-variant">
                   <span>Conteo Físico Declarado (Arqueo Ciego):</span>
-                  <span className="font-bold text-gray-900">
+                  <span className="font-bold font-mono text-on-surface">
                     {detalleSesion.total_fisico !== null ? `$${Number(detalleSesion.total_fisico).toFixed(2)}` : 'No realizado'}
                   </span>
                 </div>
-                <div className="pt-2 border-t border-dashed border-gray-200 flex justify-between font-bold">
-                  <span>Diferencia Neta:</span>
+                <div className="pt-2 border-t border-surface-container-high/60 flex justify-between font-bold">
+                  <span className="text-on-surface">Diferencia Neta:</span>
                   <span className={
-                    (detalleSesion.diferencia || 0) === 0 ? 'text-emerald-600' :
-                    (detalleSesion.diferencia || 0) > 0 ? 'text-amber-600' : 'text-red-600'
+                    (detalleSesion.diferencia || 0) === 0 ? 'text-primary' :
+                    (detalleSesion.diferencia || 0) > 0 ? 'text-amber-600' : 'text-error'
                   }>
                     {detalleSesion.diferencia !== null ? (
                       detalleSesion.diferencia > 0 
@@ -1147,24 +1163,24 @@ export default function Tactico() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100 text-xs">
-                <span className="font-medium text-gray-500">Dictamen de Auditoría:</span>
-                <span className={`px-2.5 py-1 rounded-full font-bold ${
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-surface-container-low border border-surface-container-high/40 text-body-sm">
+                <span className="font-label-caps text-[10px] text-outline font-bold uppercase">Dictamen de Auditoría:</span>
+                <span className={`px-3 py-0.5 rounded-full font-label-caps text-[10px] font-bold uppercase ${
                   detalleSesion.estado_cuadre === 'OK' || detalleSesion.diferencia === 0
-                    ? 'bg-emerald-100 text-emerald-800'
+                    ? 'bg-primary-fixed/30 text-on-primary-fixed-variant'
                     : detalleSesion.estado_cuadre === 'SOBRANTE'
-                    ? 'bg-amber-100 text-amber-800'
-                    : 'bg-red-100 text-red-800'
+                    ? 'bg-amber-100 text-amber-900'
+                    : 'bg-error-container text-on-error-container'
                 }`}>
                   {detalleSesion.estado_cuadre || detalleSesion.estado}
                 </span>
               </div>
             </div>
 
-            <div className="pt-3 border-t border-gray-100 flex justify-end">
+            <div className="p-4 bg-surface-container-low/50 border-t border-surface-container-low flex justify-end gap-2">
               <button
                 onClick={() => setDetalleSesion(null)}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors"
+                className="px-5 py-2 font-title-md text-body-sm font-bold text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors"
               >
                 Cerrar
               </button>
@@ -1175,68 +1191,64 @@ export default function Tactico() {
 
       {/* 2. Modal Detalle Lote FEFO */}
       {detalleLote && (
-        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-100 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
-                  <Clock className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900">Ficha Técnica de Lote FEFO</h3>
-                  <span className="text-xs text-gray-400 font-mono">{detalleLote.codigo_lote}</span>
-                </div>
+        <div className="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-surface-container-high/40 animate-in zoom-in-95">
+            <div className="p-6 border-b border-surface-container-low flex justify-between items-start bg-surface-container-low/50">
+              <div>
+                <span className="px-2.5 py-0.5 bg-amber-600 text-white rounded-full font-label-caps text-[10px] font-bold uppercase tracking-wider">
+                  Lotes &amp; FEFO
+                </span>
+                <h3 className="font-headline-md text-title-lg font-bold text-on-surface mt-1.5">Ficha Técnica de Lote</h3>
+                <p className="font-body-sm font-mono text-outline">Código: {detalleLote.codigo_lote}</p>
               </div>
               <button 
-                onClick={() => setDetalleLote(null)}
-                className="text-gray-400 hover:text-gray-600 p-1"
+                onClick={() => setDetalleLote(null)} 
+                className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors"
+                aria-label="Cerrar modal"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="py-4 space-y-3 text-sm">
-              <div className="p-3 bg-amber-50/50 rounded-xl border border-amber-100">
-                <span className="text-xs text-amber-800 font-bold block mb-1">Diagnóstico de Caducidad:</span>
-                <p className="text-xs text-amber-900 leading-relaxed">
-                  Este lote tiene fecha de caducidad fijada para el <strong>{detalleLote.fecha_vencimiento}</strong>. 
-                  Según el protocolo FEFO, el sistema prioriza su venta automática antes que lotes con fechas posteriores.
-                </p>
+            <div className="p-6 space-y-4 text-body-sm">
+              <div className="p-3.5 bg-amber-500/10 rounded-2xl border border-amber-300/40 text-amber-900 leading-relaxed text-body-sm">
+                <span className="font-bold block mb-0.5 text-amber-950">Diagnóstico de Caducidad:</span>
+                Este lote tiene vencimiento fijado para el <strong>{detalleLote.fecha_vencimiento}</strong>. Según la política FEFO, el POS prioriza su despacho inmediato.
               </div>
 
-              <div className="grid grid-cols-2 gap-3 text-xs bg-gray-50 p-3 rounded-xl">
+              <div className="grid grid-cols-2 gap-3 bg-surface-container-low p-4 rounded-2xl border border-surface-container-high/40">
                 <div>
-                  <span className="text-gray-400 font-medium">Stock Disponible:</span>
-                  <p className="text-base font-black text-gray-900">{detalleLote.cantidad_disponible} uds</p>
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Stock Disponible</span>
+                  <p className="font-headline-md text-headline-md font-bold text-on-surface">{detalleLote.cantidad_disponible} uds</p>
                 </div>
                 <div>
-                  <span className="text-gray-400 font-medium">Estado del Lote:</span>
-                  <p className="font-bold text-emerald-600">{detalleLote.estado}</p>
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Estado del Lote</span>
+                  <span className="inline-block px-2.5 py-0.5 rounded-full font-label-caps text-[10px] font-bold uppercase bg-primary-fixed/30 text-on-primary-fixed-variant">
+                    {detalleLote.estado}
+                  </span>
                 </div>
                 <div>
-                  <span className="text-gray-400 font-medium">Fecha Vencimiento:</span>
-                  <p className="font-bold text-red-600">{detalleLote.fecha_vencimiento}</p>
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Fecha Vencimiento</span>
+                  <p className="font-mono text-body-sm font-bold text-error">{detalleLote.fecha_vencimiento}</p>
                 </div>
                 <div>
-                  <span className="text-gray-400 font-medium">ID Producto:</span>
-                  <p className="font-mono text-gray-600 truncate">{detalleLote.producto_id}</p>
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">ID Producto</span>
+                  <p className="font-mono text-[11px] text-on-surface truncate">{detalleLote.producto_id}</p>
                 </div>
               </div>
             </div>
 
-            <div className="pt-3 border-t border-gray-100 flex gap-2 justify-end">
+            <div className="p-4 bg-surface-container-low/50 border-t border-surface-container-low flex justify-end gap-2">
               <button
-                onClick={() => {
-                  setBajaMermaModal(detalleLote);
-                }}
-                className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-sm transition-colors flex items-center gap-1.5"
+                onClick={() => setBajaMermaModal(detalleLote)}
+                className="px-4 py-2 font-title-md text-body-sm font-bold text-error bg-surface-container-lowest hover:bg-error-container rounded-full cursor-pointer transition-colors shadow-xs flex items-center gap-1.5"
               >
                 <Ban className="w-3.5 h-3.5" />
-                Dar de Baja por Merma
+                <span>Baja por Merma</span>
               </button>
               <button
                 onClick={() => setDetalleLote(null)}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors"
+                className="px-5 py-2 font-title-md text-body-sm font-bold text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors"
               >
                 Cerrar
               </button>
@@ -1247,75 +1259,74 @@ export default function Tactico() {
 
       {/* 3. Modal Detalle Evento Forense */}
       {detalleAuditoria && (
-        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-gray-100 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className={`p-3 rounded-xl ${
-                  detalleAuditoria.gravedad === 'CRITICA' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
+        <div className="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-surface-container-high/40 animate-in zoom-in-95">
+            <div className="p-6 border-b border-surface-container-low flex justify-between items-start bg-surface-container-low/50">
+              <div>
+                <span className={`px-2.5 py-0.5 rounded-full font-label-caps text-[10px] font-bold uppercase tracking-wider ${
+                  detalleAuditoria.gravedad === 'CRITICA' ? 'bg-error text-on-error' : 'bg-secondary text-on-secondary'
                 }`}>
-                  <Terminal className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900">Registro Forense Inmutable</h3>
-                  <span className="text-xs text-gray-400 font-mono">ID: {detalleAuditoria.id}</span>
-                </div>
+                  Auditoría Forense
+                </span>
+                <h3 className="font-headline-md text-title-lg font-bold text-on-surface mt-1.5">Registro Forense Inmutable</h3>
+                <p className="font-body-sm font-mono text-outline">ID: {detalleAuditoria.id}</p>
               </div>
               <button 
-                onClick={() => setDetalleAuditoria(null)}
-                className="text-gray-400 hover:text-gray-600 p-1"
+                onClick={() => setDetalleAuditoria(null)} 
+                className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors"
+                aria-label="Cerrar modal"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="py-4 space-y-3 text-xs">
-              <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 space-y-2">
+            <div className="p-6 space-y-4 text-body-sm">
+              <div className="bg-surface-container-low p-4 rounded-2xl border border-surface-container-high/40 space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Tipo de Evento:</span>
-                  <span className="font-bold text-gray-900">{detalleAuditoria.tipo_evento}</span>
+                  <span className="font-label-caps text-[10px] text-outline uppercase font-bold">Tipo de Evento:</span>
+                  <span className="font-bold text-on-surface">{detalleAuditoria.tipo_evento}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Fecha y Hora Exacta:</span>
-                  <span className="font-mono text-gray-700">{new Date(detalleAuditoria.fecha_evento).toISOString()}</span>
+                  <span className="font-label-caps text-[10px] text-outline uppercase font-bold">Timestamp UTC:</span>
+                  <span className="font-mono text-on-surface">{new Date(detalleAuditoria.fecha_evento).toISOString()}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Operador Involucrado:</span>
-                  <span className="font-bold text-gray-800">{detalleAuditoria.usuario_nombre}</span>
+                  <span className="font-label-caps text-[10px] text-outline uppercase font-bold">Operador:</span>
+                  <span className="font-bold text-on-surface">{detalleAuditoria.usuario_nombre}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Terminal / IP:</span>
-                  <span className="font-mono text-gray-800">{detalleAuditoria.ip_terminal || 'Localhost'}</span>
+                  <span className="font-label-caps text-[10px] text-outline uppercase font-bold">Terminal / IP:</span>
+                  <span className="font-mono text-on-surface">{detalleAuditoria.ip_terminal || 'Localhost'}</span>
                 </div>
                 {detalleAuditoria.venta_referencia_id && (
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Ticket Referencia:</span>
-                    <span className="font-mono text-quantix-600 font-bold">{detalleAuditoria.venta_referencia_id}</span>
+                    <span className="font-label-caps text-[10px] text-outline uppercase font-bold">Ticket Ref:</span>
+                    <span className="font-mono text-primary font-bold">{detalleAuditoria.venta_referencia_id}</span>
                   </div>
                 )}
               </div>
 
               <div>
-                <span className="text-gray-500 font-bold block mb-1">Descripción:</span>
-                <p className="p-3 bg-gray-50 rounded-xl text-gray-700 border border-gray-100 leading-relaxed">
+                <span className="font-label-caps text-[10px] text-outline uppercase font-bold block mb-1">Descripción:</span>
+                <p className="p-3.5 bg-surface-container-low rounded-2xl text-on-surface border border-surface-container-high/40 leading-relaxed">
                   {detalleAuditoria.descripcion}
                 </p>
               </div>
 
               {detalleAuditoria.detalle_json && (
                 <div>
-                  <span className="text-gray-500 font-bold block mb-1">Payload Forense Serializado (JSONB):</span>
-                  <pre className="bg-gray-900 text-emerald-400 p-3 rounded-xl font-mono text-[11px] overflow-x-auto max-h-40">
+                  <span className="font-label-caps text-[10px] text-outline uppercase font-bold block mb-1">Payload Forense Serializado (JSONB):</span>
+                  <pre className="bg-inverse-surface text-primary-fixed p-3.5 rounded-2xl font-mono text-[11px] overflow-x-auto max-h-40 border border-surface-container-high/40">
                     {JSON.stringify(detalleAuditoria.detalle_json, null, 2)}
                   </pre>
                 </div>
               )}
             </div>
 
-            <div className="pt-3 border-t border-gray-100 flex justify-end">
+            <div className="p-4 bg-surface-container-low/50 border-t border-surface-container-low flex justify-end">
               <button
                 onClick={() => setDetalleAuditoria(null)}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors"
+                className="px-5 py-2 font-title-md text-body-sm font-bold text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors"
               >
                 Cerrar
               </button>
@@ -1326,203 +1337,201 @@ export default function Tactico() {
 
       {/* 4. Modal Baja por Merma de Lote */}
       {bajaMermaModal && (
-        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-100 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-red-50 text-red-600 rounded-xl">
-                  <Ban className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900">Baja Lógica por Merma</h3>
-                  <span className="text-xs text-gray-500 font-mono">{bajaMermaModal.codigo_lote}</span>
-                </div>
+        <div className="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-surface-container-high/40 animate-in zoom-in-95">
+            <div className="p-6 border-b border-surface-container-low flex justify-between items-start bg-surface-container-low/50">
+              <div>
+                <span className="px-2.5 py-0.5 bg-error text-on-error rounded-full font-label-caps text-[10px] font-bold uppercase tracking-wider">
+                  Control de Mermas
+                </span>
+                <h3 className="font-headline-md text-title-lg font-bold text-on-surface mt-1.5">Baja Lógica por Merma</h3>
+                <p className="font-body-sm font-mono text-outline">Lote: {bajaMermaModal.codigo_lote}</p>
               </div>
               <button 
                 onClick={() => setBajaMermaModal(null)} 
-                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
-                title="Cerrar modal"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {accionStatus ? (
-              <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-xl text-center font-bold text-sm my-4">
-                {accionStatus}
-              </div>
-            ) : (
-              <form onSubmit={handleBajaPorMerma} className="space-y-4">
-                <p className="text-xs text-gray-600 leading-relaxed">
-                  ¿Confirmas el retiro de <strong>{bajaMermaModal.cantidad_disponible} unidades</strong> de este lote? 
-                  El lote pasará al estado <strong>MERMA</strong> sin borrado físico de la base de datos, garantizando la trazabilidad sanitaria.
-                </p>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Motivo de la merma
-                  </label>
-                  <select
-                    value={mermaMotivo}
-                    onChange={(e) => setMermaMotivo(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-red-500"
-                  >
-                    <option value="Caducidad inminente">Caducidad inminente</option>
-                    <option value="Empaque dañado o roto">Empaque dañado o roto</option>
-                    <option value="Rotura de cadena de frío">Rotura de cadena de frío</option>
-                    <option value="Devolución defectuosa de cliente">Devolución defectuosa de cliente</option>
-                  </select>
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setBajaMermaModal(null)}
-                    className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 rounded-xl text-xs font-bold text-gray-700"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-md"
-                  >
-                    Confirmar Baja por Merma
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 5. Modal Supervisor Override */}
-      {overrideModal && (
-        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-100 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-gray-900 text-amber-400 rounded-xl">
-                  <KeyRound className="w-7 h-7" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900">Pase de Supervisor (Override)</h3>
-                  <p className="text-xs text-gray-500">Autorización de excepciones y anulaciones</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setOverrideModal(false)} 
-                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
-                title="Cerrar modal"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {overrideMsg ? (
-              <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-xl text-center font-bold text-sm my-4">
-                {overrideMsg}
-              </div>
-            ) : (
-              <form onSubmit={handleSupervisorOverride} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    PIN / Contraseña de Supervisor
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={overridePass}
-                    onChange={(e) => setOverridePass(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-quantix-500"
-                  />
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setOverrideModal(false)}
-                    className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 rounded-xl text-xs font-bold text-gray-700"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-xs font-bold shadow-md"
-                  >
-                    Firmar Autorización
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* MODAL DETALLE DE EVENTO EN VIVO (ESTÁNDAR CON BOTÓN 'X' Y ACCIONES CLARAS) */}
-      {detalleEvento && (
-        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-gray-100 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-quantix-50 text-quantix-600 rounded-xl">
-                  <Activity className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900">{detalleEvento.titulo}</h3>
-                  <span className="text-xs text-gray-400 font-mono">ID: {detalleEvento.id}</span>
-                </div>
-              </div>
-              <button 
-                onClick={() => setDetalleEvento(null)}
-                className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors"
                 aria-label="Cerrar modal"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="py-4 space-y-3.5 text-sm">
-              <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-100 text-xs">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Descripción del Evento</span>
-                <p className="text-gray-800 font-semibold text-sm leading-relaxed">{detalleEvento.mensaje}</p>
+            <div className="p-6 space-y-4">
+              {accionStatus ? (
+                <div className="bg-primary-fixed/30 border border-primary/20 text-on-primary-fixed-variant p-4 rounded-2xl text-center font-bold text-body-sm">
+                  {accionStatus}
+                </div>
+              ) : (
+                <form onSubmit={handleBajaPorMerma} className="space-y-4">
+                  <div className="p-3.5 bg-surface-container-low rounded-2xl border border-surface-container-high/40 text-body-sm text-on-surface leading-relaxed">
+                    ¿Confirmas el retiro de <strong>{bajaMermaModal.cantidad_disponible} unidades</strong> de este lote? 
+                    El lote pasará al estado <strong>MERMA</strong> sin borrado físico de la base de datos, garantizando la trazabilidad sanitaria.
+                  </div>
+
+                  <div>
+                    <label className="block font-label-caps text-[10px] text-outline font-bold uppercase mb-1.5">
+                      Motivo de la Merma
+                    </label>
+                    <select
+                      value={mermaMotivo}
+                      onChange={(e) => setMermaMotivo(e.target.value)}
+                      className="w-full h-11 px-4 rounded-full bg-surface-container-low text-on-surface font-body-md border border-surface-container-high/60 focus:bg-surface-container focus:outline-none"
+                    >
+                      <option value="Caducidad inminente">Caducidad inminente</option>
+                      <option value="Empaque dañado o roto">Empaque dañado o roto</option>
+                      <option value="Rotura de cadena de frío">Rotura de cadena de frío</option>
+                      <option value="Devolución defectuosa de cliente">Devolución defectuosa de cliente</option>
+                    </select>
+                  </div>
+
+                  <div className="pt-2 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setBajaMermaModal(null)}
+                      className="px-5 py-2 font-title-md text-body-sm font-bold text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 font-title-md text-body-sm font-bold text-on-error bg-error hover:opacity-95 rounded-full cursor-pointer transition-colors shadow-xs"
+                    >
+                      Confirmar Baja
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Modal Supervisor Override */}
+      {overrideModal && (
+        <div className="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-surface-container-high/40 animate-in zoom-in-95">
+            <div className="p-6 border-b border-surface-container-low flex justify-between items-start bg-surface-container-low/50">
+              <div>
+                <span className="px-2.5 py-0.5 bg-secondary text-on-secondary rounded-full font-label-caps text-[10px] font-bold uppercase tracking-wider">
+                  Seguridad RBAC
+                </span>
+                <h3 className="font-headline-md text-title-lg font-bold text-on-surface mt-1.5">Pase de Supervisor (Override)</h3>
+                <p className="font-body-sm text-outline">Autorización de excepciones y anulaciones</p>
+              </div>
+              <button 
+                onClick={() => setOverrideModal(false)} 
+                className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors"
+                aria-label="Cerrar modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {overrideMsg ? (
+                <div className="bg-primary-fixed/30 border border-primary/20 text-on-primary-fixed-variant p-4 rounded-2xl text-center font-bold text-body-sm">
+                  {overrideMsg}
+                </div>
+              ) : (
+                <form onSubmit={handleSupervisorOverride} className="space-y-4">
+                  <div>
+                    <label className="block font-label-caps text-[10px] text-outline font-bold uppercase mb-1.5">
+                      PIN / Contraseña de Supervisor
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={overridePass}
+                      onChange={(e) => setOverridePass(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full h-11 px-4 rounded-full bg-surface-container-low text-on-surface font-mono border border-surface-container-high/60 focus:bg-surface-container focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="pt-2 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setOverrideModal(false)}
+                      className="px-5 py-2 font-title-md text-body-sm font-bold text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 font-title-md text-body-sm font-bold text-on-primary bg-primary hover:opacity-95 rounded-full cursor-pointer transition-colors shadow-xs"
+                    >
+                      Firmar Autorización
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. Modal Detalle Evento en Vivo */}
+      {detalleEvento && (
+        <div className="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-surface-container-high/40 animate-in zoom-in-95">
+            <div className="p-6 border-b border-surface-container-low flex justify-between items-start bg-surface-container-low/50">
+              <div>
+                <span className="px-2.5 py-0.5 bg-primary text-on-primary rounded-full font-label-caps text-[10px] font-bold uppercase tracking-wider">
+                  Evento en Vivo
+                </span>
+                <h3 className="font-headline-md text-title-lg font-bold text-on-surface mt-1.5">{detalleEvento.titulo}</h3>
+                <p className="font-body-sm font-mono text-outline">ID: {detalleEvento.id}</p>
+              </div>
+              <button 
+                onClick={() => setDetalleEvento(null)} 
+                className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors"
+                aria-label="Cerrar modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 text-body-sm">
+              <div className="p-4 bg-surface-container-low rounded-2xl border border-surface-container-high/40">
+                <span className="font-label-caps text-[10px] text-outline uppercase tracking-wider block mb-1">Descripción del Evento</span>
+                <p className="text-on-surface font-semibold text-body-md leading-relaxed">{detalleEvento.mensaje}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100 text-xs">
+              <div className="grid grid-cols-2 gap-3 bg-surface-container-low p-4 rounded-2xl border border-surface-container-high/40">
                 <div>
-                  <span className="text-gray-400 font-medium">Tipo de Evento</span>
-                  <p className="font-bold text-gray-800 font-mono mt-0.5">{detalleEvento.tipo}</p>
+                  <span className="font-label-caps text-[10px] text-outline font-medium block">Tipo de Evento</span>
+                  <p className="font-bold text-on-surface font-mono mt-0.5">{detalleEvento.tipo}</p>
                 </div>
                 <div>
-                  <span className="text-gray-400 font-medium">Severidad</span>
-                  <p className="font-bold text-gray-800 mt-0.5">{detalleEvento.severidad}</p>
+                  <span className="font-label-caps text-[10px] text-outline font-medium block">Severidad</span>
+                  <p className="font-bold text-on-surface mt-0.5">{detalleEvento.severidad}</p>
                 </div>
                 <div>
-                  <span className="text-gray-400 font-medium">Timestamp</span>
-                  <p className="font-mono text-gray-700 mt-0.5">{new Date(detalleEvento.timestamp).toLocaleString()}</p>
+                  <span className="font-label-caps text-[10px] text-outline font-medium block">Timestamp</span>
+                  <p className="font-mono text-on-surface mt-0.5 text-body-sm">{new Date(detalleEvento.timestamp).toLocaleString()}</p>
                 </div>
                 <div>
-                  <span className="text-gray-400 font-medium">Canal</span>
-                  <p className="font-bold text-emerald-600 mt-0.5">WebSocket Stream</p>
+                  <span className="font-label-caps text-[10px] text-outline font-medium block">Canal</span>
+                  <p className="font-bold text-primary mt-0.5">WebSocket Stream</p>
                 </div>
               </div>
 
               {detalleEvento.payload && Object.keys(detalleEvento.payload).length > 0 && (
                 <div>
-                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">
+                  <span className="font-label-caps text-[10px] text-outline uppercase font-bold block mb-1.5">
                     Payload Forense JSON
                   </span>
-                  <pre className="p-3 bg-gray-900 text-emerald-400 rounded-xl text-xs font-mono overflow-x-auto max-h-48">
+                  <pre className="p-3.5 bg-inverse-surface text-primary-fixed rounded-2xl text-[11px] font-mono overflow-x-auto max-h-48 border border-surface-container-high/40">
                     {JSON.stringify(detalleEvento.payload, null, 2)}
                   </pre>
                 </div>
               )}
             </div>
 
-            <div className="pt-4 border-t border-gray-100 flex justify-end">
+            <div className="p-4 bg-surface-container-low/50 border-t border-surface-container-low flex justify-end">
               <button
                 onClick={() => setDetalleEvento(null)}
-                className="px-5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-xl text-xs shadow-sm transition-all cursor-pointer"
+                className="px-5 py-2 font-title-md text-body-sm font-bold text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors"
               >
                 Cerrar
               </button>
@@ -1531,106 +1540,118 @@ export default function Tactico() {
         </div>
       )}
 
-      {/* MODAL ACTA FISCAL DE CORTE Z */}
+      {/* 7. Modal Acta Fiscal de Corte Z */}
       {corteZModal && (
-        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-gray-100 animate-in fade-in zoom-in-95 max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100 shrink-0">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2.5 bg-quantix-50 text-quantix-600 rounded-xl">
-                  <FileText className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-base font-black text-gray-900">Acta de Corte Z (Cierre de Turno)</h3>
-                  <span className="text-xs font-mono text-gray-400">Folio: {corteZModal.folio_corte}</span>
-                </div>
+        <div className="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-surface-container-high/40 animate-in zoom-in-95 max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b border-surface-container-low flex justify-between items-start bg-surface-container-low/50 shrink-0">
+              <div>
+                <span className="px-2.5 py-0.5 bg-primary text-on-primary rounded-full font-label-caps text-[10px] font-bold uppercase tracking-wider">
+                  Corte Z
+                </span>
+                <h3 className="font-headline-md text-title-lg font-bold text-on-surface mt-1.5">Acta de Cierre de Turno</h3>
+                <p className="font-body-sm font-mono text-outline">Folio: {corteZModal.folio_corte}</p>
               </div>
               <button 
                 onClick={() => setCorteZModal(null)} 
-                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
+                className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors"
+                aria-label="Cerrar modal"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="py-4 space-y-3.5 text-xs overflow-y-auto flex-1 font-mono">
-              <div className="bg-gray-900 text-emerald-400 p-4 rounded-xl space-y-1.5 shadow-inner leading-relaxed">
-                <div className="text-center pb-2 border-b border-gray-800 text-white font-bold">
+            <div className="p-6 space-y-3.5 text-xs overflow-y-auto flex-1 font-mono">
+              <div className="bg-inverse-surface text-primary-fixed p-4 rounded-2xl space-y-1.5 shadow-inner leading-relaxed border border-surface-container-high/40">
+                <div className="text-center pb-2 border-b border-white/10 text-white font-bold">
                   *** COMPROBANTE FISCAL DE CORTE Z ***
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Terminal / Caja:</span>
+                  <span className="text-white/60">Terminal / Caja:</span>
                   <span className="text-white font-bold">{corteZModal.terminal_id}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Operador:</span>
+                  <span className="text-white/60">Operador:</span>
                   <span className="text-white font-bold">{corteZModal.cajero_nombre}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Apertura:</span>
+                  <span className="text-white/60">Apertura:</span>
                   <span>{new Date(corteZModal.fecha_apertura).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Cierre:</span>
+                  <span className="text-white/60">Cierre:</span>
                   <span>{corteZModal.fecha_cierre ? new Date(corteZModal.fecha_cierre).toLocaleString() : 'En curso'}</span>
                 </div>
-                <div className="pt-2 border-t border-gray-800 flex justify-between">
-                  <span className="text-gray-400">Fondo Inicial:</span>
+                <div className="pt-2 border-t border-white/10 flex justify-between">
+                  <span className="text-white/60">Fondo Inicial:</span>
                   <span className="text-white">${corteZModal.fondo_inicial.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between font-bold text-white text-sm">
                   <span>TOTAL COBRADO EN VENTAS:</span>
                   <span>${corteZModal.total_ventas.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-[11px] text-gray-400">
+                <div className="flex justify-between text-[11px] text-white/60">
                   <span>- Efectivo:</span>
                   <span>${corteZModal.ventas_efectivo.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-[11px] text-gray-400">
+                <div className="flex justify-between text-[11px] text-white/60">
                   <span>- Tarjetas Débito/Crédito:</span>
                   <span>${corteZModal.ventas_tarjeta.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-[11px] text-gray-400">
+                <div className="flex justify-between text-[11px] text-white/60">
                   <span>- Transferencias / QR:</span>
                   <span>${corteZModal.ventas_transferencia.toFixed(2)}</span>
                 </div>
-                <div className="pt-2 border-t border-gray-800 flex justify-between">
-                  <span className="text-gray-400">Total Físico Declarado:</span>
+                <div className="pt-2 border-t border-white/10 flex justify-between">
+                  <span className="text-white/60">Total Físico Declarado:</span>
                   <span className="text-white font-bold">${(corteZModal.total_fisico_declarado || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between font-bold">
-                  <span className="text-gray-400">Diferencia / Descuadre:</span>
-                  <span className={corteZModal.diferencia === 0 ? 'text-emerald-400' : corteZModal.diferencia > 0 ? 'text-amber-400' : 'text-red-400'}>
+                  <span className="text-white/60">Diferencia / Descuadre:</span>
+                  <span className={corteZModal.diferencia === 0 ? 'text-primary-fixed' : corteZModal.diferencia > 0 ? 'text-amber-300' : 'text-error-container'}>
                     ${(corteZModal.diferencia || 0).toFixed(2)} ({corteZModal.estado_cuadre || 'OK'})
                   </span>
                 </div>
-                <div className="flex justify-between text-[11px] text-gray-400 pt-1">
+                <div className="flex justify-between text-[11px] text-white/60 pt-1">
                   <span>Tickets Emitidos:</span>
                   <span>{corteZModal.total_tickets_emitidos} ({corteZModal.primer_folio || 'TKT-1'} a {corteZModal.ultimo_folio || 'TKT-N'})</span>
                 </div>
               </div>
             </div>
 
-            <div className="pt-3 border-t border-gray-100 flex gap-2 shrink-0">
+            <div className="p-4 bg-surface-container-low/50 border-t border-surface-container-low flex gap-2 justify-end shrink-0">
               <button
                 onClick={() => window.print()}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl font-bold text-xs transition-colors cursor-pointer"
+                className="px-5 py-2 font-title-md text-body-sm font-bold text-on-surface bg-surface-container-lowest hover:bg-surface-container border border-surface-container-high/60 rounded-full cursor-pointer transition-colors shadow-xs flex items-center gap-1.5"
               >
                 <Printer className="w-4 h-4" />
-                Imprimir Corte
+                <span>Imprimir</span>
               </button>
               <button
                 onClick={handleDescargarCorteZ}
                 disabled={loadingCorteZ}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-quantix-600 hover:bg-quantix-700 text-white rounded-xl font-bold text-xs shadow-sm transition-colors cursor-pointer"
+                className="px-5 py-2 font-title-md text-body-sm font-bold text-on-primary bg-primary hover:opacity-95 rounded-full cursor-pointer transition-colors shadow-xs flex items-center gap-1.5"
               >
                 {descargadoCorteZ ? <Check className="w-4 h-4" /> : <Download className="w-4 h-4" />}
-                {descargadoCorteZ ? '¡Descargado!' : 'Descargar TXT'}
+                <span>{descargadoCorteZ ? '¡Descargado!' : 'Descargar TXT'}</span>
+              </button>
+              <button
+                onClick={() => setCorteZModal(null)}
+                className="px-5 py-2 font-title-md text-body-sm font-bold text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors"
+              >
+                Cerrar
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Modal de Corte X */}
+      <CorteXModal
+        isOpen={!!corteXSesionId}
+        sesionId={corteXSesionId || undefined}
+        onClose={() => setCorteXSesionId(null)}
+      />
 
     </div>
   );

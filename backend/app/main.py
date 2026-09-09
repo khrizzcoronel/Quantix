@@ -15,6 +15,11 @@ async def lifespan(app: FastAPI):
         notif_manager.set_event_loop(asyncio.get_running_loop())
     except Exception:
         pass
+    try:
+        from app.db.init_db import init_reportes_tables
+        await init_reportes_tables()
+    except Exception:
+        pass
     scheduler = start_scheduler()
     yield
     # Acciones al apagar el servidor
@@ -43,7 +48,11 @@ async def health_check():
     """
     return {"status": "ok", "service": settings.PROJECT_NAME, "version": settings.VERSION}
 
-from app.api import pos, auth, caja, inventario, ws, analitica, crm, configuracion, usuarios, operaciones, promociones, pagos, sync
+from app.api import (
+    pos, auth, caja, inventario, ws, analitica, crm, configuracion,
+    usuarios, operaciones, promociones, pagos, sync, sucursales, transferencias,
+    reportes
+)
 
 # Integración de routers HTTP
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["Auth"])
@@ -58,6 +67,9 @@ app.include_router(usuarios.router, prefix=f"{settings.API_V1_STR}/usuarios", ta
 app.include_router(operaciones.router, prefix=f"{settings.API_V1_STR}/operaciones", tags=["Operaciones & ETL"])
 app.include_router(pagos.router, prefix=f"{settings.API_V1_STR}/pagos", tags=["Pagos"])
 app.include_router(sync.router, prefix=f"{settings.API_V1_STR}/sync", tags=["Sync Offline"])
+app.include_router(sucursales.router, prefix=f"{settings.API_V1_STR}/sucursales", tags=["Multi-Sucursal"])
+app.include_router(transferencias.router, prefix=f"{settings.API_V1_STR}/transferencias", tags=["Traspasos Inter-Sucursal"])
+app.include_router(reportes.router, prefix=f"{settings.API_V1_STR}/reportes", tags=["Reportes & Analisis Estadistico"])
 
 # Integración de WebSockets (Sin prefijo de API v1 para aislar los protocolos)
 app.include_router(ws.router, prefix="/ws/notificaciones", tags=["WebSockets"])

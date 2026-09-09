@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { 
   Zap, Delete, CornerDownLeft, Sparkles, 
-  Layers, CheckCircle2, Plus, X
+  Layers, CheckCircle2, Plus, X, Scale, Wine, Cake, Package
 } from 'lucide-react';
 
 export interface ProductoCatalogo {
@@ -20,6 +20,44 @@ interface VentaFlashGridProps {
   products: ProductoCatalogo[];
   onSelectProduct: (product: ProductoCatalogo, cantidad?: number) => void;
   onClose?: () => void;
+}
+
+type ColorFamily = 'blue' | 'purple' | 'green' | 'default';
+
+function getProductColorFamily(product: ProductoCatalogo): ColorFamily {
+  const cat = (product.categoria_nombre || '').toLowerCase();
+  if (
+    product.requiere_pesaje || 
+    cat.includes('fruta') || 
+    cat.includes('verdura') || 
+    cat.includes('báscula') || 
+    cat.includes('bascula') || 
+    cat.includes('granel') || 
+    cat.includes('granja')
+  ) {
+    return 'green'; // Báscula / Granel / Granja
+  }
+  if (
+    cat.includes('bebida') || 
+    cat.includes('refresco') || 
+    cat.includes('agua') || 
+    cat.includes('jugo') || 
+    cat.includes('cerveza') || 
+    cat.includes('licor')
+  ) {
+    return 'blue'; // Bebidas
+  }
+  if (
+    cat.includes('pan') || 
+    cat.includes('reposter') || 
+    cat.includes('dulce') || 
+    cat.includes('snack') || 
+    cat.includes('galleta') || 
+    cat.includes('botana')
+  ) {
+    return 'purple'; // Panadería & Snacks
+  }
+  return 'default'; // Abarrotes / General
 }
 
 export default function VentaFlashGrid({
@@ -47,8 +85,7 @@ export default function VentaFlashGrid({
       return products;
     }
     if (selectedCategory === 'FRECUENTES') {
-      // Top productos con más stock o primeros 8 más comunes
-      return products.slice(0, 8);
+      return products.slice(0, 12);
     }
     return products.filter((p) => p.categoria_nombre?.toLowerCase() === selectedCategory.toLowerCase());
   }, [products, selectedCategory]);
@@ -113,36 +150,40 @@ export default function VentaFlashGrid({
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-slate-900 text-white rounded-2xl overflow-hidden border border-slate-800 shadow-2xl p-4">
+    <div className="flex-1 flex flex-col bg-surface-container-lowest text-on-surface rounded-3xl overflow-hidden border border-surface-container-high/80 shadow-xl p-5">
       {/* Barra Superior del Modo Venta Flash */}
-      <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
+      <div className="flex items-center justify-between pb-3.5 mb-3 border-b border-surface-container-high/50">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-amber-500/20 text-amber-400 rounded-xl flex items-center justify-center border border-amber-500/30">
-            <Zap className="w-5 h-5 fill-amber-400" />
+          <div className="w-10 h-10 rounded-2xl bg-primary-container text-on-primary-container flex items-center justify-center shadow-sm">
+            <Zap className="w-5 h-5 fill-current" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-black tracking-wide text-white">Terminal Ágil: Venta Flash</h2>
-              <span className="text-[10px] bg-amber-400/10 text-amber-400 font-bold px-2 py-0.5 rounded-full border border-amber-400/20">
+              <h2 className="font-headline-md text-title-lg text-on-surface font-bold tracking-tight">
+                Terminal Táctil: Venta Flash
+              </h2>
+              <span className="px-2.5 py-0.5 bg-primary-fixed/30 text-on-primary-fixed-variant font-label-caps text-label-caps uppercase font-bold rounded-full tracking-wider">
                 1-Touch POS
               </span>
             </div>
-            <p className="text-xs text-slate-400">Selección táctil acelerada con teclado numérico integrado</p>
+            <p className="font-body-sm text-body-sm text-on-surface-variant">
+              Selección táctil acelerada con familias cromáticas y multiplicador integrado
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           {lastAddedMsg && (
-            <div className="bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 animate-in fade-in">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>{lastAddedMsg}</span>
+            <div className="bg-primary-fixed/25 border border-primary text-on-primary-fixed-variant text-body-sm px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 animate-in fade-in">
+              <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
+              <span className="font-title-md text-body-sm">{lastAddedMsg}</span>
             </div>
           )}
 
           {onClose && (
             <button
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors"
+              className="p-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full transition-colors"
               title="Volver a catálogo estándar"
             >
               <X className="w-5 h-5" />
@@ -151,22 +192,22 @@ export default function VentaFlashGrid({
         </div>
       </div>
 
-      {/* Selector de Categorías Rápido */}
-      <div className="flex gap-2 overflow-x-auto pb-2 mb-3 scrollbar-none">
+      {/* Selector de Categorías Rápido (Pills Neo-Retail) */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-3 scrollbar-none">
         {categories.map((cat) => {
           const isSelected = selectedCategory.toLowerCase() === cat.toLowerCase();
           return (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`px-3.5 py-1.5 text-xs font-bold rounded-xl whitespace-nowrap transition-all flex items-center gap-1.5 border ${
+              className={`px-4 py-2 rounded-full font-title-md text-body-sm font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 shadow-xs ${
                 isSelected
-                  ? 'bg-quantix-600 text-white border-quantix-500 shadow-md shadow-quantix-600/20 scale-105'
-                  : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-white'
+                  ? 'bg-on-surface text-surface-container-lowest shadow-sm scale-[1.02]'
+                  : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
               }`}
             >
-              {cat === 'FRECUENTES' && <Sparkles className="w-3.5 h-3.5 text-amber-400" />}
-              {cat === 'TODOS' && <Layers className="w-3.5 h-3.5" />}
+              {cat === 'FRECUENTES' && <Sparkles className="w-3.5 h-3.5 text-amber-500" />}
+              {cat === 'TODOS' && <Layers className="w-3.5 h-3.5 text-primary" />}
               <span>{cat}</span>
             </button>
           );
@@ -176,63 +217,108 @@ export default function VentaFlashGrid({
       {/* Contenedor Principal: Grid Táctil Izquierdo + Teclado Numérico Derecho */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-hidden">
         
-        {/* Grid de Productos Frecuentes Táctiles (Columnas 1 a 2/3) */}
+        {/* Grid de Productos Táctiles por Familia de Color */}
         <div className="lg:col-span-2 xl:col-span-3 overflow-y-auto pr-1">
-          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5">
-            {displayedProducts.map((p) => (
-              <button
-                key={p.sku}
-                onClick={() => handleProductTouch(p)}
-                className="bg-slate-800/90 hover:bg-slate-700/90 active:bg-slate-600 active:scale-95 border border-slate-700/70 hover:border-quantix-500 rounded-2xl p-3 flex flex-col justify-between text-left transition-all h-32 group cursor-pointer shadow-sm relative overflow-hidden"
-              >
-                <div className="w-full flex items-center justify-between">
-                  <span className="text-[10px] font-mono font-bold text-slate-400 group-hover:text-quantix-400">
-                    {p.sku}
-                  </span>
-                  {p.stock_total !== undefined && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-900/60 text-emerald-400 border border-emerald-500/20">
-                      {p.stock_total} disp.
-                    </span>
-                  )}
-                </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
+            {displayedProducts.map((p) => {
+              const family = getProductColorFamily(p);
 
-                <div className="my-1">
-                  <span className="text-xs font-bold text-slate-100 line-clamp-2 leading-tight group-hover:text-white">
-                    {p.nombre}
-                  </span>
-                </div>
+              // Definición cromática por familia Neo-Retail
+              let cardStyles = 'bg-surface-container-low border-surface-container-high hover:border-primary-container text-on-surface';
+              let badgeStyles = 'bg-surface-container-highest text-on-surface-variant';
+              let priceColor = 'text-on-surface';
+              let buttonStyles = 'bg-primary-container text-on-primary-container';
+              let FamilyIcon = Package;
 
-                <div className="w-full flex items-center justify-between pt-1 border-t border-slate-700/50">
-                  <span className="text-base font-black text-amber-400 group-hover:text-amber-300">
-                    ${p.precio_venta.toFixed(2)}
-                  </span>
-                  <div className="w-7 h-7 rounded-lg bg-quantix-600/30 group-hover:bg-quantix-600 text-quantix-300 group-hover:text-white flex items-center justify-center transition-colors">
-                    <Plus className="w-4 h-4" />
+              if (family === 'blue') {
+                // Bebidas: Azul
+                cardStyles = 'bg-blue-50/80 dark:bg-blue-950/25 border-blue-200/80 dark:border-blue-800/40 hover:border-blue-500 hover:shadow-blue-500/10';
+                badgeStyles = 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200';
+                priceColor = 'text-blue-700 dark:text-blue-300';
+                buttonStyles = 'bg-secondary-container text-on-secondary-container';
+                FamilyIcon = Wine;
+              } else if (family === 'purple') {
+                // Panadería & Snacks: Púrpura
+                cardStyles = 'bg-purple-50/80 dark:bg-purple-950/25 border-purple-200/80 dark:border-purple-800/40 hover:border-purple-500 hover:shadow-purple-500/10';
+                badgeStyles = 'bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200';
+                priceColor = 'text-purple-700 dark:text-purple-300';
+                buttonStyles = 'bg-tertiary-container text-on-tertiary-container';
+                FamilyIcon = Cake;
+              } else if (family === 'green') {
+                // Báscula / Granel / Frescos: Verde
+                cardStyles = 'bg-emerald-50/80 dark:bg-emerald-950/25 border-emerald-200/80 dark:border-emerald-800/40 hover:border-emerald-500 hover:shadow-emerald-500/10';
+                badgeStyles = 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200';
+                priceColor = 'text-primary';
+                buttonStyles = 'bg-primary-container text-on-primary-container';
+                FamilyIcon = Scale;
+              }
+
+              return (
+                <button
+                  key={p.sku}
+                  onClick={() => handleProductTouch(p)}
+                  className={`${cardStyles} border rounded-2xl p-3.5 flex flex-col justify-between text-left transition-all h-36 group cursor-pointer shadow-xs hover:shadow-md active:scale-95 relative overflow-hidden`}
+                >
+                  <div className="w-full flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <FamilyIcon className="w-3.5 h-3.5 opacity-60" />
+                      <span className="font-body-sm text-[11px] font-mono font-bold opacity-70">
+                        {p.sku}
+                      </span>
+                    </div>
+                    {p.stock_total !== undefined && (
+                      <span className={`font-label-caps text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeStyles}`}>
+                        {p.stock_total} disp.
+                      </span>
+                    )}
                   </div>
-                </div>
-              </button>
-            ))}
+
+                  <div className="my-1">
+                    <span className="font-title-md text-title-md font-bold text-on-surface line-clamp-2 leading-tight">
+                      {p.nombre}
+                    </span>
+                    {p.categoria_nombre && (
+                      <span className="font-label-caps text-[10px] opacity-70 uppercase tracking-wider block mt-0.5">
+                        {p.categoria_nombre}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="w-full flex items-center justify-between pt-1 border-t border-surface-container-high/40">
+                    <span className={`font-headline-md text-headline-md font-extrabold ${priceColor}`}>
+                      ${p.precio_venta.toFixed(2)}
+                    </span>
+                    <div className={`w-8 h-8 rounded-full ${buttonStyles} flex items-center justify-center transition-all group-hover:scale-110 shadow-xs`}>
+                      <Plus className="w-4 h-4 stroke-[3]" />
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Panel Teclado Numérico y Control de Multiplicador */}
-        <div className="bg-slate-800/80 rounded-2xl p-3.5 border border-slate-700/80 flex flex-col justify-between shadow-inner">
+        {/* Panel Teclado Numérico y Control de Multiplicador Neo-Retail */}
+        <div className="bg-surface-container-low rounded-3xl p-4 border border-surface-container-high/70 flex flex-col justify-between shadow-xs">
           <div>
             {/* Pantalla del Multiplicador / Cantidad */}
-            <div className="bg-slate-950 p-3 rounded-xl border border-slate-700 mb-3 text-right">
-              <div className="flex justify-between items-center text-[10px] text-slate-400 uppercase font-mono font-bold mb-1">
-                <span>Multiplicador / Cantidad</span>
+            <div className="bg-surface-container-lowest p-3.5 rounded-2xl border border-surface-container-high/80 mb-3 text-right shadow-xs">
+              <div className="flex justify-between items-center font-label-caps text-label-caps text-on-surface-variant uppercase font-bold mb-1">
+                <span>Multiplicador</span>
                 <button
+                  type="button"
                   onClick={() => setAutoReset(!autoReset)}
-                  className={`px-1.5 py-0.5 rounded text-[9px] transition-colors ${
-                    autoReset ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-slate-800 text-slate-400'
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase transition-colors ${
+                    autoReset 
+                      ? 'bg-primary-fixed/40 text-on-primary-fixed-variant' 
+                      : 'bg-surface-container text-on-surface-variant'
                   }`}
                   title="Reiniciar a 1 tras agregar"
                 >
-                  {autoReset ? 'Auto-reset: ON' : 'Auto-reset: OFF'}
+                  {autoReset ? 'Auto-reset ON' : 'Fijo OFF'}
                 </button>
               </div>
-              <div className="text-3xl font-black font-mono text-amber-400 tracking-wider">
+              <div className="font-label-numeric-lg text-display-lg-mobile font-mono text-primary font-extrabold tracking-tight">
                 {keypadInput || '1'}
               </div>
             </div>
@@ -243,10 +329,10 @@ export default function VentaFlashGrid({
                 <button
                   key={preset}
                   onClick={() => handlePresetQuantity(preset)}
-                  className={`py-1.5 rounded-lg text-xs font-black font-mono transition-all border ${
+                  className={`py-2 rounded-xl font-label-numeric-md text-body-sm font-bold font-mono transition-all border ${
                     keypadInput === preset.toString()
-                      ? 'bg-quantix-600 text-white border-quantix-400'
-                      : 'bg-slate-700/70 hover:bg-slate-600 text-slate-200 border-slate-600'
+                      ? 'bg-primary-container text-on-primary-container border-primary shadow-xs'
+                      : 'bg-surface-container-lowest hover:bg-surface-container text-on-surface border-surface-container-high'
                   }`}
                 >
                   +{preset}
@@ -260,7 +346,7 @@ export default function VentaFlashGrid({
                 <button
                   key={digit}
                   onClick={() => handleKeypadPress(digit)}
-                  className="py-3 bg-slate-700/60 hover:bg-slate-600 active:bg-slate-500 active:scale-95 text-xl font-black font-mono rounded-xl text-white border border-slate-600/60 shadow-sm transition-all flex items-center justify-center cursor-pointer"
+                  className="py-3 bg-surface-container-lowest hover:bg-surface-container active:bg-surface-container-high active:scale-95 font-label-numeric-md text-title-lg font-bold font-mono rounded-2xl text-on-surface border border-surface-container-high/80 shadow-xs transition-all flex items-center justify-center cursor-pointer"
                 >
                   {digit}
                 </button>
@@ -268,7 +354,7 @@ export default function VentaFlashGrid({
 
               <button
                 onClick={handleClearKeypad}
-                className="py-3 bg-rose-900/40 hover:bg-rose-800/60 active:scale-95 text-rose-300 font-bold text-sm rounded-xl border border-rose-700/40 transition-all flex items-center justify-center cursor-pointer"
+                className="py-3 bg-error-container/40 hover:bg-error-container active:scale-95 text-on-error-container font-label-caps text-title-md font-bold rounded-2xl border border-error-container transition-all flex items-center justify-center cursor-pointer"
                 title="Limpiar cantidad a 1"
               >
                 C
@@ -276,14 +362,14 @@ export default function VentaFlashGrid({
 
               <button
                 onClick={() => handleKeypadPress('0')}
-                className="py-3 bg-slate-700/60 hover:bg-slate-600 active:bg-slate-500 active:scale-95 text-xl font-black font-mono rounded-xl text-white border border-slate-600/60 shadow-sm transition-all flex items-center justify-center cursor-pointer"
+                className="py-3 bg-surface-container-lowest hover:bg-surface-container active:bg-surface-container-high active:scale-95 font-label-numeric-md text-title-lg font-bold font-mono rounded-2xl text-on-surface border border-surface-container-high/80 shadow-xs transition-all flex items-center justify-center cursor-pointer"
               >
                 0
               </button>
 
               <button
                 onClick={handleBackspaceKeypad}
-                className="py-3 bg-slate-700/60 hover:bg-slate-600 active:scale-95 text-slate-300 font-bold rounded-xl border border-slate-600/60 transition-all flex items-center justify-center cursor-pointer"
+                className="py-3 bg-surface-container-lowest hover:bg-surface-container active:scale-95 text-on-surface-variant font-bold rounded-2xl border border-surface-container-high/80 transition-all flex items-center justify-center cursor-pointer"
                 title="Borrar último dígito"
               >
                 <Delete className="w-5 h-5" />
@@ -292,10 +378,10 @@ export default function VentaFlashGrid({
           </div>
 
           {/* Botón de Entrada por Código / Enter */}
-          <div className="pt-3 mt-2 border-t border-slate-700">
+          <div className="pt-3 mt-2 border-t border-surface-container-high/60">
             <button
               onClick={handleKeypadEnter}
-              className="w-full py-2.5 bg-quantix-600 hover:bg-quantix-500 active:scale-95 text-white font-bold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 border border-quantix-400"
+              className="w-full py-3 bg-primary-container hover:opacity-95 active:scale-98 text-on-primary-container font-title-md text-body-sm font-bold rounded-full shadow-sm transition-all flex items-center justify-center gap-2"
             >
               <CornerDownLeft className="w-4 h-4" />
               <span>Buscar / Asignar SKU</span>

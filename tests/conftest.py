@@ -28,6 +28,7 @@ from app.models.inventario import (
     Categoria, Producto, LoteInventario, Proveedor, OrdenCompra, 
     DetalleOrdenCompra, EstadoOrdenCompra, EstadoLote
 )
+from app.models.sucursal import Sucursal
 from app.models.ventas import Cliente, Cupon, Venta, DetalleVenta, PagoVenta
 from app.models.configuracion import Configuracion
 from app.models.promociones import ReglaPromocion, TipoReglaPromocion, DescuentoReglaTipo
@@ -45,7 +46,7 @@ TEST_DATABASE_URL = os.getenv(
     f"postgresql+asyncpg://{TEST_DB_USER}:{TEST_DB_PASSWORD}@{TEST_DB_HOST}:{TEST_DB_PORT}/quantix_test"
 )
 
-test_engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+test_engine = create_async_engine(TEST_DATABASE_URL, echo=False, connect_args={"statement_cache_size": 0})
 TestSessionLocal = async_sessionmaker(bind=test_engine, expire_on_commit=False)
 
 @pytest.fixture(scope="session")
@@ -57,6 +58,11 @@ def event_loop():
 @pytest_asyncio.fixture(scope="session", autouse=True)
 async def setup_test_database():
     """Inicializa el esquema completo en la base de datos de test y crea usuarios base"""
+    import app.db.oltp as oltp_mod
+    import app.services.payment_attempts as pay_mod
+    oltp_mod.AsyncSessionLocal = TestSessionLocal
+    pay_mod.AsyncSessionLocal = TestSessionLocal
+
     async with test_engine.begin() as conn:
         from sqlalchemy import text
         await conn.execute(text("DROP SCHEMA public CASCADE;"))
@@ -122,6 +128,18 @@ async def setup_test_database():
         db.add(prod)
         await db.flush()
 
+        # Sucursal Matriz predeterminada
+        matriz = Sucursal(
+            id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
+            codigo="MATRIZ",
+            nombre="Sucursal Matriz (Principal)",
+            direccion="Av. Central 100, Bodega Central",
+            es_matriz=True,
+            activo=True
+        )
+        db.add(matriz)
+        await db.flush()
+
         # Dos lotes con fechas distintas para testear FEFO
         hoy = datetime.utcnow()
         lote_proximo = LoteInventario(
@@ -133,7 +151,8 @@ async def setup_test_database():
             costo_unitario=18.50,
             fecha_ingreso=hoy,
             fecha_vencimiento=hoy.date() + timedelta(days=5), # Vence en 5 días
-            estado=EstadoLote.ACTIVO
+            estado=EstadoLote.ACTIVO,
+            sucursal_id=matriz.id
         )
         lote_lejano = LoteInventario(
             id=uuid.uuid4(),
@@ -144,7 +163,8 @@ async def setup_test_database():
             costo_unitario=18.50,
             fecha_ingreso=hoy,
             fecha_vencimiento=hoy.date() + timedelta(days=30), # Vence en 30 días
-            estado=EstadoLote.ACTIVO
+            estado=EstadoLote.ACTIVO,
+            sucursal_id=matriz.id
         )
         db.add_all([lote_proximo, lote_lejano])
 

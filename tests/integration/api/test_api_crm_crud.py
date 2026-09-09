@@ -46,3 +46,59 @@ async def test_crm_clientes_crud_completo_con_baja_logica(async_client: AsyncCli
     assert res_activos.status_code == 200
     ids_activos = [c["id"] for c in res_activos.json()]
     assert c_id not in ids_activos
+
+
+@pytest.mark.asyncio
+async def test_buscar_por_cedula_y_registro_rapido(async_client: AsyncClient, director_headers: dict):
+    """
+    Verifica el flujo del usuario:
+    1. Búsqueda de cliente por cédula inexistente -> 404.
+    2. Registro rápido con cédula, nombre, celular y correo -> 201.
+    3. Búsqueda inmediata por cédula -> 200 con todos los datos.
+    4. Rechazo ante intento de duplicar la misma cédula -> 400.
+    """
+    cedula_test = f"CED-{uuid.uuid4().hex[:8].upper()}"
+    celular_test = f"55{uuid.uuid4().int % 100000000:08d}"
+
+    # 1. Búsqueda de cédula inexistente
+    res_404 = await async_client.get(f"/api/v1/crm/clientes/buscar/{cedula_test}", headers=director_headers)
+    assert res_404.status_code == 404
+
+    # 2. Registro rápido
+    res_crear = await async_client.post(
+        "/api/v1/crm/clientes",
+        json={
+            "cedula": cedula_test,
+            "nombre": "Carlos Mendoza",
+            "telefono": celular_test,
+            "email": "carlos.mendoza@ejemplo.com"
+        },
+        headers=director_headers
+    )
+    assert res_crear.status_code == 201
+    cliente = res_crear.json()
+    assert cliente["cedula"] == cedula_test
+    assert cliente["nombre"] == "Carlos Mendoza"
+    assert cliente["telefono"] == celular_test
+    assert cliente["email"] == "carlos.mendoza@ejemplo.com"
+
+    # 3. Búsqueda por cédula
+    res_busqueda = await async_client.get(f"/api/v1/crm/clientes/buscar/{cedula_test}", headers=director_headers)
+    assert res_busqueda.status_code == 200
+    assert res_busqueda.json()["id"] == cliente["id"]
+    assert res_busqueda.json()["cedula"] == cedula_test
+
+    # 4. Rechazo de cédula duplicada
+    res_dup = await async_client.post(
+        "/api/v1/crm/clientes",
+        json={
+            "cedula": cedula_test,
+            "nombre": "Otro Cliente",
+            "telefono": f"55{uuid.uuid4().int % 100000000:08d}",
+            "email": "otro@ejemplo.com"
+        },
+        headers=director_headers
+    )
+    assert res_dup.status_code == 400
+    assert "Ya existe un cliente con esta cédula" in res_dup.json()["detail"]
+

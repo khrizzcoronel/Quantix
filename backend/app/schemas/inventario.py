@@ -162,6 +162,8 @@ class DetalleOrdenCompraResponse(BaseModel):
     producto_nombre: Optional[str] = None
     producto_sku: Optional[str] = None
     cantidad_solicitada: Decimal
+    cantidad_recibida: Decimal = Decimal("0.00")
+    cantidad_pendiente: Optional[Decimal] = None
     costo_unitario_pactado: Decimal
     subtotal: Optional[Decimal] = None
     model_config = ConfigDict(from_attributes=True)

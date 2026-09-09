@@ -5,6 +5,7 @@ import {
   Calendar, DollarSign
 } from 'lucide-react';
 import api from '../services/api';
+import { mostrarToast } from '../hooks/useWebSocket';
 
 export default function Configuracion() {
   const [loading, setLoading] = useState(true);
@@ -79,10 +80,22 @@ export default function Configuracion() {
 
     try {
       await api.put('/configuracion', payload);
-      setSaveSuccess('Parámetros globales guardados exitosamente.');
+      const exitoMsg = 'Parámetros globales guardados exitosamente.';
+      setSaveSuccess(exitoMsg);
+      mostrarToast({
+        titulo: 'Configuración Guardada',
+        mensaje: exitoMsg,
+        severidad: 'SUCCESS',
+      });
       setTimeout(() => setSaveSuccess(null), 4000);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.detail || 'Error al guardar los parámetros.');
+      const errorText = err.response?.data?.detail || 'Error al guardar los parámetros.';
+      setErrorMsg(errorText);
+      mostrarToast({
+        titulo: 'Error de Configuración',
+        mensaje: errorText,
+        severidad: 'CRITICO',
+      });
     } finally {
       setSaving(false);
     }
@@ -97,14 +110,26 @@ export default function Configuracion() {
 
     try {
       const res = await api.post('/configuracion/smtp/probar', { email_destino: emailPrueba });
+      const exitoMsg = res.data.mensaje || 'Correo de prueba enviado correctamente.';
       setSmtpResult({
         tipo: 'success',
-        mensaje: res.data.mensaje || 'Correo de prueba enviado correctamente.'
+        mensaje: exitoMsg
+      });
+      mostrarToast({
+        titulo: 'Prueba SMTP Exitosa',
+        mensaje: exitoMsg,
+        severidad: 'SUCCESS',
       });
     } catch (err: any) {
+      const errorText = err.response?.data?.detail || 'Fallo de conexión con el servidor SMTP.';
       setSmtpResult({
         tipo: 'error',
-        mensaje: err.response?.data?.detail || 'Fallo de conexión con el servidor SMTP.'
+        mensaje: errorText
+      });
+      mostrarToast({
+        titulo: 'Error en Servidor SMTP',
+        mensaje: errorText,
+        severidad: 'CRITICO',
       });
     } finally {
       setTestingSmtp(false);
@@ -123,35 +148,42 @@ export default function Configuracion() {
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-gray-50 p-6 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-300">
+    <div className="h-full overflow-y-auto bg-background text-on-surface p-6 md:p-8 select-none">
+      <div className="w-full space-y-6 animate-in fade-in duration-300">
       
       {/* Toast Feedback */}
       {saveSuccess && (
-        <div className="fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-2xl shadow-xl text-sm font-bold">
-          <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+        <div className="fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 bg-primary-fixed/30 text-on-primary-fixed-variant border border-primary-fixed rounded-2xl shadow-xl text-body-sm font-bold">
+          <CheckCircle2 className="w-5 h-5 text-primary" />
           <span>{saveSuccess}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 bg-red-50 text-red-800 border border-red-200 rounded-2xl shadow-xl text-sm font-bold">
-          <AlertCircle className="w-5 h-5 text-red-600" />
+        <div className="fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 bg-error-container text-on-error-container border border-error rounded-2xl shadow-xl text-body-sm font-bold">
+          <AlertCircle className="w-5 h-5 text-error" />
           <span>{errorMsg}</span>
         </div>
       )}
 
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 pb-5">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-surface-container-high/60 pb-5">
         <div>
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-quantix-50 text-quantix-600 rounded-2xl border border-quantix-100 shadow-sm">
+            <div className="w-11 h-11 bg-surface-container-low text-primary rounded-2xl flex items-center justify-center shadow-xs">
               <Sliders className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-2xl font-black text-gray-900 tracking-tight">Ajustes del Sistema</h1>
-              <p className="text-gray-500 text-xs font-medium">
-                Políticas de caducidad FEFO, tolerancia de arqueo de caja y pasarela SMTP
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="px-2.5 py-0.5 bg-tertiary-fixed text-on-tertiary-fixed rounded-full font-label-caps text-[10px] font-bold uppercase tracking-wider">
+                  Nivel Estratégico • Dirección
+                </span>
+              </div>
+              <h1 className="font-headline-xl text-2xl md:text-3xl font-bold text-on-surface tracking-tight">
+                Ajustes & Políticas del Sistema
+              </h1>
+              <p className="font-body-sm text-body-sm text-on-surface-variant">
+                Políticas operativas sanitarias FEFO, tolerancias de gaveta y pasarela SMTP
               </p>
             </div>
           </div>
@@ -160,10 +192,10 @@ export default function Configuracion() {
         <button
           onClick={handleGuardarCambios}
           disabled={saving}
-          className="flex items-center gap-2 px-5 py-2.5 bg-quantix-600 hover:bg-quantix-700 text-white rounded-xl font-bold text-sm shadow-md transition-all active:scale-95 disabled:opacity-50 self-start md:self-auto"
+          className="flex items-center gap-2 px-6 py-3 bg-primary-container hover:bg-primary-container/90 text-on-primary-container rounded-full font-headline-md text-title-md font-bold shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50 cursor-pointer self-start md:self-auto"
         >
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          <span>{saving ? 'Guardando...' : 'Guardar Todos los Cambios'}</span>
+          {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+          <span>{saving ? 'Guardando...' : 'Guardar Parámetros'}</span>
         </button>
       </div>
 
@@ -173,108 +205,112 @@ export default function Configuracion() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
           {/* Tarjeta 1: Políticas Sanitarias FEFO */}
-          <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2.5 bg-amber-100 text-amber-800 rounded-xl">
-                <Calendar className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-gray-900">Políticas Sanitarias FEFO</h3>
-                <p className="text-xs text-gray-400">Umbrales para el semáforo y alertas automáticas de caducidad</p>
-              </div>
-            </div>
-
-            <div className="space-y-4 text-xs">
-              <div>
-                <label className="block font-bold text-gray-700 uppercase mb-1">
-                  Alerta Amarilla / Riesgo Medio (Días previos)
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    min="1"
-                    max="180"
-                    value={fefoDias2}
-                    onChange={(e) => setFefoDias2(e.target.value)}
-                    className="w-full px-3 py-2.5 border rounded-xl font-mono text-sm font-bold focus:ring-2 focus:ring-quantix-500"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">días</span>
+          <div className="bg-surface-container-lowest rounded-3xl p-7 border border-surface-container-high/60 shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-11 h-11 bg-primary-fixed/30 text-on-primary-fixed-variant rounded-2xl flex items-center justify-center">
+                  <Calendar className="w-6 h-6 text-primary" />
                 </div>
-                <p className="text-[11px] text-gray-400 mt-1">Lotes que caduquen dentro de este lapso entran a semáforo preventivo.</p>
+                <div>
+                  <h3 className="font-headline-md text-title-lg font-bold text-on-surface">Políticas Sanitarias FEFO</h3>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">Umbrales para el semáforo y alertas preventivas de caducidad</p>
+                </div>
               </div>
 
-              <div>
-                <label className="block font-bold text-gray-700 uppercase mb-1">
-                  Alerta Roja / Riesgo Inminente (Días previos)
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    min="1"
-                    max="90"
-                    value={fefoDias1}
-                    onChange={(e) => setFefoDias1(e.target.value)}
-                    className="w-full px-3 py-2.5 border rounded-xl font-mono text-sm font-bold text-red-600 focus:ring-2 focus:ring-quantix-500"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">días</span>
+              <div className="space-y-5 text-body-sm">
+                <div>
+                  <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                    Alerta Amarilla / Riesgo Medio (Días previos)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="1"
+                      max="180"
+                      value={fefoDias2}
+                      onChange={(e) => setFefoDias2(e.target.value)}
+                      className="w-full px-4 py-3 bg-surface-container-low rounded-2xl font-mono text-body-md font-bold text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-outline font-title-md text-body-sm">días</span>
+                  </div>
+                  <p className="font-body-sm text-[11px] text-outline mt-1.5">Lotes que caduquen dentro de este lapso entran en semáforo preventivo.</p>
                 </div>
-                <p className="text-[11px] text-gray-400 mt-1">Dispara sugerencia prioritaria de liquidación y notificación a supervisión.</p>
+
+                <div>
+                  <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                    Alerta Roja / Riesgo Inminente (Días previos)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="1"
+                      max="90"
+                      value={fefoDias1}
+                      onChange={(e) => setFefoDias1(e.target.value)}
+                      className="w-full px-4 py-3 bg-surface-container-low rounded-2xl font-mono text-body-md font-bold text-error focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-error/20 transition-all"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-outline font-title-md text-body-sm">días</span>
+                  </div>
+                  <p className="font-body-sm text-[11px] text-outline mt-1.5">Dispara sugerencia prioritaria de rotación FEFO e inspección en bodega.</p>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Tarjeta 2: Políticas de Caja y Arqueo Ciego */}
-          <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2.5 bg-emerald-100 text-emerald-800 rounded-xl">
-                <DollarSign className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-gray-900">Políticas de Caja & Arqueo Ciego</h3>
-                <p className="text-xs text-gray-400">Tolerancias de gaveta antes de registrar auditoría forense</p>
-              </div>
-            </div>
-
-            <div className="space-y-4 text-xs">
-              <div>
-                <label className="block font-bold text-gray-700 uppercase mb-1">
-                  Tolerancia Máxima de Descuadre ($ MXN)
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
-                  <input
-                    type="number"
-                    step="0.50"
-                    min="0"
-                    value={toleranciaCaja}
-                    onChange={(e) => setToleranciaCaja(e.target.value)}
-                    className="w-full pl-8 pr-3 py-2.5 border rounded-xl font-mono text-sm font-bold text-gray-800 focus:ring-2 focus:ring-quantix-500"
-                  />
+          <div className="bg-surface-container-lowest rounded-3xl p-7 border border-surface-container-high/60 shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-11 h-11 bg-secondary-fixed text-on-secondary-fixed rounded-2xl flex items-center justify-center">
+                  <DollarSign className="w-6 h-6 text-secondary" />
                 </div>
-                <p className="text-[11px] text-gray-400 mt-1">
-                  Si la diferencia entre el efectivo contado y el teórico supera este valor, se marca el turno como DESCUADRE y se registra en la bitácora de auditoría.
-                </p>
+                <div>
+                  <h3 className="font-headline-md text-title-lg font-bold text-on-surface">Tolerancias de Caja & Arqueo</h3>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">Márgenes permitidos antes de registrar auditoría forense</p>
+                </div>
               </div>
 
-              <div>
-                <label className="block font-bold text-gray-700 uppercase mb-1">
-                  Factor de Reactivación Antipánico (CRM)
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="1.0"
-                    max="5.0"
-                    value={rfmMultiplicador}
-                    onChange={(e) => setRfmMultiplicador(e.target.value)}
-                    className="w-full px-3 py-2.5 border rounded-xl font-mono text-sm font-bold text-purple-700 focus:ring-2 focus:ring-quantix-500"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">× ciclo</span>
+              <div className="space-y-5 text-body-sm">
+                <div>
+                  <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                    Tolerancia Máxima de Descuadre ($ MXN)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-outline font-title-md text-body-md font-bold">$</span>
+                    <input
+                      type="number"
+                      step="0.50"
+                      min="0"
+                      value={toleranciaCaja}
+                      onChange={(e) => setToleranciaCaja(e.target.value)}
+                      className="w-full pl-9 pr-4 py-3 bg-surface-container-low rounded-2xl font-mono text-body-md font-bold text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all"
+                    />
+                  </div>
+                  <p className="font-body-sm text-[11px] text-outline mt-1.5">
+                    Si la diferencia entre el efectivo físico contado y el teórico supera este monto, se marca como Descuadre Auditado.
+                  </p>
                 </div>
-                <p className="text-[11px] text-gray-400 mt-1">
-                  Multiplicador sobre el ciclo intercompra habitual para clasificar a un cliente regular en riesgo de deserción.
-                </p>
+
+                <div>
+                  <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                    Factor de Reactivación RFM (CRM)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="1.0"
+                      max="5.0"
+                      value={rfmMultiplicador}
+                      onChange={(e) => setRfmMultiplicador(e.target.value)}
+                      className="w-full px-4 py-3 bg-surface-container-low rounded-2xl font-mono text-body-md font-bold text-tertiary focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-outline font-title-md text-body-sm">× ciclo</span>
+                  </div>
+                  <p className="font-body-sm text-[11px] text-outline mt-1.5">
+                    Multiplicador del ciclo intercompra para catalogar a un cliente habitual en riesgo de deserción.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -282,95 +318,103 @@ export default function Configuracion() {
         </div>
 
         {/* Tarjeta 3: Pasarela SMTP */}
-        <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2.5 bg-purple-100 text-purple-800 rounded-xl">
-              <Mail className="w-5 h-5" />
+        <div className="bg-surface-container-lowest rounded-3xl p-7 border border-surface-container-high/60 shadow-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-11 h-11 bg-tertiary-fixed text-on-tertiary-fixed rounded-2xl flex items-center justify-center">
+              <Mail className="w-6 h-6 text-tertiary" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-gray-900">Notificaciones por Correo Electrónico (SMTP)</h3>
-              <p className="text-xs text-gray-400">Servidor saliente para avisos de roturas de stock, descuadres y cupones</p>
+              <h3 className="font-headline-md text-title-lg font-bold text-on-surface">Servidor Saliente de Notificaciones (SMTP)</h3>
+              <p className="font-body-sm text-body-sm text-on-surface-variant">Configuración de mensajería para alertas operativas, quiebres de inventario y arqueos</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-body-sm">
             <div>
-              <label className="block font-bold text-gray-700 uppercase mb-1">Servidor SMTP (Host)</label>
+              <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                Servidor SMTP (Host)
+              </label>
               <input
                 type="text"
                 value={smtpHost}
                 onChange={(e) => setSmtpHost(e.target.value)}
                 placeholder="smtp.gmail.com"
-                className="w-full px-3 py-2.5 border rounded-xl font-mono text-sm focus:ring-2 focus:ring-quantix-500"
+                className="w-full px-4 py-3 bg-surface-container-low rounded-2xl font-mono text-body-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all"
               />
             </div>
 
             <div>
-              <label className="block font-bold text-gray-700 uppercase mb-1">Puerto</label>
+              <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                Puerto
+              </label>
               <input
                 type="number"
                 value={smtpPort}
                 onChange={(e) => setSmtpPort(e.target.value)}
                 placeholder="587"
-                className="w-full px-3 py-2.5 border rounded-xl font-mono text-sm focus:ring-2 focus:ring-quantix-500"
+                className="w-full px-4 py-3 bg-surface-container-low rounded-2xl font-mono text-body-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all"
               />
             </div>
 
             <div>
-              <label className="block font-bold text-gray-700 uppercase mb-1">Usuario / Remitente</label>
+              <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                Usuario Remitente
+              </label>
               <input
                 type="email"
                 value={smtpUser}
                 onChange={(e) => setSmtpUser(e.target.value)}
                 placeholder="alertas@quantix.local"
-                className="w-full px-3 py-2.5 border rounded-xl font-mono text-sm focus:ring-2 focus:ring-quantix-500"
+                className="w-full px-4 py-3 bg-surface-container-low rounded-2xl font-mono text-body-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all"
               />
             </div>
 
             <div>
-              <label className="block font-bold text-gray-700 uppercase mb-1">Contraseña / Token de Aplicación</label>
+              <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                Contraseña / Token de Aplicación
+              </label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={smtpPassword}
                   onChange={(e) => setSmtpPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="w-full px-3 py-2.5 border rounded-xl font-mono text-sm pr-10 focus:ring-2 focus:ring-quantix-500"
+                  className="w-full px-4 py-3 bg-surface-container-low rounded-2xl font-mono text-body-sm text-on-surface pr-12 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface cursor-pointer"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
             </div>
           </div>
 
           {/* Test de Correo */}
-          <div className="mt-5 pt-5 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex-1 w-full flex items-center gap-2">
+          <div className="mt-6 pt-6 border-t border-surface-container-high/50 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex-1 w-full flex items-center gap-3">
               <input
                 type="email"
                 value={emailPrueba}
                 onChange={(e) => setEmailPrueba(e.target.value)}
                 placeholder="correo-destino@ejemplo.com para prueba..."
-                className="flex-1 px-3 py-2 border rounded-xl text-xs font-semibold focus:ring-2 focus:ring-quantix-500"
+                className="flex-1 px-4 py-2.5 bg-surface-container-low rounded-full font-body-md text-body-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all"
               />
               <button
                 type="button"
                 onClick={handleProbarSmtp}
                 disabled={testingSmtp || !emailPrueba}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl disabled:opacity-50 transition-colors shrink-0"
+                className="flex items-center gap-2 px-5 py-2.5 bg-surface-container-high hover:bg-surface-container text-on-surface font-title-md text-body-sm font-semibold rounded-full disabled:opacity-50 transition-all cursor-pointer shadow-xs shrink-0"
               >
-                {testingSmtp ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                {testingSmtp ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 <span>{testingSmtp ? 'Enviando...' : 'Enviar Prueba'}</span>
               </button>
             </div>
 
             {smtpResult && (
-              <span className={`text-xs font-bold ${smtpResult.tipo === 'success' ? 'text-emerald-600' : 'text-red-600'}`}>
+              <span className={`font-title-md text-body-sm font-bold ${smtpResult.tipo === 'success' ? 'text-primary' : 'text-error'}`}>
                 {smtpResult.mensaje}
               </span>
             )}

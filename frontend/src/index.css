@@ -5,10 +5,34 @@
 @variant dark (&:where(.dark, .dark *));
 
 @layer base {
-  body {
-    @apply bg-gray-50 text-gray-900;
+  html, body {
+    margin: 0;
+    padding: 0;
   }
-  .dark body {
-    @apply bg-gray-950 text-gray-100;
+  body {
+    overscroll-behavior: none;
+  }
+  main > :first-child {
+    margin-top: 0 !important;
+  }
+  main > :last-child {
+    margin-bottom: 0 !important;
+  }
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
+
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
   }
 }

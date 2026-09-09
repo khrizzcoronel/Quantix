@@ -138,3 +138,46 @@ class MiActividadResponse(BaseModel):
     tickets_hoy: list[MiActividadTicketItem]
     eventos_auditoria_hoy: list[AuditoriaEventoResponse]
 
+class MovimientoCajaCreate(BaseModel):
+    tipo: str = Field(..., description="INGRESO o EGRESO")
+    monto: Decimal = Field(..., gt=0, description="Monto mayor a cero")
+    concepto: str = Field(..., min_length=3, max_length=255, description="Concepto del movimiento")
+
+class MovimientoCajaResponse(BaseModel):
+    id: UUID
+    sesion_id: UUID
+    usuario_id: UUID
+    usuario_nombre: Optional[str] = None
+    tipo: str
+    monto: Decimal
+    concepto: str
+    fecha_hora: datetime
+
+    class Config:
+        from_attributes = True
+
+class CorteXResponse(BaseModel):
+    sesion_id: UUID
+    folio_corte: str
+    cajero_id: UUID
+    cajero_nombre: str
+    cajero_email: Optional[str] = None
+    terminal_id: str
+    fecha_apertura: datetime
+    fecha_corte_x: datetime
+    fondo_inicial: Decimal
+    total_ventas_efectivo: Decimal
+    total_ventas_tarjeta: Decimal
+    total_ventas_transferencia: Decimal
+    total_ventas_otros: Decimal
+    total_ventas: Decimal
+    total_ingresos_extra: Decimal
+    total_egresos_extra: Decimal
+    efectivo_teorico_en_caja: Decimal
+    total_tickets_emitidos: int
+    movimientos: list[MovimientoCajaResponse] = []
+
+    class Config:
+        from_attributes = True
+
+

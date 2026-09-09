@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime, date
+from decimal import Decimal
 from typing import Optional, List
 import enum
 
@@ -56,6 +57,7 @@ class DetalleOrdenCompra(Base):
     orden_compra_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("orden_compra.id"), nullable=False)
     producto_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("producto.id"), nullable=False)
     cantidad_solicitada: Mapped[Numeric] = mapped_column(Numeric(10, 2), nullable=False)
+    cantidad_recibida: Mapped[Numeric] = mapped_column(Numeric(10, 2), default=Decimal("0.00"), nullable=False)
     costo_unitario_pactado: Mapped[Numeric] = mapped_column(Numeric(10, 2), nullable=False)
 
     orden_compra: Mapped["OrdenCompra"] = relationship("OrdenCompra", back_populates="detalles")
@@ -104,6 +106,11 @@ class LoteInventario(Base):
     fecha_ingreso: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     fecha_vencimiento: Mapped[Optional[date]] = mapped_column(Date)
     estado: Mapped[EstadoLote] = mapped_column(Enum(EstadoLote), default=EstadoLote.ACTIVO)
+    sucursal_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("sucursal.id"), 
+        default=lambda: uuid.UUID("00000000-0000-0000-0000-000000000001"), 
+        nullable=True
+    )
 
     producto: Mapped["Producto"] = relationship("Producto", back_populates="lotes")
     orden_compra: Mapped[Optional["OrdenCompra"]] = relationship("OrdenCompra", back_populates="lotes")

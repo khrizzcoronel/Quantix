@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
+from sqlalchemy.orm import selectinload
 from typing import List, Optional
 from uuid import uuid4, UUID
 import datetime
@@ -11,7 +12,7 @@ from app.db.oltp import get_db
 from app.schemas.pos import (
     ProductoBuscado, ItemCarrito, PagoCheckout, CheckoutRequest, CheckoutResponse,
     VentaResumenResponse, VentaDetalleResponse, DetalleVentaItemResponse, 
-    PagoVentaItemResponse, AnularVentaRequest
+    PagoVentaItemResponse, AnularVentaRequest, EnviarTicketRequest
 )
 from app.models.inventario import Producto, LoteInventario, EstadoLote
 from app.models.ventas import (
@@ -27,6 +28,7 @@ from app.services.payment_gateway import (
     SimulatedPaymentGateway, PaymentDeclined, PaymentTimeout, PaymentGatewayError
 )
 from app.services.payment_attempts import iniciar_intento, actualizar_intento
+from app.services.email import EmailSender
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -79,6 +81,7 @@ async def buscar_producto(
 
 
 @router.post("/checkout", response_model=CheckoutResponse)
+@router.post("/ventas", response_model=CheckoutResponse)
 async def procesar_checkout(
     req: CheckoutRequest, 
     db: AsyncSession = Depends(get_db),
@@ -105,6 +108,8 @@ async def procesar_checkout(
         )
         existente = existente_result.scalar_one_or_none()
         if existente:
+            puntos_c = req.puntos_canjeados or 0
+            desc_p = redondear_moneda(Decimal(str(puntos_c)) / Decimal("10")) if puntos_c > 0 else Decimal("0.00")
             return CheckoutResponse(
                 venta_id=existente.id,
                 folio_ticket=existente.folio_ticket,
@@ -114,6 +119,8 @@ async def procesar_checkout(
                 total_pagar=existente.total_pagar,
                 estado=getattr(existente.estado, "value", existente.estado),
                 mensaje="Venta ya procesada anteriormente; se devuelve el resultado existente",
+                puntos_canjeados=puntos_c,
+                descuento_puntos=desc_p,
             )
 
     nuevo_folio = f"TKT-{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}-{str(uuid4())[:4].upper()}"
@@ -222,6 +229,29 @@ async def procesar_checkout(
             else:
                 descuento_cupon = min(Decimal(str(cupon_aplicado.descuento_valor)), base_tras_promocion)
             total_descuento = redondear_moneda(min(total_bruto_dec, total_descuento + descuento_cupon))
+
+        # Canje de puntos de lealtad (10 puntos = $1.00 MXN)
+        cliente_instancia = None
+        descuento_puntos = Decimal("0.00")
+        puntos_canjeados = 0
+        if req.puntos_canjeados and req.puntos_canjeados > 0:
+            if not req.cliente_id:
+                raise HTTPException(status_code=400, detail="Debes asociar un cliente para canjear puntos")
+
+            cliente_result = await db.execute(
+                select(Cliente).where(Cliente.id == req.cliente_id).with_for_update()
+            )
+            cliente_instancia = cliente_result.scalar_one_or_none()
+            if not cliente_instancia:
+                raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
+            if (cliente_instancia.puntos_acumulados or 0) < req.puntos_canjeados:
+                raise HTTPException(status_code=400, detail="Puntos insuficientes")
+
+            descuento_puntos = redondear_moneda(Decimal(str(req.puntos_canjeados)) / Decimal("10"))
+            total_descuento = redondear_moneda(min(total_bruto_dec, total_descuento + descuento_puntos))
+            cliente_instancia.puntos_acumulados = (cliente_instancia.puntos_acumulados or 0) - req.puntos_canjeados
+            puntos_canjeados = req.puntos_canjeados
 
         base_gravable = redondear_moneda(max(Decimal("0.00"), total_bruto_dec - total_descuento))
         total_impuestos = redondear_moneda(base_gravable * IVA_RATE)
@@ -393,7 +423,9 @@ async def procesar_checkout(
             total_impuestos=total_impuestos,
             total_pagar=total_pagar_dec,
             estado="COMPLETADA",
-            mensaje=mensaje_exito
+            mensaje=mensaje_exito,
+            puntos_canjeados=puntos_canjeados,
+            descuento_puntos=descuento_puntos
         )
         
     except HTTPException:
@@ -417,8 +449,10 @@ async def listar_ventas(
     query = (
         select(
             Venta,
+            Cliente.cedula.label("cliente_cedula"),
             Cliente.nombre.label("cliente_nombre"),
             Cliente.telefono.label("cliente_telefono"),
+            Cliente.email.label("cliente_email"),
             func.count(DetalleVenta.id).label("items_count")
         )
         .outerjoin(Cliente, Venta.cliente_id == Cliente.id)
@@ -430,7 +464,7 @@ async def listar_ventas(
         
     query = (
         query
-        .group_by(Venta.id, Cliente.nombre, Cliente.telefono)
+        .group_by(Venta.id, Cliente.cedula, Cliente.nombre, Cliente.telefono, Cliente.email)
         .order_by(Venta.fecha_hora.desc())
         .limit(limit)
     )
@@ -439,14 +473,16 @@ async def listar_ventas(
     rows = result.all()
     
     resp = []
-    for venta, c_nom, c_tel, items_cnt in rows:
+    for venta, c_ced, c_nom, c_tel, c_email, items_cnt in rows:
         resp.append(
             VentaResumenResponse(
                 id=venta.id,
                 sesion_caja_id=venta.sesion_caja_id,
                 cliente_id=venta.cliente_id,
+                cliente_cedula=c_ced,
                 cliente_nombre=c_nom,
                 cliente_telefono=c_tel,
+                cliente_email=c_email,
                 folio_ticket=venta.folio_ticket,
                 fecha_hora=venta.fecha_hora,
                 total_bruto=venta.total_bruto,
@@ -474,11 +510,11 @@ async def obtener_venta_detalle(
         raise HTTPException(status_code=404, detail="Ticket de venta no encontrado")
         
     # Datos de cliente si existe
-    c_nom, c_tel = None, None
+    c_ced, c_nom, c_tel, c_email = None, None, None, None
     if venta.cliente_id:
         cli = await db.get(Cliente, venta.cliente_id)
         if cli:
-            c_nom, c_tel = cli.nombre, cli.telefono
+            c_ced, c_nom, c_tel, c_email = cli.cedula, cli.nombre, cli.telefono, cli.email
             
     # Consultar detalles con productos y lotes
     det_query = (
@@ -527,8 +563,10 @@ async def obtener_venta_detalle(
         id=venta.id,
         sesion_caja_id=venta.sesion_caja_id,
         cliente_id=venta.cliente_id,
+        cliente_cedula=c_ced,
         cliente_nombre=c_nom,
         cliente_telefono=c_tel,
+        cliente_email=c_email,
         folio_ticket=venta.folio_ticket,
         fecha_hora=venta.fecha_hora,
         total_bruto=venta.total_bruto,
@@ -615,3 +653,107 @@ async def anular_venta(
     })
 
     return await obtener_venta_detalle(venta_id=venta_id, db=db, current_user=current_user)
+
+
+@router.post("/ventas/{venta_id}/enviar-ticket")
+async def enviar_ticket_digital(
+    venta_id: UUID,
+    background_tasks: BackgroundTasks,
+    req: Optional[EnviarTicketRequest] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(cajero_o_superior)
+):
+    """
+    Envía el ticket de venta por correo electrónico al cliente de forma asíncrona.
+    """
+    stmt = (
+        select(Venta)
+        .where(Venta.id == venta_id)
+        .options(
+            selectinload(Venta.detalles).selectinload(DetalleVenta.producto),
+            selectinload(Venta.cliente),
+            selectinload(Venta.pagos)
+        )
+    )
+    res = await db.execute(stmt)
+    venta = res.scalar_one_or_none()
+    if not venta:
+        raise HTTPException(status_code=404, detail="Ticket de venta no encontrado")
+
+    dest_email = req.email.strip() if (req and req.email and req.email.strip()) else (venta.cliente.email if venta.cliente else None)
+    if not dest_email:
+        raise HTTPException(status_code=400, detail="No se especificó un correo electrónico de destino válido")
+
+    cajero_nombre = current_user.nombre_completo if current_user and current_user.nombre_completo else "Cajero"
+
+    lineas_texto = [
+        "QUANTIX RETAIL OS - COMPROBANTE DE COMPRA",
+        f"Folio: {venta.folio_ticket}",
+        f"Fecha: {venta.fecha_hora.strftime('%Y-%m-%d %H:%M:%S') if venta.fecha_hora else 'N/A'}",
+        f"Cajero: {cajero_nombre}",
+        "-" * 40,
+    ]
+    for det in venta.detalles:
+        prod_nom = det.producto.nombre if det.producto else "Artículo"
+        lineas_texto.append(f"{det.cantidad}x {prod_nom} - ${float(det.subtotal):.2f}")
+
+    lineas_texto.extend([
+        "-" * 40,
+        f"Subtotal: ${float(venta.total_bruto):.2f}",
+        f"Descuentos: -${float(venta.total_descuento):.2f}",
+        f"Impuestos (IVA): ${float(venta.total_impuestos):.2f}",
+        f"TOTAL PAGADO: ${float(venta.total_pagar):.2f}",
+        "-" * 40,
+        "¡Gracias por su compra en Quantix!"
+    ])
+    texto_plano = "\n".join(lineas_texto)
+
+    filas_html = "".join([
+        f"<tr><td style='padding:6px 0;'>{det.cantidad}x {det.producto.nombre if det.producto else 'Artículo'}</td>"
+        f"<td style='text-align:right;padding:6px 0;font-family:monospace;'>${float(det.subtotal):.2f}</td></tr>"
+        for det in venta.detalles
+    ])
+
+    html = f"""
+    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;border:1px solid #e0e0e0;border-radius:16px;overflow:hidden;background:#ffffff;">
+      <div style="background:#006c49;padding:24px;text-align:center;color:#ffffff;">
+        <h2 style="margin:0;font-size:20px;letter-spacing:1px;">QUANTIX RETAIL</h2>
+        <p style="margin:4px 0 0;font-size:12px;opacity:0.9;">Comprobante Digital de Compra</p>
+      </div>
+      <div style="padding:24px;">
+        <div style="font-size:13px;color:#555;margin-bottom:16px;">
+          <strong>Folio:</strong> {venta.folio_ticket}<br/>
+          <strong>Fecha:</strong> {venta.fecha_hora.strftime('%d/%m/%Y %H:%M') if venta.fecha_hora else ''}<br/>
+          <strong>Atendido por:</strong> {cajero_nombre}
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;border-top:1px dashed #ccc;border-bottom:1px dashed #ccc;padding:12px 0;">
+          {filas_html}
+        </table>
+        <div style="margin-top:16px;font-size:14px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>Subtotal:</span><span>${float(venta.total_bruto):.2f}</span></div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;color:#006c49;"><span>Descuento:</span><span>-${float(venta.total_descuento):.2f}</span></div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;color:#777;"><span>IVA:</span><span>${float(venta.total_impuestos):.2f}</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:18px;font-weight:bold;border-top:2px solid #006c49;padding-top:8px;"><span>Total:</span><span>${float(venta.total_pagar):.2f}</span></div>
+        </div>
+      </div>
+      <div style="background:#f9fafb;padding:16px;text-align:center;font-size:12px;color:#777;">
+        Este comprobante digital sustituye la impresión convencional.<br/>
+        Consérvelo para cualquier aclaración o garantía.
+      </div>
+    </div>
+    """
+
+    background_tasks.add_task(
+        EmailSender.enviar_correo,
+        [dest_email],
+        f"Tu Comprobante de Compra - Folio {venta.folio_ticket}",
+        texto_plano,
+        html
+    )
+
+    return {
+        "mensaje": f"Comprobante enviado exitosamente a {dest_email}",
+        "email": dest_email,
+        "folio": venta.folio_ticket
+    }
+

@@ -38,7 +38,8 @@ async def listar_clientes(
         query = query.where(
             or_(
                 Cliente.nombre.ilike(termino),
-                Cliente.telefono.ilike(termino)
+                Cliente.telefono.ilike(termino),
+                Cliente.cedula.ilike(termino)
             )
         )
     query = query.order_by(Cliente.nombre.asc())
@@ -53,16 +54,25 @@ async def registrar_cliente(
 ):
     """
     Registra un nuevo cliente en el sistema desde la caja o desde backoffice.
-    Valida que el teléfono no exista previamente.
+    Valida que la cédula y el teléfono no existan previamente.
     """
-    existente = await db.execute(select(Cliente).where(Cliente.telefono == req.telefono))
-    if existente.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="Ya existe un cliente con este número de teléfono")
+    cedula_limpia = req.cedula.strip() if (req.cedula and req.cedula.strip()) else None
+    tel_limpio = req.telefono.strip()
+
+    if cedula_limpia:
+        existente_ced = await db.execute(select(Cliente).where(Cliente.cedula == cedula_limpia))
+        if existente_ced.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="Ya existe un cliente con esta cédula de identidad")
+
+    existente_tel = await db.execute(select(Cliente).where(Cliente.telefono == tel_limpio))
+    if existente_tel.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Ya existe un cliente con este número de celular/teléfono")
         
     nuevo_cliente = Cliente(
-        telefono=req.telefono,
-        nombre=req.nombre,
-        email=req.email,
+        cedula=cedula_limpia,
+        telefono=tel_limpio,
+        nombre=req.nombre.strip(),
+        email=req.email.strip() if req.email else None,
         puntos_acumulados=0,
         activo=True
     )
@@ -73,20 +83,28 @@ async def registrar_cliente(
     
     return nuevo_cliente
 
-@router.get("/clientes/buscar/{telefono}", response_model=ClienteResponse)
-async def buscar_cliente_por_telefono(
-    telefono: str,
+@router.get("/clientes/buscar/{identificador}", response_model=ClienteResponse)
+async def buscar_cliente_por_identificador(
+    identificador: str,
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
     """
-    Búsqueda ágil de cliente en caja para asociarlo a una venta y ganar puntos.
+    Búsqueda ágil de cliente en caja por Cédula o Teléfono celular para asociarlo a una venta.
     """
-    result = await db.execute(select(Cliente).where(Cliente.telefono == telefono))
+    id_limpio = identificador.strip()
+    result = await db.execute(
+        select(Cliente).where(
+            or_(
+                Cliente.cedula == id_limpio,
+                Cliente.telefono == id_limpio
+            )
+        )
+    )
     cliente = result.scalar_one_or_none()
     
     if not cliente:
-        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+        raise HTTPException(status_code=404, detail="Cliente no encontrado por cédula ni teléfono")
         
     return cliente
 
@@ -115,18 +133,29 @@ async def actualizar_cliente(
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
         
+    if req.cedula is not None:
+        c_limpia = req.cedula.strip() if req.cedula.strip() else None
+        if c_limpia:
+            dup_ced = await db.execute(
+                select(Cliente).where(Cliente.cedula == c_limpia, Cliente.id != cliente_id)
+            )
+            if dup_ced.scalar_one_or_none():
+                raise HTTPException(status_code=400, detail="Ya existe otro cliente con esta cédula")
+        cliente.cedula = c_limpia
+
     if req.telefono is not None:
+        t_limpio = req.telefono.strip()
         duplicado = await db.execute(
-            select(Cliente).where(Cliente.telefono == req.telefono, Cliente.id != cliente_id)
+            select(Cliente).where(Cliente.telefono == t_limpio, Cliente.id != cliente_id)
         )
         if duplicado.scalar_one_or_none():
             raise HTTPException(status_code=400, detail="Ya existe otro cliente con este teléfono")
-        cliente.telefono = req.telefono
+        cliente.telefono = t_limpio
         
     if req.nombre is not None:
-        cliente.nombre = req.nombre
+        cliente.nombre = req.nombre.strip()
     if req.email is not None:
-        cliente.email = req.email
+        cliente.email = req.email.strip() if req.email else None
     if req.puntos_acumulados is not None:
         cliente.puntos_acumulados = req.puntos_acumulados
     if req.activo is not None:

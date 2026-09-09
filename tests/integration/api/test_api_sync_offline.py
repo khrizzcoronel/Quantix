@@ -396,7 +396,10 @@ async def test_sync_listar_y_resolver_conflictos(
     incidencia_id = incidencia_target["id"]
     res_resolver = await async_client.post(
         f"/api/v1/sync/conflictos/{incidencia_id}/resolver",
-        json={"nota_resolucion": "Ajuste de inventario aplicado tras conteo físico en anaquel"},
+        json={
+            "accion": "AJUSTE_AUTOMATICO",
+            "nota_resolucion": "Ajuste de inventario aplicado tras conteo físico en anaquel"
+        },
         headers=supervisor_headers,
     )
     assert res_resolver.status_code == 200
@@ -405,6 +408,15 @@ async def test_sync_listar_y_resolver_conflictos(
     assert resuelto_data["nota_resolucion"] == "Ajuste de inventario aplicado tras conteo físico en anaquel"
     assert resuelto_data["resuelto_por"] is not None
     assert resuelto_data["resuelto_en"] is not None
+
+    # Verificar que VentaOfflineRecibida pasó a SINCRONIZADA y generó Venta
+    recibida_resuelto = (
+        await db_session.execute(
+            select(VentaOfflineRecibida).where(VentaOfflineRecibida.id_local == id_local)
+        )
+    ).scalar_one()
+    assert recibida_resuelto.estado == "SINCRONIZADA"
+    assert recibida_resuelto.venta_id is not None
 
     # 5. Comprobar que ya no figura en la lista de pendientes por defecto
     res_pendientes = await async_client.get("/api/v1/sync/conflictos", headers=supervisor_headers)

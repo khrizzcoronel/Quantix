@@ -188,7 +188,7 @@ export default function ArqueoCiegoModal({ isOpen, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 bg-on-surface/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
       {/* Estilos dedicados para impresión CSS print */}
       <style>{`
         @media print {
@@ -216,41 +216,45 @@ export default function ArqueoCiegoModal({ isOpen, onClose }: Props) {
         }
       `}</style>
 
-      <div className={`bg-white rounded-2xl shadow-2xl w-full border border-gray-100 animate-in fade-in zoom-in-95 duration-200 transition-all ${
+      <div className={`bg-surface-container-lowest rounded-3xl shadow-2xl w-full border border-outline-variant/30 animate-in fade-in zoom-in-95 duration-200 transition-all font-body-md text-on-surface ${
         mostrarCorteZ ? 'max-w-2xl p-6 my-4' : 'max-w-lg p-6'
       }`}>
         
         {/* VISTA 1: FORMULARIO DE CONTEO FÍSICO A CIEGAS */}
         {!resultado ? (
           <>
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
+            <div className="flex items-center justify-between pb-4 border-b border-surface-container-high/60 mb-4">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-amber-100 text-amber-700 rounded-2xl shadow-inner">
-                  <EyeOff className="w-7 h-7" />
+                <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 flex items-center justify-center shadow-xs">
+                  <EyeOff className="w-6 h-6" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">Arqueo Ciego de Cierre</h2>
-                  <p className="text-xs text-gray-500 font-medium">Conteo físico obligatorio sin visibilidad del saldo teórico (RF-SEG-01)</p>
+                  <h2 className="font-headline-md text-title-lg font-bold text-on-surface tracking-tight">
+                    Arqueo Ciego de Cierre
+                  </h2>
+                  <p className="font-body-sm text-xs text-on-surface-variant font-medium">
+                    Conteo físico obligatorio sin visibilidad del saldo teórico (RF-SEG-01)
+                  </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={onClose}
-                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+                className="p-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-full transition-colors"
                 title="Cerrar modal"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-5 text-xs text-blue-800 leading-relaxed">
+            <div className="bg-surface-container-low border border-surface-container-high/60 rounded-2xl p-3.5 mb-5 text-xs text-on-surface leading-relaxed">
               Ingresa el total contado físicamente en la gaveta y los váuchers de terminal. El sistema calculará la discrepancia, cerrará el turno y generará el <strong>Corte Z</strong> fiscal.
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label className="block font-label-caps uppercase text-on-surface-variant font-bold mb-1.5">
                     Efectivo Físico Contado ($)
                   </label>
                   <input
@@ -260,13 +264,13 @@ export default function ArqueoCiegoModal({ isOpen, onClose }: Props) {
                     required
                     value={efectivo}
                     onChange={(e) => setEfectivo(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-base font-bold text-gray-800 focus:ring-2 focus:ring-quantix-500 outline-none"
+                    className="w-full px-4 py-2.5 rounded-full bg-surface-container-low border border-surface-container-high text-base font-bold font-mono text-on-surface focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary outline-none transition-all"
                     placeholder="0.00"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label className="block font-label-caps uppercase text-on-surface-variant font-bold mb-1.5">
                     Váuchers Tarjeta ($)
                   </label>
                   <input
@@ -275,13 +279,13 @@ export default function ArqueoCiegoModal({ isOpen, onClose }: Props) {
                     min="0"
                     value={tarjeta}
                     onChange={(e) => setTarjeta(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-base font-bold text-gray-800 focus:ring-2 focus:ring-quantix-500 outline-none"
+                    className="w-full px-4 py-2.5 rounded-full bg-surface-container-low border border-surface-container-high text-base font-bold font-mono text-on-surface focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary outline-none transition-all"
                     placeholder="0.00"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label className="block font-label-caps uppercase text-on-surface-variant font-bold mb-1.5">
                     Transferencias / QR ($)
                   </label>
                   <input
@@ -290,13 +294,13 @@ export default function ArqueoCiegoModal({ isOpen, onClose }: Props) {
                     min="0"
                     value={transferencia}
                     onChange={(e) => setTransferencia(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-base font-bold text-gray-800 focus:ring-2 focus:ring-quantix-500 outline-none"
+                    className="w-full px-4 py-2.5 rounded-full bg-surface-container-low border border-surface-container-high text-base font-bold font-mono text-on-surface focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary outline-none transition-all"
                     placeholder="0.00"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label className="block font-label-caps uppercase text-on-surface-variant font-bold mb-1.5">
                     Otros Comprobantes ($)
                   </label>
                   <input
@@ -305,24 +309,24 @@ export default function ArqueoCiegoModal({ isOpen, onClose }: Props) {
                     min="0"
                     value={otros}
                     onChange={(e) => setOtros(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-base font-bold text-gray-800 focus:ring-2 focus:ring-quantix-500 outline-none"
+                    className="w-full px-4 py-2.5 rounded-full bg-surface-container-low border border-surface-container-high text-base font-bold font-mono text-on-surface focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary outline-none transition-all"
                     placeholder="0.00"
                   />
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-4 border-t border-gray-100 mt-6">
+              <div className="flex gap-3 pt-4 border-t border-surface-container-high/60 mt-6">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl text-sm transition-all"
+                  className="flex-1 py-3 px-5 bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest font-title-md text-body-sm font-semibold rounded-full transition-all"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex-1 py-3 bg-amber-600 hover:bg-amber-700 disabled:opacity-70 text-white font-bold rounded-xl shadow-lg transition-all text-sm flex items-center justify-center gap-2"
+                  className="flex-1 py-3 px-5 bg-primary hover:opacity-95 text-on-primary font-title-md text-body-sm font-bold rounded-full shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirmar Conteo y Cerrar'}
                 </button>
@@ -334,65 +338,65 @@ export default function ArqueoCiegoModal({ isOpen, onClose }: Props) {
           <div className="text-center py-2 relative">
             <button
               onClick={handleFinalizar}
-              className="absolute right-0 top-0 p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+              className="absolute right-0 top-0 p-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-full transition-colors"
               title="Cerrar modal"
             >
               <X className="w-5 h-5" />
             </button>
             <div className="w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-4 mt-2">
               {resultado.estado === 'OK' ? (
-                <div className="bg-green-100 text-green-600 p-4 rounded-full">
-                  <CheckCircle2 className="w-10 h-10" />
+                <div className="bg-primary-fixed/30 text-on-primary-fixed-variant p-4 rounded-full">
+                  <CheckCircle2 className="w-10 h-10 text-primary" />
                 </div>
               ) : resultado.estado === 'SOBRANTE' ? (
-                <div className="bg-amber-100 text-amber-600 p-4 rounded-full">
+                <div className="bg-amber-100 text-amber-800 p-4 rounded-full">
                   <AlertTriangle className="w-10 h-10" />
                 </div>
               ) : (
-                <div className="bg-red-100 text-red-600 p-4 rounded-full">
+                <div className="bg-error-container text-on-error-container p-4 rounded-full">
                   <ShieldAlert className="w-10 h-10" />
                 </div>
               )}
             </div>
 
-            <h3 className="text-2xl font-black text-gray-900 mb-1">
+            <h3 className="font-headline-md text-2xl font-black text-on-surface mb-1">
               {resultado.estado === 'OK' ? 'Caja Cuadrada' : `Descuadre: ${resultado.estado}`}
             </h3>
-            <p className="text-sm text-gray-500 mb-6">{resultado.mensaje}</p>
+            <p className="font-body-sm text-sm text-on-surface-variant mb-6">{resultado.mensaje}</p>
 
-            <div className="bg-gray-50 p-4 rounded-xl space-y-2 text-sm border border-gray-200 mb-6 text-left">
-              <div className="flex justify-between">
-                <span className="text-gray-500">Total Teórico Esperado:</span>
-                <span className="font-semibold text-gray-800">${Number(resultado.total_teorico || 0).toFixed(2)}</span>
+            <div className="bg-surface-container-low p-4 rounded-2xl space-y-2 text-sm border border-surface-container-high mb-6 text-left">
+              <div className="flex justify-between items-center">
+                <span className="text-on-surface-variant">Total Teórico Esperado:</span>
+                <span className="font-bold text-on-surface font-mono">${Number(resultado.total_teorico || 0).toFixed(2)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Total Físico Declarado:</span>
-                <span className="font-semibold text-gray-800">${Number(resultado.total_fisico_declarado || 0).toFixed(2)}</span>
+              <div className="flex justify-between items-center">
+                <span className="text-on-surface-variant">Total Físico Declarado:</span>
+                <span className="font-bold text-on-surface font-mono">${Number(resultado.total_fisico_declarado || 0).toFixed(2)}</span>
               </div>
-              <div className="flex justify-between pt-2 border-t border-gray-200 font-bold">
-                <span>Diferencia:</span>
-                <span className={Number(resultado.diferencia || 0) === 0 ? 'text-green-600' : Number(resultado.diferencia || 0) > 0 ? 'text-amber-600' : 'text-red-600'}>
+              <div className="flex justify-between items-center pt-2 border-t border-surface-container-high font-bold">
+                <span className="text-on-surface">Diferencia:</span>
+                <span className={`font-mono text-base ${Number(resultado.diferencia || 0) === 0 ? 'text-primary' : Number(resultado.diferencia || 0) > 0 ? 'text-amber-700' : 'text-error'}`}>
                   {Number(resultado.diferencia || 0) > 0 ? `+$${Number(resultado.diferencia || 0).toFixed(2)}` : `-$${Math.abs(Number(resultado.diferencia || 0)).toFixed(2)}`}
                 </span>
               </div>
             </div>
 
             {resultado.requiere_auditoria && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-xs p-3 rounded-lg mb-6 text-left">
+              <div className="bg-error-container/30 border border-error-container text-on-error-container text-xs p-3.5 rounded-2xl mb-6 text-left font-medium">
                 <strong>Alerta de Seguridad:</strong> La diferencia supera la tolerancia máxima ($5.00). Se ha generado un registro en la Bitácora de Auditoría Forense y se notificó al Supervisor de Turno.
               </div>
             )}
 
             <div className="space-y-3">
               {corteZError && (
-                <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-left text-xs font-semibold text-red-700">
+                <p role="alert" className="rounded-2xl border border-error-container bg-error-container/30 p-3 text-left text-xs font-semibold text-on-error-container">
                   {corteZError}
                 </p>
               )}
               <button
                 onClick={() => cargarCorteZ(resultado.sesion_caja_id)}
                 disabled={loadingCorteZ}
-                className="w-full py-3 bg-quantix-600 hover:bg-quantix-700 text-white font-bold rounded-xl shadow-lg transition-all text-sm flex items-center justify-center gap-2"
+                className="w-full py-3.5 px-6 bg-primary hover:opacity-95 text-on-primary font-title-md text-body-sm font-bold rounded-full shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {loadingCorteZ ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -406,7 +410,7 @@ export default function ArqueoCiegoModal({ isOpen, onClose }: Props) {
 
               <button
                 onClick={handleFinalizar}
-                className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl text-sm transition-all"
+                className="w-full py-3 px-6 bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-title-md text-body-sm font-semibold rounded-full transition-all cursor-pointer"
               >
                 Aceptar y Salir de Turno
               </button>
@@ -415,10 +419,10 @@ export default function ArqueoCiegoModal({ isOpen, onClose }: Props) {
         ) : (
           /* VISTA 3: ACTA Y COMPROBANTE OFICIAL DE CORTE Z (IMPRIMIBLE / DESCARGABLE) */
           <div>
-            <div className="flex items-center justify-between pb-3 border-b border-gray-200 mb-4 no-print">
+            <div className="flex items-center justify-between pb-3 border-b border-surface-container-high/60 mb-4 no-print">
               <button
                 onClick={() => setMostrarCorteZ(false)}
-                className="flex items-center gap-1.5 text-xs font-bold text-gray-600 hover:text-gray-900 bg-gray-100 px-3 py-1.5 rounded-lg transition-colors"
+                className="flex items-center gap-1.5 text-xs font-bold text-on-surface-variant hover:text-on-surface bg-surface-container-high hover:bg-surface-container-highest px-4 py-2 rounded-full transition-colors cursor-pointer"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 Volver al Resumen
@@ -427,25 +431,25 @@ export default function ArqueoCiegoModal({ isOpen, onClose }: Props) {
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleDescargar}
-                  className="flex items-center gap-1.5 text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-all shadow-xs"
+                  className="flex items-center gap-1.5 text-xs font-bold bg-surface-container-low text-on-surface border border-surface-container-high hover:bg-surface-container px-4 py-2 rounded-full transition-all shadow-xs cursor-pointer"
                   title="Descargar comprobante en texto"
                 >
-                  {descargado ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Download className="w-3.5 h-3.5" />}
+                  {descargado ? <Check className="w-3.5 h-3.5 text-primary" /> : <Download className="w-3.5 h-3.5" />}
                   {descargado ? '¡Descargado!' : 'Descargar'}
                 </button>
 
                 <button
                   onClick={handleImprimir}
-                  className="flex items-center gap-1.5 text-xs font-bold bg-gray-900 text-white hover:bg-gray-800 px-3.5 py-1.5 rounded-lg transition-all shadow-sm"
+                  className="flex items-center gap-1.5 text-xs font-bold bg-primary text-on-primary hover:opacity-95 px-5 py-2 rounded-full transition-all shadow-md cursor-pointer"
                   title="Imprimir acta oficial"
                 >
                   <Printer className="w-3.5 h-3.5" />
-                  Imprimir Comprobante
+                  Imprimir
                 </button>
 
                 <button
                   onClick={handleFinalizar}
-                  className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+                  className="p-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-full transition-colors cursor-pointer"
                   title="Cerrar modal"
                 >
                   <X className="w-5 h-5" />
@@ -457,17 +461,17 @@ export default function ArqueoCiegoModal({ isOpen, onClose }: Props) {
             {corteZ && (
               <div 
                 id="corte-z-imprimible"
-                className="bg-white border-2 border-dashed border-gray-300 rounded-xl p-5 font-mono text-xs text-gray-800 leading-relaxed shadow-inner"
+                className="bg-white border-2 border-dashed border-gray-300 rounded-2xl p-6 font-mono text-xs text-gray-800 leading-relaxed shadow-inner select-none"
               >
                 {/* Cabecera Fiscal */}
                 <div className="text-center pb-4 border-b border-gray-200">
                   <div className="flex items-center justify-center gap-2 font-black text-sm tracking-widest uppercase text-gray-900">
-                    <FileText className="w-4 h-4 text-quantix-600" />
+                    <FileText className="w-4 h-4 text-emerald-700" />
                     QUANTIX ENTERPRISE RETAIL
                   </div>
                   <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-0.5">SISTEMA FISCAL POS • LIBRO DE CAJA</p>
                   <h2 className="text-base font-black text-gray-900 mt-2 tracking-tight">ACTA DE CIERRE DIARIO (CORTE Z)</h2>
-                  <span className="inline-block px-3 py-0.5 mt-1 bg-gray-100 border border-gray-300 rounded text-[11px] font-bold text-gray-800">
+                  <span className="inline-block px-3 py-0.5 mt-1 bg-gray-100 border border-gray-300 rounded-full text-[11px] font-bold text-gray-800">
                     FOLIO: {corteZ.folio_corte}
                   </span>
                 </div>
@@ -538,7 +542,7 @@ export default function ArqueoCiegoModal({ isOpen, onClose }: Props) {
                 </div>
 
                 {/* Arqueo Ciego y Conciliación */}
-                <div className="py-3 border-b border-gray-200 space-y-1 text-[11px] bg-gray-50/70 p-2.5 rounded-lg my-2">
+                <div className="py-3 border-b border-gray-200 space-y-1 text-[11px] bg-gray-50/70 p-3 rounded-xl my-2">
                   <div className="font-bold text-gray-900 uppercase text-[10px] tracking-wider mb-1">Auditoría de Gaveta (Arqueo Ciego)</div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Saldo Teórico Esperado:</span>
@@ -594,7 +598,7 @@ export default function ArqueoCiegoModal({ isOpen, onClose }: Props) {
             <div className="mt-5 flex justify-end no-print">
               <button
                 onClick={handleFinalizar}
-                className="px-6 py-2.5 bg-quantix-600 hover:bg-quantix-700 text-white font-bold rounded-xl text-xs shadow-md transition-all"
+                className="px-6 py-3 bg-primary hover:opacity-95 text-on-primary font-title-md text-body-sm font-bold rounded-full shadow-md hover:shadow-lg transition-all cursor-pointer"
               >
                 Cerrar Turno y Continuar
               </button>

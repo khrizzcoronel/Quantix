@@ -704,6 +704,8 @@ async def listar_ordenes_compra(
                 producto_nombre=d.producto.nombre if d.producto else None,
                 producto_sku=d.producto.sku if d.producto else None,
                 cantidad_solicitada=d.cantidad_solicitada,
+                cantidad_recibida=d.cantidad_recibida or Decimal("0.00"),
+                cantidad_pendiente=max(Decimal("0.00"), d.cantidad_solicitada - (d.cantidad_recibida or Decimal("0.00"))),
                 costo_unitario_pactado=d.costo_unitario_pactado,
                 subtotal=Decimal(str(round(d.cantidad_solicitada * d.costo_unitario_pactado, 2)))
             )
@@ -946,6 +948,8 @@ async def obtener_orden_compra_detalle(orden_id: UUID, db: AsyncSession) -> Orde
             producto_nombre=d.producto.nombre if d.producto else None,
             producto_sku=d.producto.sku if d.producto else None,
             cantidad_solicitada=d.cantidad_solicitada,
+            cantidad_recibida=d.cantidad_recibida or Decimal("0.00"),
+            cantidad_pendiente=max(Decimal("0.00"), d.cantidad_solicitada - (d.cantidad_recibida or Decimal("0.00"))),
             costo_unitario_pactado=d.costo_unitario_pactado,
             subtotal=Decimal(str(round(d.cantidad_solicitada * d.costo_unitario_pactado, 2)))
         )
@@ -1050,7 +1054,7 @@ async def recibir_orden(
         raise HTTPException(status_code=404, detail="Orden de compra no encontrada")
         
     if orden.estado in [EstadoOrdenCompra.RECIBIDA, EstadoOrdenCompra.CANCELADA]:
-        raise HTTPException(status_code=400, detail="La orden ya fue recibida o cancelada previamente")
+        raise HTTPException(status_code=400, detail="La orden ya fue recibida en su totalidad o cancelada previamente")
         
     req_data = req or RecepcionOrdenRequest()
     lotes_creados = []
@@ -1064,7 +1068,18 @@ async def recibir_orden(
                 raise HTTPException(status_code=400, detail=f"Producto con ID {item.producto_id} no encontrado")
             
             det_orig = detalles_dict.get(item.producto_id)
-            cant = item.cantidad_recibida or (det_orig.cantidad_solicitada if det_orig else Decimal("1"))
+            if not det_orig:
+                continue
+
+            pendiente = max(Decimal("0.00"), det_orig.cantidad_solicitada - (det_orig.cantidad_recibida or Decimal("0.00")))
+            cant_ahora = item.cantidad_recibida if item.cantidad_recibida is not None else pendiente
+            if cant_ahora <= Decimal("0.00"):
+                continue
+
+            # Acumular cantidad recibida en el detalle
+            recibida_previa = det_orig.cantidad_recibida or Decimal("0.00")
+            det_orig.cantidad_recibida = recibida_previa + cant_ahora
+
             costo = item.costo_unitario_real if item.costo_unitario_real is not None else (det_orig.costo_unitario_pactado if det_orig else prod.costo_base)
             
             codigo = (item.codigo_lote or "").strip()
@@ -1077,8 +1092,8 @@ async def recibir_orden(
                 producto_id=item.producto_id,
                 orden_compra_id=orden.id,
                 codigo_lote=codigo,
-                cantidad_inicial=cant,
-                cantidad_disponible=cant,
+                cantidad_inicial=cant_ahora,
+                cantidad_disponible=cant_ahora,
                 costo_unitario=costo,
                 fecha_vencimiento=vencimiento,
                 estado=EstadoLote.ACTIVO
@@ -1086,15 +1101,21 @@ async def recibir_orden(
             db.add(nuevo_lote)
             lotes_creados.append(nuevo_lote)
     else:
+        # Recepción total del saldo pendiente de cada ítem
         for det in orden.detalles:
+            pendiente = max(Decimal("0.00"), det.cantidad_solicitada - (det.cantidad_recibida or Decimal("0.00")))
+            if pendiente <= Decimal("0.00"):
+                continue
+
+            det.cantidad_recibida = det.cantidad_solicitada
             codigo = f"SAN-{hoy_code}-{uuid.uuid4().hex[:6].upper()}"
             vencimiento = req_data.fecha_vencimiento_general or (date.today() + timedelta(days=180))
             nuevo_lote = LoteInventario(
                 producto_id=det.producto_id,
                 orden_compra_id=orden.id,
                 codigo_lote=codigo,
-                cantidad_inicial=det.cantidad_solicitada,
-                cantidad_disponible=det.cantidad_solicitada,
+                cantidad_inicial=pendiente,
+                cantidad_disponible=pendiente,
                 costo_unitario=det.costo_unitario_pactado,
                 fecha_vencimiento=vencimiento,
                 estado=EstadoLote.ACTIVO
@@ -1102,19 +1123,38 @@ async def recibir_orden(
             db.add(nuevo_lote)
             lotes_creados.append(nuevo_lote)
 
-    orden.estado = EstadoOrdenCompra.RECIBIDA
+    if not lotes_creados:
+        raise HTTPException(status_code=400, detail="No se especificó ninguna cantidad válida pendiente por recibir")
+
+    # Evaluar si la orden fue completada al 100% o quedó en entrega parcial
+    todas_completadas = True
+    al_menos_una_recibida = False
+    for det in orden.detalles:
+        recibida = det.cantidad_recibida or Decimal("0.00")
+        if recibida > Decimal("0.00"):
+            al_menos_una_recibida = True
+        if recibida < det.cantidad_solicitada:
+            todas_completadas = False
+
+    if todas_completadas:
+        orden.estado = EstadoOrdenCompra.RECIBIDA
+    elif al_menos_una_recibida:
+        orden.estado = EstadoOrdenCompra.RECIBIDA_PARCIAL
+
     orden.fecha_recepcion = datetime.utcnow()
     if req_data.notas:
         orden.notas = f"{orden.notas or ''} | Recepción: {req_data.notas}".strip(" |")
     
+    es_parcial = orden.estado == EstadoOrdenCompra.RECIBIDA_PARCIAL
     auditoria = AuditoriaEvento(
         usuario_id=current_user.id,
-        tipo_evento="RECEPCION_ORDEN_COMPRA",
-        descripcion=f"Recepción de orden de compra {orden.id} con {len(lotes_creados)} lotes sanitarios generados",
+        tipo_evento="RECEPCION_ORDEN_COMPRA_PARCIAL" if es_parcial else "RECEPCION_ORDEN_COMPRA_TOTAL",
+        descripcion=f"Recepción {'parcial' if es_parcial else 'completa'} de orden {orden.id}: {len(lotes_creados)} lotes ingresados",
         gravedad="INFO",
         detalle_json={
             "orden_id": str(orden.id),
-            "total_lotes": len(lotes_creados),
+            "estado_resultante": orden.estado.value,
+            "total_lotes_generados": len(lotes_creados),
             "lotes": [l.codigo_lote for l in lotes_creados]
         }
     )

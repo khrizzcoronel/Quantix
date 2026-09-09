@@ -7,9 +7,11 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { exportToCSV, formatDate, formatBoolean } from '../utils/exportUtils';
+import { mostrarToast } from '../hooks/useWebSocket';
 
 interface Cliente {
   id: string;
+  cedula?: string | null;
   telefono: string;
   nombre: string;
   email: string | null;
@@ -105,6 +107,7 @@ export default function Clientes() {
   const [showModalCrearCliente, setShowModalCrearCliente] = useState(false);
   const [clienteAEditar, setClienteAEditar] = useState<Cliente | null>(null);
   const [formCliente, setFormCliente] = useState({
+    cedula: '',
     nombre: '',
     telefono: '',
     email: '',
@@ -124,9 +127,14 @@ export default function Clientes() {
 
   const [notificacion, setNotificacion] = useState<string | null>(null);
 
-  const mostrarAviso = (msg: string) => {
+  const mostrarAviso = (msg: string, severidad: 'SUCCESS' | 'CRITICO' | 'WARNING' | 'INFO' = 'SUCCESS') => {
     setNotificacion(msg);
-    setTimeout(() => setNotificacion(null), 3000);
+    mostrarToast({
+      titulo: severidad === 'CRITICO' ? 'Error en Clientes / CRM' : 'Clientes & CRM',
+      mensaje: msg,
+      severidad,
+    });
+    setTimeout(() => setNotificacion(null), 3500);
   };
 
   const cargarClientes = useCallback(async (query = '') => {
@@ -215,16 +223,17 @@ export default function Clientes() {
     e.preventDefault();
     try {
       await api.post('/crm/clientes', {
-        nombre: formCliente.nombre,
-        telefono: formCliente.telefono,
-        email: formCliente.email || null,
+        cedula: formCliente.cedula.trim() || null,
+        nombre: formCliente.nombre.trim(),
+        telefono: formCliente.telefono.trim(),
+        email: formCliente.email.trim() || null,
       });
       mostrarAviso('¡Cliente registrado exitosamente!');
       setShowModalCrearCliente(false);
-      setFormCliente({ nombre: '', telefono: '', email: '' });
+      setFormCliente({ cedula: '', nombre: '', telefono: '', email: '' });
       cargarClientes();
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Error al registrar cliente');
+      mostrarAviso(err.response?.data?.detail || 'Error al registrar cliente', 'CRITICO');
     }
   };
 
@@ -233,15 +242,17 @@ export default function Clientes() {
     if (!clienteAEditar) return;
     try {
       await api.put(`/crm/clientes/${clienteAEditar.id}`, {
-        nombre: formCliente.nombre,
-        telefono: formCliente.telefono,
-        email: formCliente.email || null,
+        cedula: formCliente.cedula.trim() || null,
+        nombre: formCliente.nombre.trim(),
+        telefono: formCliente.telefono.trim(),
+        email: formCliente.email.trim() || null,
       });
       mostrarAviso('¡Datos de cliente actualizados!');
       setClienteAEditar(null);
+      setFormCliente({ cedula: '', nombre: '', telefono: '', email: '' });
       cargarClientes();
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Error al actualizar cliente');
+      mostrarAviso(err.response?.data?.detail || 'Error al actualizar cliente', 'CRITICO');
     }
   };
 
@@ -262,7 +273,7 @@ export default function Clientes() {
         setDetalleCliente({ ...detalleCliente, activo: !cliente.activo });
       }
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Error al cambiar estado del cliente');
+      mostrarAviso(err.response?.data?.detail || 'Error al cambiar estado del cliente', 'CRITICO');
     }
   };
 
@@ -291,7 +302,7 @@ export default function Clientes() {
       });
       cargarCupones();
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Error al emitir cupón');
+      mostrarAviso(err.response?.data?.detail || 'Error al emitir cupón', 'CRITICO');
     }
   };
 
@@ -305,7 +316,7 @@ export default function Clientes() {
         setDetalleCupon({ ...detalleCupon, estado: 'EXPIRADO' });
       }
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Error al expirar cupón');
+      mostrarAviso(err.response?.data?.detail || 'Error al expirar cupón', 'CRITICO');
     }
   };
 
@@ -339,7 +350,7 @@ export default function Clientes() {
       });
       cargarPromociones();
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Error al crear la regla de promoción');
+      mostrarAviso(err.response?.data?.detail || 'Error al crear la regla de promoción', 'CRITICO');
     }
   };
 
@@ -355,32 +366,31 @@ export default function Clientes() {
         await api.put(`/promociones/${regla.id}`, { activo: true });
         mostrarAviso('¡Regla reactivada con éxito!');
       }
-      cargarPromociones();
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Error al modificar estado de la regla');
+      mostrarAviso(err.response?.data?.detail || 'Error al modificar estado de la regla', 'CRITICO');
     }
   };
 
   return (
-    <div className="p-8 h-full overflow-y-auto bg-gray-50">
+    <div className="p-6 md:p-8 h-full overflow-y-auto bg-background text-on-surface select-none">
       
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-surface-container-high/60 pb-6 mb-8">
         <div>
           <div className="flex items-center gap-2">
-            <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-black uppercase tracking-wider">
-              Operativo • Piso & Venta
+            <span className="px-3 py-1 bg-primary-fixed/30 text-on-primary-fixed-variant rounded-full font-label-caps text-[10px] font-bold uppercase tracking-wider">
+              Nivel Operativo • Piso & Fidelización
             </span>
           </div>
-          <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight mt-2">
-            Clientes y Cupones
+          <h2 className="font-headline-xl text-2xl md:text-3xl font-bold text-on-surface tracking-tight mt-2">
+            Clientes, Fidelización & Promociones
           </h2>
-          <p className="text-gray-500 mt-0.5 font-medium text-sm">
-            Fidelización, cuentas de clientes, puntos de lealtad y emisión de cupones con baja lógica
+          <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+            Directorio maestro RFM, monedero de lealtad, emisión de cupones y reglas de combo
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 flex-wrap">
           <button
             onClick={() => {
               cargarClientes();
@@ -388,10 +398,10 @@ export default function Clientes() {
               cargarPromociones();
             }}
             disabled={loading}
-            className="flex items-center gap-2 px-3.5 py-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl font-bold text-xs shadow-sm transition-all"
+            className="flex items-center gap-2 px-4 py-2.5 bg-surface-container-lowest border border-surface-container-high hover:bg-surface-container text-on-surface rounded-full font-title-md text-body-sm shadow-xs transition-all cursor-pointer disabled:opacity-50"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            Refrescar
+            <RefreshCw className={`w-3.5 h-3.5 text-primary ${loading ? 'animate-spin' : ''}`} />
+            <span>Refrescar</span>
           </button>
 
           <button
@@ -440,23 +450,23 @@ export default function Clientes() {
                 });
               }
             }}
-            className="flex items-center gap-2 px-3.5 py-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2.5 bg-surface-container-lowest border border-surface-container-high text-on-surface hover:bg-surface-container rounded-full font-title-md text-body-sm shadow-xs transition-all cursor-pointer"
             title="Exportar registros a CSV / Excel"
           >
-            <Download className="w-3.5 h-3.5 text-quantix-600" />
+            <Download className="w-3.5 h-3.5 text-primary" />
             <span>Exportar CSV</span>
           </button>
 
           {activeTab === 'CLIENTES' ? (
             <button
               onClick={() => {
-                setFormCliente({ nombre: '', telefono: '', email: '' });
+                setFormCliente({ cedula: '', nombre: '', telefono: '', email: '' });
                 setShowModalCrearCliente(true);
               }}
-              className="flex items-center gap-2 px-4 py-2.5 bg-quantix-600 hover:bg-quantix-700 text-white rounded-xl font-bold text-xs shadow-md transition-all active:scale-95"
+              className="flex items-center gap-2 px-5 py-2.5 bg-primary-container hover:bg-primary-container/90 text-on-primary-container rounded-full font-title-md text-body-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer"
             >
               <UserPlus className="w-4 h-4" />
-              Nuevo Cliente
+              <span>Nuevo Cliente</span>
             </button>
           ) : activeTab === 'CUPONES' ? (
             <button
@@ -470,123 +480,123 @@ export default function Clientes() {
                 }
                 setShowModalCrearCupon(true);
               }}
-              className="flex items-center gap-2 px-4 py-2.5 bg-quantix-600 hover:bg-quantix-700 text-white rounded-xl font-bold text-xs shadow-md transition-all active:scale-95"
+              className="flex items-center gap-2 px-5 py-2.5 bg-primary-container hover:bg-primary-container/90 text-on-primary-container rounded-full font-title-md text-body-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              Emitir Cupón
+              <span>Emitir Cupón</span>
             </button>
           ) : (
             <button
               onClick={() => {
                 setShowModalCrearPromo(true);
               }}
-              className="flex items-center gap-2 px-4 py-2.5 bg-quantix-600 hover:bg-quantix-700 text-white rounded-xl font-bold text-xs shadow-md transition-all active:scale-95"
+              className="flex items-center gap-2 px-5 py-2.5 bg-primary-container hover:bg-primary-container/90 text-on-primary-container rounded-full font-title-md text-body-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer"
             >
               <Sparkles className="w-4 h-4" />
-              Nueva Promoción
+              <span>Nueva Promoción</span>
             </button>
           )}
         </div>
       </div>
 
       {notificacion && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm p-4 rounded-2xl mb-6 flex items-center gap-2 shadow-sm animate-in fade-in">
-          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-          <span className="font-semibold">{notificacion}</span>
+        <div className="bg-primary-fixed/30 border border-primary-fixed text-on-primary-fixed-variant text-body-sm p-4 rounded-2xl mb-6 flex items-center gap-2.5 shadow-sm animate-in fade-in">
+          <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
+          <span className="font-bold">{notificacion}</span>
         </div>
       )}
 
       {/* KPI Cards CRM */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex items-center justify-between">
+        <div className="bg-surface-container-lowest p-6 rounded-3xl shadow-sm border border-surface-container-high/60 flex items-center justify-between">
           <div>
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Clientes Registrados</span>
-            <p className="text-2xl font-black text-gray-900 mt-1">{clientes.length} Clientes</p>
-            <span className="text-xs text-emerald-600 font-semibold">
+            <span className="font-label-caps text-[10px] font-bold text-outline uppercase tracking-wider">Clientes Registrados</span>
+            <p className="font-headline-md text-2xl font-bold text-on-surface mt-1">{clientes.length} Clientes</p>
+            <span className="font-body-sm text-[11px] text-primary font-semibold">
               {clientes.filter(c => c.activo).length} Activos en plataforma
             </span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+          <div className="w-12 h-12 rounded-2xl bg-primary-fixed/30 flex items-center justify-center text-primary">
             <Users className="w-6 h-6" />
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex items-center justify-between">
+        <div className="bg-surface-container-lowest p-6 rounded-3xl shadow-sm border border-surface-container-high/60 flex items-center justify-between">
           <div>
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Puntos de Lealtad</span>
-            <p className="text-2xl font-black text-quantix-600 mt-1">
+            <span className="font-label-caps text-[10px] font-bold text-outline uppercase tracking-wider">Puntos de Lealtad</span>
+            <p className="font-headline-md text-2xl font-bold text-primary mt-1">
               {clientes.reduce((acc, c) => acc + (c.puntos_acumulados || 0), 0)} pts
             </p>
-            <span className="text-xs text-gray-400 font-medium">Acumulados en monedero</span>
+            <span className="font-body-sm text-[11px] text-outline font-medium">Acumulados en monedero</span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-quantix-50 flex items-center justify-center text-quantix-600">
+          <div className="w-12 h-12 rounded-2xl bg-primary-fixed/20 flex items-center justify-center text-primary">
             <Award className="w-6 h-6" />
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex items-center justify-between">
+        <div className="bg-surface-container-lowest p-6 rounded-3xl shadow-sm border border-surface-container-high/60 flex items-center justify-between">
           <div>
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Cupones Vigentes</span>
-            <p className="text-2xl font-black text-purple-600 mt-1">
+            <span className="font-label-caps text-[10px] font-bold text-tertiary uppercase tracking-wider">Cupones Vigentes</span>
+            <p className="font-headline-md text-2xl font-bold text-tertiary mt-1">
               {cupones.filter(cp => cp.estado === 'EMITIDO').length} Cupones
             </p>
-            <span className="text-xs text-purple-600 font-semibold">Disponibles para canje en POS</span>
+            <span className="font-body-sm text-[11px] text-outline font-medium">Listos para canje en POS</span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600">
+          <div className="w-12 h-12 rounded-2xl bg-tertiary-fixed flex items-center justify-center text-on-tertiary-fixed">
             <Tag className="w-6 h-6" />
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex items-center justify-between">
+        <div className="bg-surface-container-lowest p-6 rounded-3xl shadow-sm border border-surface-container-high/60 flex items-center justify-between">
           <div>
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Promociones Activas</span>
-            <p className="text-2xl font-black text-amber-600 mt-1">
+            <span className="font-label-caps text-[10px] font-bold text-secondary uppercase tracking-wider">Promociones Activas</span>
+            <p className="font-headline-md text-2xl font-bold text-secondary mt-1">
               {reglasPromocion.filter(r => r.activo).length} Reglas
             </p>
-            <span className="text-xs text-amber-600 font-semibold">Motor de Combos en Caja</span>
+            <span className="font-body-sm text-[11px] text-outline font-medium">Motor de Combos en Caja</span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
+          <div className="w-12 h-12 rounded-2xl bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed">
             <Sparkles className="w-6 h-6" />
           </div>
         </div>
       </div>
 
-      {/* Selector de Pestañas */}
-      <div className="flex border-b border-gray-200 mb-6 gap-2">
+      {/* Selector de Pestañas — SegmentedControl Neo-Retail */}
+      <div className="inline-flex p-1 bg-surface-container-low rounded-full gap-1 mb-6">
         <button
           onClick={() => setActiveTab('CLIENTES')}
-          className={`pb-3 px-4 font-bold text-sm border-b-2 transition-all flex items-center gap-2 ${
+          className={`px-5 py-2 rounded-full font-title-md text-body-sm transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === 'CLIENTES'
-              ? 'border-quantix-600 text-quantix-600'
-              : 'border-transparent text-gray-400 hover:text-gray-600'
+              ? 'bg-surface-container-lowest text-on-surface shadow-xs font-semibold'
+              : 'text-on-surface-variant hover:text-on-surface'
           }`}
         >
           <Users className="w-4 h-4" />
-          Directorio de Clientes ({clientes.length})
+          <span>Directorio de Clientes ({clientes.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('CUPONES')}
-          className={`pb-3 px-4 font-bold text-sm border-b-2 transition-all flex items-center gap-2 ${
+          className={`px-5 py-2 rounded-full font-title-md text-body-sm transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === 'CUPONES'
-              ? 'border-quantix-600 text-quantix-600'
-              : 'border-transparent text-gray-400 hover:text-gray-600'
+              ? 'bg-surface-container-lowest text-on-surface shadow-xs font-semibold'
+              : 'text-on-surface-variant hover:text-on-surface'
           }`}
         >
           <Tag className="w-4 h-4" />
-          Cupones de Descuento ({cupones.length})
+          <span>Cupones de Descuento ({cupones.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('PROMOCIONES')}
-          className={`pb-3 px-4 font-bold text-sm border-b-2 transition-all flex items-center gap-2 ${
+          className={`px-5 py-2 rounded-full font-title-md text-body-sm transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === 'PROMOCIONES'
-              ? 'border-quantix-600 text-quantix-600'
-              : 'border-transparent text-gray-400 hover:text-gray-600'
+              ? 'bg-surface-container-lowest text-on-surface shadow-xs font-semibold'
+              : 'text-on-surface-variant hover:text-on-surface'
           }`}
         >
           <Sparkles className="w-4 h-4" />
-          Promociones & Combos ({reglasPromocion.length})
+          <span>Motor de Promociones ({reglasPromocion.length})</span>
         </button>
       </div>
 
@@ -651,7 +661,12 @@ export default function Clientes() {
                     className="hover:bg-quantix-50/40 cursor-pointer transition-colors group"
                   >
                     <td className="py-3.5 px-4 font-bold text-gray-900 group-hover:text-quantix-700">
-                      {c.nombre}
+                      <div>{c.nombre}</div>
+                      {c.cedula && (
+                        <div className="text-[11px] font-mono text-gray-500 font-normal">
+                          Cédula: {c.cedula}
+                        </div>
+                      )}
                     </td>
                     <td className="py-3.5 px-4 font-mono text-gray-700 font-semibold">
                       {c.telefono}
@@ -682,6 +697,7 @@ export default function Clientes() {
                           onClick={() => {
                             setClienteAEditar(c);
                             setFormCliente({
+                              cedula: c.cedula || '',
                               nombre: c.nombre,
                               telefono: c.telefono,
                               email: c.email || '',
@@ -907,42 +923,47 @@ export default function Clientes() {
 
       {/* ================= MODAL DETALLE CLIENTE & HISTORIAL ================= */}
       {detalleCliente && (
-        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 border border-gray-100 max-h-[85vh] flex flex-col animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
-                  <Users className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-gray-900">{detalleCliente.nombre}</h3>
-                  <span className="text-xs text-gray-400 font-mono">ID: {detalleCliente.id}</span>
-                </div>
+        <div className="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden border border-surface-container-high/40 animate-in zoom-in-95 max-h-[85vh] flex flex-col">
+            <div className="p-6 border-b border-surface-container-low flex justify-between items-start bg-surface-container-low/50">
+              <div>
+                <span className="px-2.5 py-0.5 bg-primary text-on-primary rounded-full font-label-caps text-[10px] font-bold uppercase tracking-wider">
+                  Ficha de Cliente CRM
+                </span>
+                <h3 className="font-headline-md text-title-lg font-bold text-on-surface mt-1.5">{detalleCliente.nombre}</h3>
+                <p className="font-body-sm font-mono text-outline">ID: {detalleCliente.id}</p>
               </div>
-              <button onClick={() => setDetalleCliente(null)} className="text-gray-400 hover:text-gray-600">
+              <button 
+                onClick={() => setDetalleCliente(null)} 
+                className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="py-4 space-y-4 overflow-y-auto flex-1 text-xs">
+            <div className="p-6 space-y-4 overflow-y-auto flex-1 text-body-sm">
               {/* Tarjetas de Datos de Contacto y Fidelización */}
-              <div className="grid grid-cols-2 gap-3 bg-gray-50 p-3.5 rounded-xl border border-gray-100">
+              <div className="grid grid-cols-2 gap-3 bg-surface-container-low p-4 rounded-2xl border border-surface-container-high/40">
                 <div>
-                  <span className="text-gray-400 font-medium">Teléfono / Identificador en Caja:</span>
-                  <p className="font-bold text-gray-900 mt-0.5 text-sm">{detalleCliente.telefono}</p>
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Cédula / Identificación:</span>
+                  <p className="font-title-md text-body-sm font-mono font-bold text-on-surface">{detalleCliente.cedula || 'No registrada'}</p>
                 </div>
                 <div>
-                  <span className="text-gray-400 font-medium">Correo Electrónico:</span>
-                  <p className="font-semibold text-gray-800 mt-0.5">{detalleCliente.email || 'Sin correo asociado'}</p>
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Teléfono / Celular:</span>
+                  <p className="font-title-md text-body-sm font-mono font-bold text-on-surface">{detalleCliente.telefono}</p>
                 </div>
                 <div>
-                  <span className="text-gray-400 font-medium">Monedero de Lealtad:</span>
-                  <p className="font-black text-quantix-600 mt-0.5 text-sm">{detalleCliente.puntos_acumulados} puntos</p>
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Correo Electrónico:</span>
+                  <p className="font-title-md text-body-sm font-semibold text-on-surface">{detalleCliente.email || 'Sin correo asociado'}</p>
                 </div>
                 <div>
-                  <span className="text-gray-400 font-medium">Estado de Cuenta:</span>
-                  <span className={`inline-block mt-0.5 px-2.5 py-0.5 rounded-full font-bold ${
-                    detalleCliente.activo ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Monedero de Lealtad:</span>
+                  <p className="font-headline-md text-title-md font-black text-primary">{detalleCliente.puntos_acumulados} puntos</p>
+                </div>
+                <div className="col-span-2">
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Estado de Cuenta:</span>
+                  <span className={`inline-block px-2.5 py-0.5 rounded-full font-label-caps text-[10px] font-bold uppercase ${
+                    detalleCliente.activo ? 'bg-primary-fixed/30 text-on-primary-fixed-variant' : 'bg-surface-container-highest text-on-surface-variant'
                   }`}>
                     {detalleCliente.activo ? 'Activo' : 'Inactivo (Baja Lógica)'}
                   </span>
@@ -952,33 +973,33 @@ export default function Clientes() {
               {/* Historial de Compras */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-bold text-gray-700 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
-                    <ShoppingBag className="w-3.5 h-3.5 text-quantix-600" />
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase tracking-wider flex items-center gap-1.5">
+                    <ShoppingBag className="w-3.5 h-3.5 text-primary" />
                     Historial de Compras & Tickets
                   </span>
-                  <span className="text-gray-400 text-[11px]">{historialVentas.length} Tickets</span>
+                  <span className="font-mono text-[11px] text-outline">{historialVentas.length} Tickets</span>
                 </div>
 
                 {loadingHistorial ? (
-                  <div className="text-center py-6 text-gray-400">Cargando tickets...</div>
+                  <div className="text-center py-6 text-on-surface-variant">Cargando tickets...</div>
                 ) : historialVentas.length === 0 ? (
-                  <div className="text-center py-6 bg-gray-50 rounded-xl text-gray-400 border border-gray-100">
+                  <div className="text-center py-6 bg-surface-container-low rounded-2xl text-on-surface-variant border border-surface-container-high/40">
                     Este cliente no tiene compras previas registradas.
                   </div>
                 ) : (
-                  <div className="border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100 max-h-48 overflow-y-auto">
+                  <div className="border border-surface-container-high/40 rounded-2xl overflow-hidden divide-y divide-surface-container-low max-h-48 overflow-y-auto">
                     {historialVentas.map((v) => (
-                      <div key={v.id} className="p-2.5 flex justify-between items-center bg-white hover:bg-gray-50">
+                      <div key={v.id} className="p-3 flex justify-between items-center bg-surface-container-lowest hover:bg-surface-container-low/70 transition-colors">
                         <div>
-                          <span className="font-bold font-mono text-gray-900 block">{v.folio_ticket}</span>
-                          <span className="text-[10px] text-gray-400">
+                          <span className="font-bold font-mono text-on-surface block text-body-sm">{v.folio_ticket}</span>
+                          <span className="text-[10px] text-outline">
                             {new Date(v.fecha_hora).toLocaleString()}
                           </span>
                         </div>
                         <div className="text-right">
-                          <span className="font-black text-gray-900">${Number(v.total_pagar).toFixed(2)}</span>
-                          <span className={`block text-[10px] font-bold ${
-                            v.estado === 'COMPLETADA' ? 'text-emerald-600' : 'text-red-600'
+                          <span className="font-headline-md font-bold text-on-surface block text-body-sm">${Number(v.total_pagar).toFixed(2)}</span>
+                          <span className={`inline-block text-[10px] font-bold font-label-caps uppercase ${
+                            v.estado === 'COMPLETADA' ? 'text-primary' : 'text-error'
                           }`}>
                             {v.estado}
                           </span>
@@ -990,20 +1011,20 @@ export default function Clientes() {
               </div>
             </div>
 
-            <div className="pt-3 border-t border-gray-100 flex justify-between items-center">
+            <div className="p-4 bg-surface-container-low/50 border-t border-surface-container-low flex justify-between items-center">
               <button
                 onClick={() => handleBajaLogicaCliente(detalleCliente)}
-                className={`px-3.5 py-2 font-bold text-xs rounded-xl transition-colors ${
+                className={`px-4 py-2 font-title-md text-body-sm font-bold rounded-full cursor-pointer transition-colors shadow-xs ${
                   detalleCliente.activo 
-                    ? 'bg-red-50 hover:bg-red-100 text-red-700 border border-red-200' 
-                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200'
+                    ? 'text-error bg-surface-container-lowest hover:bg-error-container' 
+                    : 'text-primary bg-surface-container-lowest hover:bg-primary-fixed/30'
                 }`}
               >
                 {detalleCliente.activo ? 'Dar de Baja Lógica' : 'Reactivar Cliente'}
               </button>
               <button
                 onClick={() => setDetalleCliente(null)}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl"
+                className="px-4 py-2 font-title-md text-body-sm font-bold text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors"
               >
                 Cerrar
               </button>
@@ -1014,79 +1035,77 @@ export default function Clientes() {
 
       {/* ================= MODAL DETALLE CUPÓN ================= */}
       {detalleCupon && (
-        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-100 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2.5 bg-purple-50 text-purple-600 rounded-xl">
-                  <Tag className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-gray-900">Detalle de Cupón</h3>
-                  <span className="text-xs text-gray-400 font-mono">{detalleCupon.id}</span>
-                </div>
+        <div className="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-surface-container-high/40 animate-in zoom-in-95 flex flex-col">
+            <div className="p-6 border-b border-surface-container-low flex justify-between items-start bg-surface-container-low/50">
+              <div>
+                <span className="px-2.5 py-0.5 bg-secondary text-on-secondary rounded-full font-label-caps text-[10px] font-bold uppercase tracking-wider">
+                  Cupón Promocional
+                </span>
+                <h3 className="font-headline-md text-title-lg font-bold text-on-surface mt-1.5">Detalle de Cupón</h3>
+                <p className="font-body-sm font-mono text-outline">{detalleCupon.id}</p>
               </div>
-              <button onClick={() => setDetalleCupon(null)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setDetalleCupon(null)} className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="py-4 space-y-3 text-xs">
-              <div className="text-center p-4 bg-purple-50 rounded-2xl border border-purple-100">
-                <span className="text-xs text-purple-600 font-bold uppercase tracking-wider block">Código Promocional</span>
-                <span className="text-2xl font-black font-mono text-purple-900 tracking-wider my-1 block">
+            <div className="p-6 space-y-4 text-body-sm">
+              <div className="text-center p-5 bg-surface-container-low rounded-2xl border border-surface-container-high/40">
+                <span className="font-label-caps text-[10px] text-outline font-bold uppercase tracking-wider block">Código Promocional</span>
+                <span className="text-2xl font-black font-mono text-on-surface tracking-wider my-1.5 block">
                   {detalleCupon.codigo}
                 </span>
-                <span className="text-xs font-bold text-purple-700 bg-purple-200/60 px-2.5 py-0.5 rounded-full">
+                <span className="px-3 py-1 font-label-caps text-[11px] font-bold text-on-secondary-container bg-secondary-container rounded-full inline-block">
                   {detalleCupon.descuento_tipo === 'PORCENTAJE' ? `${detalleCupon.descuento_valor}% DE DESCUENTO` : `$${detalleCupon.descuento_valor} OFF DIRECTO`}
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100">
+              <div className="grid grid-cols-2 gap-3 bg-surface-container-low p-4 rounded-2xl border border-surface-container-high/40">
                 <div>
-                  <span className="text-gray-400">Cliente Asignado:</span>
-                  <p className="font-bold text-gray-800 mt-0.5">{detalleCupon.cliente_nombre || 'N/A'}</p>
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Cliente Asignado:</span>
+                  <p className="font-title-md text-body-sm font-bold text-on-surface">{detalleCupon.cliente_nombre || 'N/A'}</p>
                 </div>
                 <div>
-                  <span className="text-gray-400">Tipo:</span>
-                  <p className="font-bold text-gray-800 mt-0.5">{detalleCupon.tipo}</p>
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Tipo:</span>
+                  <p className="font-title-md text-body-sm font-bold text-on-surface">{detalleCupon.tipo}</p>
                 </div>
                 <div>
-                  <span className="text-gray-400">Válido Desde:</span>
-                  <p className="font-semibold text-gray-700 mt-0.5">{detalleCupon.valido_desde}</p>
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Válido Desde:</span>
+                  <p className="font-mono text-body-sm text-on-surface">{detalleCupon.valido_desde}</p>
                 </div>
                 <div>
-                  <span className="text-gray-400">Válido Hasta:</span>
-                  <p className="font-semibold text-gray-700 mt-0.5">{detalleCupon.valido_hasta}</p>
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Válido Hasta:</span>
+                  <p className="font-mono text-body-sm text-on-surface">{detalleCupon.valido_hasta}</p>
                 </div>
               </div>
 
-              <div className="flex justify-between items-center p-3 rounded-xl bg-gray-50 border border-gray-100">
-                <span className="text-gray-500 font-medium">Estado del Cupón:</span>
-                <span className={`px-2.5 py-1 rounded-full font-bold ${
+              <div className="flex justify-between items-center p-4 rounded-2xl bg-surface-container-low border border-surface-container-high/40">
+                <span className="font-label-caps text-[10px] text-outline font-bold uppercase">Estado del Cupón:</span>
+                <span className={`px-2.5 py-0.5 rounded-full font-label-caps text-[10px] font-bold uppercase ${
                   detalleCupon.estado === 'EMITIDO'
-                    ? 'bg-emerald-100 text-emerald-800'
+                    ? 'bg-primary-fixed/30 text-on-primary-fixed-variant'
                     : detalleCupon.estado === 'CANJEADO'
-                    ? 'bg-blue-100 text-blue-800'
-                    : 'bg-gray-100 text-gray-500'
+                    ? 'bg-secondary-fixed/30 text-on-secondary-fixed-variant'
+                    : 'bg-surface-container-highest text-on-surface-variant'
                 }`}>
                   {detalleCupon.estado}
                 </span>
               </div>
             </div>
 
-            <div className="pt-3 border-t border-gray-100 flex justify-between items-center">
+            <div className="p-4 bg-surface-container-low/50 border-t border-surface-container-low flex justify-between items-center">
               {detalleCupon.estado === 'EMITIDO' && (
                 <button
                   onClick={() => handleBajaLogicaCupon(detalleCupon)}
-                  className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs rounded-xl border border-red-200"
+                  className="px-4 py-2 font-title-md text-body-sm font-bold rounded-full text-error bg-surface-container-lowest hover:bg-error-container cursor-pointer transition-colors shadow-xs"
                 >
                   Expirar Cupón (Baja Lógica)
                 </button>
               )}
               <button
                 onClick={() => setDetalleCupon(null)}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl ml-auto"
+                className="px-4 py-2 font-title-md text-body-sm font-bold text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors ml-auto"
               >
                 Cerrar
               </button>
@@ -1097,62 +1116,81 @@ export default function Clientes() {
 
       {/* ================= MODAL CREAR CLIENTE ================= */}
       {showModalCrearCliente && (
-        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-100 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <h3 className="text-base font-bold text-gray-900">Registrar Nuevo Cliente</h3>
-              <button onClick={() => setShowModalCrearCliente(false)} className="text-gray-400 hover:text-gray-600">
+        <div className="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-surface-container-high/40 animate-in zoom-in-95">
+            <div className="p-6 border-b border-surface-container-low flex justify-between items-center bg-surface-container-low/50">
+              <h3 className="font-headline-md text-title-lg font-bold text-on-surface">Registrar Nuevo Cliente</h3>
+              <button onClick={() => setShowModalCrearCliente(false)} className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCrearCliente} className="py-4 space-y-3 text-xs">
+            <form onSubmit={handleCrearCliente} className="p-6 space-y-4 text-body-sm">
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">Nombre Completo *</label>
+                <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                  Cédula / Documento de Identidad
+                </label>
+                <input
+                  type="text"
+                  value={formCliente.cedula}
+                  onChange={(e) => setFormCliente({ ...formCliente, cedula: e.target.value })}
+                  placeholder="Ej. 12345678"
+                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-mono text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40"
+                />
+              </div>
+
+              <div>
+                <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                  Nombre Completo *
+                </label>
                 <input
                   type="text"
                   required
                   value={formCliente.nombre}
                   onChange={(e) => setFormCliente({ ...formCliente, nombre: e.target.value })}
                   placeholder="Ej. Roberto Martínez"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-quantix-500"
+                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-title-md text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">Teléfono Móvil (ID en Caja) *</label>
+                <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                  Teléfono Móvil (ID en Caja) *
+                </label>
                 <input
                   type="tel"
                   required
                   value={formCliente.telefono}
                   onChange={(e) => setFormCliente({ ...formCliente, telefono: e.target.value })}
                   placeholder="Ej. 5512345678"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-quantix-500 font-mono"
+                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-mono text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">Correo Electrónico (Opcional)</label>
+                <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                  Correo Electrónico (Opcional)
+                </label>
                 <input
                   type="email"
                   value={formCliente.email}
                   onChange={(e) => setFormCliente({ ...formCliente, email: e.target.value })}
                   placeholder="cliente@ejemplo.com"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-quantix-500"
+                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-title-md text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40"
                 />
               </div>
 
-              <div className="pt-3 border-t border-gray-100 flex gap-2 justify-end">
+              <div className="pt-3 border-t border-surface-container-low flex gap-2 justify-end">
                 <button
                   type="button"
                   onClick={() => setShowModalCrearCliente(false)}
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl"
+                  className="px-4 py-2 font-title-md text-body-sm font-bold text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-quantix-600 hover:bg-quantix-700 text-white font-bold rounded-xl shadow-sm"
+                  className="px-5 py-2 font-title-md text-body-sm font-bold bg-primary hover:opacity-95 text-on-primary rounded-full cursor-pointer transition-colors shadow-xs"
                 >
                   Guardar Cliente
                 </button>
@@ -1164,59 +1202,78 @@ export default function Clientes() {
 
       {/* ================= MODAL EDITAR CLIENTE ================= */}
       {clienteAEditar && (
-        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-100 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <h3 className="text-base font-bold text-gray-900">Modificar Cliente</h3>
-              <button onClick={() => setClienteAEditar(null)} className="text-gray-400 hover:text-gray-600">
+        <div className="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-surface-container-high/40 animate-in zoom-in-95">
+            <div className="p-6 border-b border-surface-container-low flex justify-between items-center bg-surface-container-low/50">
+              <h3 className="font-headline-md text-title-lg font-bold text-on-surface">Modificar Cliente</h3>
+              <button onClick={() => setClienteAEditar(null)} className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleActualizarCliente} className="py-4 space-y-3 text-xs">
+            <form onSubmit={handleActualizarCliente} className="p-6 space-y-4 text-body-sm">
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">Nombre Completo</label>
+                <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                  Cédula / Documento de Identidad
+                </label>
+                <input
+                  type="text"
+                  value={formCliente.cedula}
+                  onChange={(e) => setFormCliente({ ...formCliente, cedula: e.target.value })}
+                  placeholder="Ej. 12345678"
+                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-mono text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40"
+                />
+              </div>
+
+              <div>
+                <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                  Nombre Completo
+                </label>
                 <input
                   type="text"
                   required
                   value={formCliente.nombre}
                   onChange={(e) => setFormCliente({ ...formCliente, nombre: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-quantix-500"
+                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-title-md text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">Teléfono</label>
+                <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                  Teléfono
+                </label>
                 <input
                   type="tel"
                   required
                   value={formCliente.telefono}
                   onChange={(e) => setFormCliente({ ...formCliente, telefono: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-quantix-500 font-mono"
+                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-mono text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">Correo Electrónico</label>
+                <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                  Correo Electrónico
+                </label>
                 <input
                   type="email"
                   value={formCliente.email}
                   onChange={(e) => setFormCliente({ ...formCliente, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-quantix-500"
+                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-title-md text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40"
                 />
               </div>
 
-              <div className="pt-3 border-t border-gray-100 flex gap-2 justify-end">
+              <div className="pt-3 border-t border-surface-container-low flex gap-2 justify-end">
                 <button
                   type="button"
                   onClick={() => setClienteAEditar(null)}
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl"
+                  className="px-4 py-2 font-title-md text-body-sm font-bold text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-quantix-600 hover:bg-quantix-700 text-white font-bold rounded-xl shadow-sm"
+                  className="px-5 py-2 font-title-md text-body-sm font-bold bg-primary hover:opacity-95 text-on-primary rounded-full cursor-pointer transition-colors shadow-xs"
                 >
                   Actualizar Datos
                 </button>
@@ -1228,23 +1285,25 @@ export default function Clientes() {
 
       {/* ================= MODAL EMITIR CUPÓN ================= */}
       {showModalCrearCupon && (
-        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-100 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <h3 className="text-base font-bold text-gray-900">Emitir Nuevo Cupón de Fidelización</h3>
-              <button onClick={() => setShowModalCrearCupon(false)} className="text-gray-400 hover:text-gray-600">
+        <div className="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-surface-container-high/40 animate-in zoom-in-95">
+            <div className="p-6 border-b border-surface-container-low flex justify-between items-center bg-surface-container-low/50">
+              <h3 className="font-headline-md text-title-lg font-bold text-on-surface">Emitir Nuevo Cupón de Fidelización</h3>
+              <button onClick={() => setShowModalCrearCupon(false)} className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCrearCupon} className="py-4 space-y-3 text-xs">
+            <form onSubmit={handleCrearCupon} className="p-6 space-y-4 text-body-sm">
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">Cliente Beneficiario *</label>
+                <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                  Cliente Beneficiario *
+                </label>
                 <select
                   required
                   value={formCupon.cliente_id}
                   onChange={(e) => setFormCupon({ ...formCupon, cliente_id: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-quantix-500"
+                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-title-md text-body-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40 cursor-pointer"
                 >
                   <option value="">Seleccione un cliente...</option>
                   {clientes.map((c) => (
@@ -1256,24 +1315,28 @@ export default function Clientes() {
               </div>
 
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">Código del Cupón *</label>
+                <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                  Código del Cupón *
+                </label>
                 <input
                   type="text"
                   required
                   value={formCupon.codigo}
                   onChange={(e) => setFormCupon({ ...formCupon, codigo: e.target.value.toUpperCase() })}
                   placeholder="Ej. VERANO20"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-quantix-500 font-mono uppercase font-bold"
+                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-mono uppercase font-bold text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Tipo Promoción</label>
+                  <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                    Tipo Promoción
+                  </label>
                   <select
                     value={formCupon.tipo}
                     onChange={(e) => setFormCupon({ ...formCupon, tipo: e.target.value })}
-                    className="w-full px-2.5 py-2 border border-gray-300 rounded-xl outline-none"
+                    className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-title-md text-body-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40 cursor-pointer"
                   >
                     <option value="MANUAL">Manual</option>
                     <option value="CUMPLEANIOS">Cumpleaños</option>
@@ -1283,11 +1346,13 @@ export default function Clientes() {
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Tipo Descuento</label>
+                  <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                    Tipo Descuento
+                  </label>
                   <select
                     value={formCupon.descuento_tipo}
                     onChange={(e) => setFormCupon({ ...formCupon, descuento_tipo: e.target.value })}
-                    className="w-full px-2.5 py-2 border border-gray-300 rounded-xl outline-none"
+                    className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-title-md text-body-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40 cursor-pointer"
                   >
                     <option value="PORCENTAJE">Porcentaje (%)</option>
                     <option value="MONTO_FIJO">Monto Fijo ($)</option>
@@ -1296,28 +1361,30 @@ export default function Clientes() {
               </div>
 
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">Valor del Descuento *</label>
+                <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                  Valor del Descuento *
+                </label>
                 <input
                   type="number"
                   step="0.01"
                   required
                   value={formCupon.descuento_valor}
                   onChange={(e) => setFormCupon({ ...formCupon, descuento_valor: Number(e.target.value) })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-quantix-500 font-bold"
+                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-headline-md font-bold text-body-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40"
                 />
               </div>
 
-              <div className="pt-3 border-t border-gray-100 flex gap-2 justify-end">
+              <div className="pt-3 border-t border-surface-container-low flex gap-2 justify-end">
                 <button
                   type="button"
                   onClick={() => setShowModalCrearCupon(false)}
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl"
+                  className="px-4 py-2 font-title-md text-body-sm font-bold text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-quantix-600 hover:bg-quantix-700 text-white font-bold rounded-xl shadow-sm"
+                  className="px-5 py-2 font-title-md text-body-sm font-bold bg-primary hover:opacity-95 text-on-primary rounded-full cursor-pointer transition-colors shadow-xs"
                 >
                   Emitir Cupón
                 </button>
@@ -1329,39 +1396,43 @@ export default function Clientes() {
 
       {/* ================= MODAL CREAR PROMOCIÓN ================= */}
       {showModalCrearPromo && (
-        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-gray-100 animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
+        <div className="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-surface-container-high/40 animate-in zoom-in-95 max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b border-surface-container-low flex justify-between items-center bg-surface-container-low/50 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-amber-500/15 text-amber-900 dark:text-amber-200 flex items-center justify-center">
                   <Sparkles className="w-4 h-4" />
                 </div>
-                <h3 className="text-base font-bold text-gray-900">Nueva Regla de Promoción</h3>
+                <h3 className="font-headline-md text-title-lg font-bold text-on-surface">Nueva Regla de Promoción</h3>
               </div>
-              <button onClick={() => setShowModalCrearPromo(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setShowModalCrearPromo(false)} className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCrearPromocion} className="py-4 space-y-3 text-xs">
+            <form onSubmit={handleCrearPromocion} className="p-6 space-y-4 text-body-sm overflow-y-auto flex-1">
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">Nombre de la Promoción *</label>
+                <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                  Nombre de la Promoción *
+                </label>
                 <input
                   type="text"
                   required
                   value={formPromo.nombre}
                   onChange={(e) => setFormPromo({ ...formPromo, nombre: e.target.value })}
                   placeholder="Ej. Combo Desayuno 50% en Donas"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-quantix-500 font-medium"
+                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-title-md text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">Tipo de Regla *</label>
+                <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                  Tipo de Regla *
+                </label>
                 <select
                   value={formPromo.tipo_regla}
                   onChange={(e) => setFormPromo({ ...formPromo, tipo_regla: e.target.value as any })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-quantix-500"
+                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-title-md text-body-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40 cursor-pointer"
                 >
                   <option value="COMBO">COMBO (Producto A dispara beneficio en Producto B)</option>
                   <option value="VOLUMEN">VOLUMEN (Cantidad mínima de producto o categoría)</option>
@@ -1371,13 +1442,15 @@ export default function Clientes() {
 
               {/* Campos dinámicos según tipo de regla */}
               {formPromo.tipo_regla === 'COMBO' && (
-                <div className="p-3 bg-purple-50/50 rounded-xl border border-purple-100 space-y-3">
+                <div className="p-4 bg-surface-container-low rounded-2xl border border-surface-container-high/40 space-y-3">
                   <div>
-                    <label className="block font-semibold text-purple-900 mb-1">Producto Disparador (A) *</label>
+                    <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                      Producto Disparador (A) *
+                    </label>
                     <select
                       value={formPromo.producto_disparador_id}
                       onChange={(e) => setFormPromo({ ...formPromo, producto_disparador_id: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none bg-white"
+                      className="w-full px-4 py-2.5 bg-surface-container-lowest rounded-2xl font-title-md text-body-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40 cursor-pointer"
                       required
                     >
                       <option value="">Seleccione el producto disparador...</option>
@@ -1390,11 +1463,13 @@ export default function Clientes() {
                   </div>
 
                   <div>
-                    <label className="block font-semibold text-purple-900 mb-1">Producto Beneficio (B) *</label>
+                    <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                      Producto Beneficio (B) *
+                    </label>
                     <select
                       value={formPromo.producto_beneficio_id}
                       onChange={(e) => setFormPromo({ ...formPromo, producto_beneficio_id: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none bg-white"
+                      className="w-full px-4 py-2.5 bg-surface-container-lowest rounded-2xl font-title-md text-body-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40 cursor-pointer"
                       required
                     >
                       <option value="">Seleccione el producto beneficio...</option>
@@ -1409,9 +1484,11 @@ export default function Clientes() {
               )}
 
               {formPromo.tipo_regla === 'VOLUMEN' && (
-                <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100 space-y-3">
+                <div className="p-4 bg-surface-container-low rounded-2xl border border-surface-container-high/40 space-y-3">
                   <div>
-                    <label className="block font-semibold text-blue-900 mb-1">Cantidad Mínima Requerida *</label>
+                    <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                      Cantidad Mínima Requerida *
+                    </label>
                     <input
                       type="number"
                       step="1"
@@ -1419,17 +1496,19 @@ export default function Clientes() {
                       required
                       value={formPromo.cantidad_minima}
                       onChange={(e) => setFormPromo({ ...formPromo, cantidad_minima: Number(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none bg-white font-bold"
+                      className="w-full px-4 py-2.5 bg-surface-container-lowest rounded-2xl font-headline-md font-bold text-body-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40"
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block font-semibold text-blue-900 mb-1">Producto Específico (Opcional)</label>
+                      <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                        Producto Específico (Opcional)
+                      </label>
                       <select
                         value={formPromo.producto_disparador_id}
                         onChange={(e) => setFormPromo({ ...formPromo, producto_disparador_id: e.target.value })}
-                        className="w-full px-2.5 py-2 border border-gray-300 rounded-xl outline-none bg-white"
+                        className="w-full px-4 py-2.5 bg-surface-container-lowest rounded-2xl font-title-md text-body-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40 cursor-pointer"
                       >
                         <option value="">Cualquier producto / Ninguno</option>
                         {productosCatalogo.map((p) => (
@@ -1441,11 +1520,13 @@ export default function Clientes() {
                     </div>
 
                     <div>
-                      <label className="block font-semibold text-blue-900 mb-1">Categoría (Opcional)</label>
+                      <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                        Categoría (Opcional)
+                      </label>
                       <select
                         value={formPromo.categoria_id}
                         onChange={(e) => setFormPromo({ ...formPromo, categoria_id: e.target.value })}
-                        className="w-full px-2.5 py-2 border border-gray-300 rounded-xl outline-none bg-white"
+                        className="w-full px-4 py-2.5 bg-surface-container-lowest rounded-2xl font-title-md text-body-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40 cursor-pointer"
                       >
                         <option value="">Cualquier categoría / Ninguna</option>
                         {categoriasCatalogo.map((c) => (
@@ -1460,9 +1541,11 @@ export default function Clientes() {
               )}
 
               {formPromo.tipo_regla === 'MONTO_MINIMO' && (
-                <div className="p-3 bg-amber-50/50 rounded-xl border border-amber-100 space-y-3">
+                <div className="p-4 bg-surface-container-low rounded-2xl border border-surface-container-high/40 space-y-3">
                   <div>
-                    <label className="block font-semibold text-amber-900 mb-1">Monto Mínimo de Ticket ($) *</label>
+                    <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                      Monto Mínimo de Ticket ($) *
+                    </label>
                     <input
                       type="number"
                       step="0.01"
@@ -1470,19 +1553,21 @@ export default function Clientes() {
                       required
                       value={formPromo.monto_minimo}
                       onChange={(e) => setFormPromo({ ...formPromo, monto_minimo: Number(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none bg-white font-bold"
+                      className="w-full px-4 py-2.5 bg-surface-container-lowest rounded-2xl font-headline-md font-bold text-body-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40"
                     />
                   </div>
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Tipo de Descuento</label>
+                  <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                    Tipo de Descuento
+                  </label>
                   <select
                     value={formPromo.descuento_tipo}
                     onChange={(e) => setFormPromo({ ...formPromo, descuento_tipo: e.target.value as any })}
-                    className="w-full px-2.5 py-2 border border-gray-300 rounded-xl outline-none"
+                    className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-title-md text-body-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40 cursor-pointer"
                   >
                     <option value="PORCENTAJE">Porcentaje (%)</option>
                     <option value="MONTO_FIJO">Monto Fijo ($)</option>
@@ -1490,7 +1575,9 @@ export default function Clientes() {
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Valor del Descuento *</label>
+                  <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                    Valor del Descuento *
+                  </label>
                   <input
                     type="number"
                     step="0.01"
@@ -1498,27 +1585,27 @@ export default function Clientes() {
                     required
                     value={formPromo.descuento_valor}
                     onChange={(e) => setFormPromo({ ...formPromo, descuento_valor: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-quantix-500 font-bold"
+                    className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-headline-md font-bold text-body-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all border border-surface-container-high/40"
                   />
                 </div>
               </div>
 
-              <div className="p-2.5 bg-gray-50 rounded-xl text-[11px] text-gray-500 border border-gray-100 flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <div className="p-3.5 bg-surface-container-low rounded-2xl border border-surface-container-high/40 text-[11px] text-on-surface-variant flex items-center gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
                 <span>Protección automática activada: El motor validará que el ticket mantenga margen &ge; $0.00 al cobrar.</span>
               </div>
 
-              <div className="pt-3 border-t border-gray-100 flex gap-2 justify-end">
+              <div className="pt-3 border-t border-surface-container-low flex gap-2 justify-end">
                 <button
                   type="button"
                   onClick={() => setShowModalCrearPromo(false)}
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl"
+                  className="px-4 py-2 font-title-md text-body-sm font-bold text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-quantix-600 hover:bg-quantix-700 text-white font-bold rounded-xl shadow-sm"
+                  className="px-5 py-2 font-title-md text-body-sm font-bold bg-primary hover:opacity-95 text-on-primary rounded-full cursor-pointer transition-colors shadow-xs"
                 >
                   Crear Regla de Promoción
                 </button>

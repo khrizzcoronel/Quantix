@@ -56,4 +56,8 @@ class IncidenciaSyncResponse(BaseModel):
 
 
 class ResolverIncidenciaRequest(BaseModel):
+    accion: Optional[str] = Field(
+        default="AJUSTE_AUTOMATICO",
+        description="AJUSTE_AUTOMATICO | FORZAR_VENTA | DESCARTAR"
+    )
     nota_resolucion: str = Field(..., min_length=1, max_length=1000)

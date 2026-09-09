@@ -32,15 +32,16 @@
 | RF-CRM-02 Cumpleaños | Pendiente | No existe flujo completo de emisión y envío automático. |
 | RF-CRM-03 Ciclo intercompra | Pendiente | No existe cálculo productivo completo por cliente. |
 | RF-CRM-04 Reactivación | Parcial | Job por inactividad fija; aún no usa 150% del ciclo individual. |
-| RF-CRM-05 RFM/LTV | Pendiente | El modelo Gold extendido y el tablero aún no están implementados. |
+| RF-CRM-05 RFM/LTV | Implementado | Segmentación analítica RFM calculada sobre DuckDB Gold en `GET /api/v1/reportes/analisis/rfm-clientes` y visualizada en tarjetas interactivas de `Analisis.tsx`. |
 | RF-SEG-01 Arqueo ciego | Implementado | El backend calcula el teórico después de recibir el conteo físico. |
 | RF-SEG-02 Discrepancias | Implementado | Tolerancia, auditoría y alertas WebSocket. |
 | RF-SEG-03 Autorización supervisada | Implementado | Override protegido por JWT, validación de rol y auditoría del autorizador. |
 | RF-SEG-04 Registro inmutable | Parcial | La API no expone edición/borrado; falta una protección append-only a nivel PostgreSQL. |
-| RF-BI-01 Tablero táctico | Parcial | Vista operativa con datos PostgreSQL; no todas las métricas proceden de Gold. |
-| RF-BI-02 Margen vs. rotación | Pendiente | No existe matriz productiva completa. |
-| RF-BI-03 LTV | Pendiente | No existe hecho RFM/LTV completo. |
-| RF-BI-04 Proyección de demanda | Parcial | Endpoint Z/T real y frontend conectado; falta incluir días cero y excluir quiebres de stock. |
+| RF-BI-01 Tablero táctico | Implementado | Vista operativa en `Tactico.tsx` con auditoría en vivo, arqueos y transferencias. |
+| RF-BI-02 Margen vs. rotación | Implementado | Matriz Pareto ABC en `GET /api/v1/reportes/analisis/abc-productos` y visualización en `Analisis.tsx`. |
+| RF-BI-03 LTV | Implementado | Gasto acumulado y ticket medio analítico en segmentación RFM. |
+| RF-BI-04 Proyección de demanda | Implementado | Inferencia estadística con Teorema del Límite Central (Normal Z / Student-t) e intervalos de confianza al 95%. |
+| RF-REP-01/12 Reportes Avanzados | Implementado | Módulo 012 completo: Constructor dinámico de reportes OLAP, 15 columnas configurables, filtros, agrupaciones, totales consolidados, plantillas persistentes y exportación a CSV/PDF. |
 
 ## Requisitos no funcionales
 
@@ -51,21 +52,16 @@
 | RNF-DISP-01/02 | Implementado | Arquitectura offline-first completa: IndexedDB nativo (`quantix_offline_db` v1 con stores `catalogo`, `ventas`, `cola_sync`, `metadata`), snapshot configurable con TTL (24h), cola FIFO transaccional con Web Locks API (`quantix_sync_lock`), tolerancia a desconexión con histéresis anti-oscilación (2 fallos = offline, 2 éxitos = online), asignación FEFO en servidor sin stock negativo (`PENDIENTE_REVISION` + `IncidenciaSync`) y supervisión auditada de incidencias. |
 | RNF-SEG-01 | Implementado | bcrypt y JWT; los secretos se inyectan por entorno. |
 | RNF-SEG-02 | Implementado para simulación | La pasarela simulada no recibe ni almacena PAN/CVV. |
-| RNF-SEG-03 | Implementado básico | REST y WebSocket requieren JWT; el frontend bloquea también la navegación directa según rol. |
-| RNF-ESC-01 | Implementado básico | PostgreSQL y DuckDB están desacoplados por ETL programado. |
-| RNF-ESC-02 | Pendiente | Multi-sucursal permanece solo en especificación. |
+| RNF-SEG-03 | Implementado | REST y WebSocket requieren JWT; frontend bloquea navegación directa según rol con `RoleRoute`. |
+| RNF-ESC-01 | Implementado | PostgreSQL y DuckDB están desacoplados por ETL Medallion (Bronze/Silver/Gold). |
+| RNF-ESC-02 | Implementado | Multi-sucursal activo en base de datos (`sucursales`, `transferencias_stock`), selector en frontend y aislamiento estricto de consultas por rol (Supervisor fijo, Director global). |
 
 ## Calidad verificada
 
-- 73 pruebas automáticas aprobadas en backend (pytest), 0 advertencias de linter (oxlint) y compilación exitosa (tsc + Vite).
-- Build TypeScript/Vite y lint frontend aprobados sin advertencias.
-- Rutas frontend protegidas por rol y módulos cargados bajo demanda.
-- Migraciones Alembic verificadas mediante `upgrade → downgrade → upgrade` sobre una base vacía (incluyendo revisión `0004_offline_sync`).
-- El frontend no contiene datos mock de negocio, comprobantes contables locales inventados ni convierte errores de API en operaciones exitosas.
-
-## Próximas prioridades
-
-1. Adaptador de proveedor real, webhooks firmados y conciliación bancaria.
-2. Gold dimensional completo, RFM/LTV y tableros restantes.
-3. Multi-sucursal y aislamiento obligatorio de consultas.
-4. Pruebas E2E, rendimiento y CI.
+- **95 pruebas automáticas aprobadas en backend** (`pytest`), 0 regresiones.
+- **32 pruebas automáticas aprobadas en frontend** (`vitest`).
+- **Compilación TypeScript y Vite exitosa** (`tsc -b && vite build`) con 0 errores.
+- Rutas frontend protegidas por rol (`DIRECTOR`, `SUPERVISOR`, `BODEGUERO`, `CAJERO`).
+- Migraciones Alembic verificadas hasta la versión `0010_add_plantillas_reporte.py`.
+- DuckDB Gold actualizado con dimensiones `dim_cliente`, `dim_cajero`, `dim_sucursal`, `dim_producto` y hechos `fact_ventas`, `fact_pagos`.
+- Aislamiento RBAC verificado: supervisores restringidos obligatoriamente a su sucursal asignada.

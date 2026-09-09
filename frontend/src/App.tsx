@@ -11,6 +11,7 @@ const Configuracion = lazy(() => import('./pages/Configuracion'));
 const Clientes = lazy(() => import('./pages/Clientes'));
 const Operaciones = lazy(() => import('./pages/Operaciones'));
 const Usuarios = lazy(() => import('./pages/Usuarios'));
+const Analisis = lazy(() => import('./pages/Analisis'));
 const Login = lazy(() => import('./pages/Login'));
 
 // Componente para proteger rutas que requieren autenticación
@@ -67,6 +68,7 @@ function App() {
           <Route path="inventario" element={<RoleRoute roles={['DIRECTOR', 'SUPERVISOR', 'BODEGUERO']}><Inventario /></RoleRoute>} />
           <Route path="clientes" element={<RoleRoute roles={['DIRECTOR', 'SUPERVISOR', 'CAJERO']}><Clientes /></RoleRoute>} />
           <Route path="dashboard" element={<RoleRoute roles={['DIRECTOR']}><Dashboard /></RoleRoute>} />
+          <Route path="analisis" element={<RoleRoute roles={['DIRECTOR', 'SUPERVISOR']}><Analisis /></RoleRoute>} />
           <Route path="operaciones" element={<RoleRoute roles={['DIRECTOR']}><Operaciones /></RoleRoute>} />
           <Route path="usuarios" element={<RoleRoute roles={['DIRECTOR', 'SUPERVISOR']}><Usuarios /></RoleRoute>} />
           <Route path="configuracion" element={<RoleRoute roles={['DIRECTOR']}><Configuracion /></RoleRoute>} />

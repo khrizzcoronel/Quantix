@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from datetime import datetime, timezone
@@ -9,13 +9,18 @@ from decimal import Decimal
 from uuid import UUID
 from app.db.oltp import get_db
 from app.api.deps import get_current_user, RoleChecker
-from app.models.usuarios import Usuario, SesionCaja, EstadoSesionCaja, ArqueoCaja, AuditoriaEvento
+from app.models.usuarios import (
+    Usuario, SesionCaja, EstadoSesionCaja, ArqueoCaja, AuditoriaEvento,
+    TipoMovimientoCaja, MovimientoCaja, RolUsuario
+)
+from app.services.email import EmailSender
 from app.models.ventas import Venta, PagoVenta, EstadoVenta, Cliente
 from app.schemas.caja import (
     AperturaCajaRequest, ArqueoCiegoRequest, SesionCajaResponse, 
     ArqueoResponse, SesionDetalleResponse, AuditoriaEventoResponse,
     CorteZResponse, EstadisticasHistoricasCajasResponse, EstadisticaCajeroItem,
-    MiActividadResponse, MiActividadTicketItem
+    MiActividadResponse, MiActividadTicketItem,
+    MovimientoCajaCreate, MovimientoCajaResponse, CorteXResponse
 )
 from app.api.ws import notif_manager
 
@@ -109,6 +114,7 @@ async def obtener_sesion_activa(
 @router.post("/arqueo-ciego", response_model=ArqueoResponse)
 async def arqueo_ciego(
     req: ArqueoCiegoRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
@@ -141,7 +147,14 @@ async def arqueo_ciego(
     result_pagos = await db.execute(query_pagos)
     suma_pagos = result_pagos.scalar() or 0.0
     
-    total_teorico = float(sesion.fondo_inicial) + float(suma_pagos)
+    # Movimientos extraordinarios de efectivo en la sesión (ingresos / egresos)
+    query_movs = select(MovimientoCaja).where(MovimientoCaja.sesion_id == sesion.id)
+    result_movs = await db.execute(query_movs)
+    movs_sesion = result_movs.scalars().all()
+    ingresos_extra = sum((float(m.monto) for m in movs_sesion if (m.tipo.value if hasattr(m.tipo, 'value') else str(m.tipo)) == 'INGRESO'), 0.0)
+    egresos_extra = sum((float(m.monto) for m in movs_sesion if (m.tipo.value if hasattr(m.tipo, 'value') else str(m.tipo)) == 'EGRESO'), 0.0)
+
+    total_teorico = float(sesion.fondo_inicial) + float(suma_pagos) + ingresos_extra - egresos_extra
     total_fisico = float(req.conteo_declarado.total)
     
     diferencia = total_fisico - total_teorico
@@ -222,6 +235,67 @@ async def arqueo_ciego(
             "total_fisico": round(total_fisico, 2)
         }
     })
+
+    # 7. Alerta por correo a Directores si hay descuadre significativo o auditoría requerida
+    if abs(Decimal(str(diferencia))) > Decimal("50.00") or requiere_auditoria:
+        directores_q = await db.execute(
+            select(Usuario.email).where(
+                Usuario.rol == RolUsuario.DIRECTOR,
+                Usuario.email.is_not(None),
+                Usuario.email != "",
+            )
+        )
+        director_emails = [email for email in directores_q.scalars().all() if email]
+
+        if director_emails:
+            asunto = f"⚠️ ALERTA CRÍTICA: Descuadre en Arqueo de Caja - Terminal {sesion.terminal_id}"
+            cajero_nombre = current_user.nombre_completo
+            fecha_str = (
+                sesion.fecha_cierre.strftime("%Y-%m-%d %H:%M:%S UTC")
+                if sesion.fecha_cierre
+                else datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+            )
+            diff_tipo = "Faltante" if diferencia < 0 else ("Sobrante" if diferencia > 0 else "Cuadrado")
+
+            texto_plano = (
+                f"ALERTA CRÍTICA: DESCUADRE EN ARQUEO DE CAJA\n\n"
+                f"Terminal: {sesion.terminal_id}\n"
+                f"Cajero: {cajero_nombre}\n"
+                f"Fecha: {fecha_str}\n"
+                f"Total Teórico: ${total_teorico:.2f}\n"
+                f"Total Físico Declarado: ${total_fisico:.2f}\n"
+                f"Diferencia: ${abs(diferencia):.2f} ({diff_tipo})\n"
+                f"Estado de Cuadre: {estado_cuadre}\n\n"
+                f"Este reporte ha sido registrado en la auditoría inmutable de Quantix POS."
+            )
+
+            html = f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                <div style="background-color: #dc2626; color: white; padding: 16px 24px;">
+                    <h2 style="margin: 0; font-size: 20px;">⚠️ ALERTA CRÍTICA: Descuadre en Arqueo de Caja</h2>
+                </div>
+                <div style="padding: 24px; color: #1e293b;">
+                    <p>Se ha detectado un descuadre que excede la tolerancia permitida durante el arqueo de caja:</p>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 16px;">
+                        <tr><td style="padding: 8px; border-bottom: 1px solid #f1f5f9; font-weight: bold;">Terminal:</td><td style="padding: 8px; border-bottom: 1px solid #f1f5f9;">{sesion.terminal_id}</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid #f1f5f9; font-weight: bold;">Cajero:</td><td style="padding: 8px; border-bottom: 1px solid #f1f5f9;">{cajero_nombre}</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid #f1f5f9; font-weight: bold;">Fecha:</td><td style="padding: 8px; border-bottom: 1px solid #f1f5f9;">{fecha_str}</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid #f1f5f9; font-weight: bold;">Total Teórico:</td><td style="padding: 8px; border-bottom: 1px solid #f1f5f9;">${total_teorico:.2f}</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid #f1f5f9; font-weight: bold;">Total Físico Declarado:</td><td style="padding: 8px; border-bottom: 1px solid #f1f5f9;">${total_fisico:.2f}</td></tr>
+                        <tr style="background-color: #fee2e2; color: #991b1b;"><td style="padding: 8px; font-weight: bold;">Diferencia ({diff_tipo}):</td><td style="padding: 8px; font-weight: bold;">${abs(diferencia):.2f}</td></tr>
+                    </table>
+                    <p style="margin-top: 20px; font-size: 13px; color: #64748b;">Este reporte ha sido generado automáticamente y registrado en la auditoría inmutable de Quantix POS.</p>
+                </div>
+            </div>
+            """
+
+            background_tasks.add_task(
+                EmailSender.enviar_correo,
+                director_emails,
+                asunto,
+                texto_plano,
+                html
+            )
 
     return ArqueoResponse(
         sesion_caja_id=sesion.id,
@@ -575,7 +649,10 @@ async def obtener_mi_actividad(
         )
 
     # 2. Rango de hoy (00:00:00 UTC en adelante)
-    hoy_inicio = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    # Venta.fecha_hora es TIMESTAMP WITHOUT TIME ZONE (naive)
+    # AuditoriaEvento.fecha_evento es TIMESTAMP WITH TIME ZONE (aware)
+    hoy_inicio_aware = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    hoy_inicio_naive = hoy_inicio_aware.replace(tzinfo=None)
 
     # 3. Tickets de hoy para sesiones del usuario
     q_tickets = (
@@ -584,7 +661,7 @@ async def obtener_mi_actividad(
         .outerjoin(Cliente, Venta.cliente_id == Cliente.id)
         .where(
             SesionCaja.usuario_id == current_user.id,
-            Venta.fecha_hora >= hoy_inicio
+            Venta.fecha_hora >= hoy_inicio_naive
         )
         .order_by(Venta.fecha_hora.desc())
         .limit(100)
@@ -618,12 +695,12 @@ async def obtener_mi_actividad(
             )
         )
 
-    # 4. Eventos de auditoría de hoy para el usuario
+    # 4. Eventos de auditoría de hoy para el usuario (o autorizados por el supervisor/director)
     q_aud = (
         select(AuditoriaEvento)
         .where(
-            AuditoriaEvento.usuario_id == current_user.id,
-            AuditoriaEvento.fecha_evento >= hoy_inicio
+            (AuditoriaEvento.usuario_id == current_user.id) | (AuditoriaEvento.usuario_autorizador_id == current_user.id),
+            AuditoriaEvento.fecha_evento >= hoy_inicio_aware
         )
         .order_by(AuditoriaEvento.fecha_evento.desc())
         .limit(50)
@@ -661,3 +738,279 @@ async def obtener_mi_actividad(
         tickets_hoy=tickets_list,
         eventos_auditoria_hoy=aud_list
     )
+
+
+@router.post("/movimientos", response_model=MovimientoCajaResponse)
+async def registrar_movimiento_caja(
+    req: MovimientoCajaCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(RoleChecker(['CAJERO', 'SUPERVISOR', 'DIRECTOR']))
+):
+    """
+    (RF-CAJA-MOV) Registra una entrada extraordinaria (dotación adicional de cambio)
+    o salida de efectivo (gasto menor, retiro parcial) en la sesión activa.
+    """
+    sesion_q = await db.execute(
+        select(SesionCaja).where(
+            SesionCaja.usuario_id == current_user.id,
+            SesionCaja.estado == EstadoSesionCaja.ABIERTA
+        )
+    )
+    sesion = sesion_q.scalar_one_or_none()
+    if not sesion:
+        raise HTTPException(status_code=400, detail="No tienes una sesión de caja abierta para registrar movimientos")
+
+    tipo_str = req.tipo.upper()
+    if tipo_str not in ['INGRESO', 'EGRESO']:
+        raise HTTPException(status_code=400, detail="El tipo de movimiento debe ser INGRESO o EGRESO")
+
+    monto_val = Decimal(str(req.monto))
+    if monto_val <= Decimal("0"):
+        raise HTTPException(status_code=400, detail="El monto debe ser estrictamente mayor a 0")
+
+    # Si es EGRESO, validar que haya suficiente efectivo teórico disponible
+    if tipo_str == 'EGRESO':
+        pagos_efectivo_q = await db.execute(
+            select(func.sum(PagoVenta.monto))
+            .select_from(PagoVenta)
+            .join(Venta)
+            .where(
+                Venta.sesion_caja_id == sesion.id,
+                Venta.estado.in_(['COMPLETADA', 'PAGADO']),
+                PagoVenta.metodo_pago == 'EFECTIVO'
+            )
+        )
+        efectivo_ventas = Decimal(str(pagos_efectivo_q.scalar() or "0.00"))
+
+        movs_q = await db.execute(select(MovimientoCaja).where(MovimientoCaja.sesion_id == sesion.id))
+        movs = movs_q.scalars().all()
+        ingresos_prev = sum((Decimal(str(m.monto)) for m in movs if (m.tipo.value if hasattr(m.tipo, 'value') else str(m.tipo)) == 'INGRESO'), Decimal("0.00"))
+        egresos_prev = sum((Decimal(str(m.monto)) for m in movs if (m.tipo.value if hasattr(m.tipo, 'value') else str(m.tipo)) == 'EGRESO'), Decimal("0.00"))
+
+        efectivo_actual = Decimal(str(sesion.fondo_inicial)) + efectivo_ventas + ingresos_prev - egresos_prev
+        if monto_val > efectivo_actual:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Saldo insuficiente en efectivo. Disponible en caja: ${efectivo_actual:.2f}, intentando retirar: ${monto_val:.2f}"
+            )
+
+    tipo_enum = TipoMovimientoCaja.INGRESO if tipo_str == 'INGRESO' else TipoMovimientoCaja.EGRESO
+    mov = MovimientoCaja(
+        sesion_id=sesion.id,
+        usuario_id=current_user.id,
+        tipo=tipo_enum,
+        monto=float(monto_val),
+        concepto=req.concepto.strip()
+    )
+    db.add(mov)
+
+    # Registrar evento de auditoría
+    auditoria = AuditoriaEvento(
+        usuario_id=current_user.id,
+        tipo_evento=f"MOVIMIENTO_CAJA_{tipo_str}",
+        descripcion=f"Movimiento de caja {tipo_str} por ${monto_val:.2f}. Concepto: {req.concepto.strip()}",
+        gravedad="BAJA" if tipo_str == 'INGRESO' else "MEDIA",
+        ip_terminal=sesion.terminal_id,
+        detalle_json={
+            "sesion_id": str(sesion.id),
+            "tipo": tipo_str,
+            "monto": float(monto_val),
+            "concepto": req.concepto.strip()
+        }
+    )
+    db.add(auditoria)
+    await db.commit()
+    await db.refresh(mov)
+
+    return MovimientoCajaResponse(
+        id=mov.id,
+        sesion_id=mov.sesion_id,
+        usuario_id=mov.usuario_id,
+        usuario_nombre=current_user.nombre,
+        tipo=tipo_str,
+        monto=monto_val,
+        concepto=mov.concepto,
+        fecha_hora=mov.fecha_hora
+    )
+
+
+@router.get("/movimientos", response_model=List[MovimientoCajaResponse])
+async def listar_movimientos_caja(
+    sesion_id: Optional[UUID] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
+    """
+    Lista los movimientos de caja de una sesión dada o de la sesión activa del usuario actual.
+    """
+    target_sesion_id = sesion_id
+    if not target_sesion_id:
+        sesion_q = await db.execute(
+            select(SesionCaja).where(
+                SesionCaja.usuario_id == current_user.id,
+                SesionCaja.estado == EstadoSesionCaja.ABIERTA
+            )
+        )
+        sesion = sesion_q.scalar_one_or_none()
+        if not sesion:
+            return []
+        target_sesion_id = sesion.id
+
+    query = (
+        select(MovimientoCaja, Usuario.nombre.label("usuario_nombre"))
+        .join(Usuario, MovimientoCaja.usuario_id == Usuario.id)
+        .where(MovimientoCaja.sesion_id == target_sesion_id)
+        .order_by(MovimientoCaja.fecha_hora.asc())
+    )
+    result = await db.execute(query)
+    rows = result.all()
+
+    return [
+        MovimientoCajaResponse(
+            id=m.id,
+            sesion_id=m.sesion_id,
+            usuario_id=m.usuario_id,
+            usuario_nombre=u_nom,
+            tipo=m.tipo.value if hasattr(m.tipo, 'value') else str(m.tipo),
+            monto=Decimal(str(m.monto)),
+            concepto=m.concepto,
+            fecha_hora=m.fecha_hora
+        )
+        for m, u_nom in rows
+    ]
+
+
+@router.get("/corte-x", response_model=CorteXResponse)
+async def obtener_corte_x(
+    sesion_id: Optional[UUID] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
+    """
+    (CORTE-X) Reporte instantáneo de arqueo parcial sin cerrar la sesión de caja.
+    Calcula ventas acumuladas por medio de pago, movimientos extraordinarios
+    y efectivo teórico actual en gaveta.
+    """
+    target_sesion = None
+    if sesion_id:
+        target_sesion = await db.get(SesionCaja, sesion_id)
+        if not target_sesion:
+            raise HTTPException(status_code=404, detail="Sesión de caja no encontrada")
+        rol_str = current_user.rol.value if hasattr(current_user.rol, 'value') else str(current_user.rol)
+        if rol_str not in ['SUPERVISOR', 'DIRECTOR'] and target_sesion.usuario_id != current_user.id:
+            raise HTTPException(status_code=403, detail="No tienes autorización para consultar el Corte X de esta sesión")
+    else:
+        sesion_q = await db.execute(
+            select(SesionCaja).where(
+                SesionCaja.usuario_id == current_user.id,
+                SesionCaja.estado == EstadoSesionCaja.ABIERTA
+            )
+        )
+        target_sesion = sesion_q.scalar_one_or_none()
+        if not target_sesion:
+            raise HTTPException(status_code=404, detail="No tienes una sesión de caja activa")
+
+    cajero = await db.get(Usuario, target_sesion.usuario_id)
+    cajero_nombre = cajero.nombre if cajero else "Cajero No Registrado"
+    cajero_email = cajero.email if cajero else None
+
+    # Ventas completadas de la sesión
+    ventas_q = await db.execute(
+        select(Venta).where(
+            Venta.sesion_caja_id == target_sesion.id,
+            Venta.estado.in_(['COMPLETADA', 'PAGADO'])
+        )
+    )
+    ventas_completadas = ventas_q.scalars().all()
+    total_ventas = sum((Decimal(str(v.total_pagar)) for v in ventas_completadas), Decimal("0.00"))
+
+    # Pagos de la sesión
+    pagos_q = await db.execute(
+        select(PagoVenta)
+        .join(Venta, PagoVenta.venta_id == Venta.id)
+        .where(
+            Venta.sesion_caja_id == target_sesion.id,
+            Venta.estado.in_(['COMPLETADA', 'PAGADO'])
+        )
+    )
+    pagos = pagos_q.scalars().all()
+
+    ventas_efectivo = Decimal("0.00")
+    ventas_tarjeta = Decimal("0.00")
+    ventas_transferencia = Decimal("0.00")
+    ventas_otros = Decimal("0.00")
+
+    for p in pagos:
+        met = p.metodo_pago.upper() if p.metodo_pago else 'OTROS'
+        val = Decimal(str(p.monto))
+        if met == 'EFECTIVO':
+            ventas_efectivo += val
+        elif met in ['TARJETA', 'TARJETA_CREDITO', 'TARJETA_DEBITO']:
+            ventas_tarjeta += val
+        elif met in ['TRANSFERENCIA', 'SPEI']:
+            ventas_transferencia += val
+        else:
+            ventas_otros += val
+
+    # Movimientos de caja
+    movs_query = (
+        select(MovimientoCaja, Usuario.nombre.label("usuario_nombre"))
+        .join(Usuario, MovimientoCaja.usuario_id == Usuario.id)
+        .where(MovimientoCaja.sesion_id == target_sesion.id)
+        .order_by(MovimientoCaja.fecha_hora.asc())
+    )
+    res_movs = await db.execute(movs_query)
+    movs_rows = res_movs.all()
+
+    movs_list: list[MovimientoCajaResponse] = []
+    total_ingresos_extra = Decimal("0.00")
+    total_egresos_extra = Decimal("0.00")
+
+    for m, u_nom in movs_rows:
+        tipo_str = m.tipo.value if hasattr(m.tipo, 'value') else str(m.tipo)
+        monto_dec = Decimal(str(m.monto))
+        if tipo_str == 'INGRESO':
+            total_ingresos_extra += monto_dec
+        else:
+            total_egresos_extra += monto_dec
+
+        movs_list.append(
+            MovimientoCajaResponse(
+                id=m.id,
+                sesion_id=m.sesion_id,
+                usuario_id=m.usuario_id,
+                usuario_nombre=u_nom,
+                tipo=tipo_str,
+                monto=monto_dec,
+                concepto=m.concepto,
+                fecha_hora=m.fecha_hora
+            )
+        )
+
+    fondo_inicial = Decimal(str(target_sesion.fondo_inicial))
+    efectivo_teorico = fondo_inicial + ventas_efectivo + total_ingresos_extra - total_egresos_extra
+    ahora_utc = datetime.now(timezone.utc)
+    folio_corte = f"X-{target_sesion.terminal_id}-{ahora_utc.strftime('%Y%m%d%H%M%S')}"
+
+    return CorteXResponse(
+        sesion_id=target_sesion.id,
+        folio_corte=folio_corte,
+        cajero_id=target_sesion.usuario_id,
+        cajero_nombre=cajero_nombre,
+        cajero_email=cajero_email,
+        terminal_id=target_sesion.terminal_id,
+        fecha_apertura=target_sesion.fecha_apertura,
+        fecha_corte_x=ahora_utc,
+        fondo_inicial=fondo_inicial,
+        total_ventas_efectivo=ventas_efectivo,
+        total_ventas_tarjeta=ventas_tarjeta,
+        total_ventas_transferencia=ventas_transferencia,
+        total_ventas_otros=ventas_otros,
+        total_ventas=total_ventas,
+        total_ingresos_extra=total_ingresos_extra,
+        total_egresos_extra=total_egresos_extra,
+        efectivo_teorico_en_caja=efectivo_teorico,
+        total_tickets_emitidos=len(ventas_completadas),
+        movimientos=movs_list
+    )
+

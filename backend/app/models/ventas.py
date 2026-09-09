@@ -1,12 +1,15 @@
 import uuid
 from datetime import datetime, date
 from decimal import Decimal
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 from enum import Enum
 
 from sqlalchemy import String, Integer, Numeric, DateTime, Date, ForeignKey, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base
+
+if TYPE_CHECKING:
+    from app.models.inventario import Producto
 
 class TipoCupon(str, Enum):
     CUMPLEANIOS = "CUMPLEANIOS"
@@ -41,6 +44,7 @@ class Cliente(Base):
     __tablename__ = "clientes"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    cedula: Mapped[Optional[str]] = mapped_column(String(30), unique=True, index=True, nullable=True)
     telefono: Mapped[str] = mapped_column(String(20), unique=True, index=True)
     nombre: Mapped[str] = mapped_column(String(100))
     email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
@@ -77,6 +81,7 @@ class Venta(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     sesion_caja_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("sesion_caja.id"))
     cliente_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("clientes.id"), nullable=True)
+    sucursal_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("sucursal.id"), nullable=True)
     folio_ticket: Mapped[str] = mapped_column(String(50), unique=True, index=True)
     idempotency_key: Mapped[Optional[str]] = mapped_column(String(64), unique=True, index=True, nullable=True)
     fecha_hora: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -107,6 +112,7 @@ class DetalleVenta(Base):
 
     # Relaciones
     venta: Mapped["Venta"] = relationship(back_populates="detalles")
+    producto: Mapped[Optional["Producto"]] = relationship("Producto")
 
 class PagoVenta(Base):
     __tablename__ = "pagos_venta"

@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+
+<html lang="es"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base { html, body { margin: 0; padding: 0; } body { overscroll-behavior: none; } main > :first-child { margin-top: 0 !important; } main > :last-child { margin-bottom: 0 !important; } } ::-webkit-scrollbar { display: none; }</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "secondary": "#0051d5", "on-tertiary": "#ffffff", "on-error-container": "#93000a", "primary-fixed": "#6ffbbe", "inverse-surface": "#283044", "surface-container-highest": "#dae2fd", "on-primary": "#ffffff", "surface-container-low": "#f2f3ff", "secondary-fixed": "#dbe1ff", "error": "#ba1a1a", "inverse-primary": "#4edea3", "on-error": "#ffffff", "on-primary-fixed": "#002113", "primary-fixed-dim": "#4edea3", "secondary-container": "#316bf3", "on-primary-fixed-variant": "#005236", "primary": "#006c49", "surface-bright": "#faf8ff", "surface-container-lowest": "#ffffff", "error-container": "#ffdad6", "on-surface": "#131b2e", "secondary-fixed-dim": "#b4c5ff", "surface-variant": "#dae2fd", "on-secondary": "#ffffff", "on-tertiary-container": "#4900a4", "surface-tint": "#006c49", "tertiary-container": "#b48fff", "on-tertiary-fixed": "#25005a", "surface-container": "#eaedff", "on-background": "#131b2e", "outline": "#6c7a71", "on-secondary-fixed": "#00174b", "tertiary": "#732ee4", "inverse-on-surface": "#eef0ff", "tertiary-fixed": "#eaddff", "on-primary-container": "#00422b", "tertiary-fixed-dim": "#d2bbff", "on-secondary-fixed-variant": "#003ea8", "on-secondary-container": "#fefcff", "outline-variant": "#bbcabf", "background": "#faf8ff", "on-tertiary-fixed-variant": "#5a00c6", "surface": "#faf8ff", "primary-container": "#10b981", "on-surface-variant": "#3c4a42", "surface-container-high": "#e2e7ff", "surface-dim": "#d2d9f4" }, "borderRadius": { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" }, "spacing": { "gap-spacious": "1.5rem", "pad-card-lg": "1.75rem", "gap-compact": "0.5rem", "gap-standard": "1rem", "touch-large": "4.5rem", "pad-terminal": "1.5rem", "touch-standard": "3.5rem", "gutter-split": "1.5rem", "touch-min": "3rem", "pad-card-sm": "1rem" }, "fontFamily": { "label-numeric-lg": [ "Space Grotesk" ], "body-sm": [ "Geist" ], "title-lg": [ "Space Grotesk" ], "display-lg-mobile": [ "Space Grotesk" ], "title-md": [ "Geist" ], "display-lg": [ "Space Grotesk" ], "headline-xl": [ "Space Grotesk" ], "label-numeric-md": [ "Space Grotesk" ], "label-caps": [ "Space Grotesk" ], "body-md": [ "Geist" ], "headline-md": [ "Space Grotesk" ], "body-lg": [ "Geist" ], "headline-xl-mobile": [ "Space Grotesk" ] }, "fontSize": { "label-numeric-lg": [ "32px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "700" } ], "body-sm": [ "12px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "400" } ], "title-lg": [ "20px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" } ], "display-lg-mobile": [ "32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" } ], "title-md": [ "16px", { "lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "600" } ], "display-lg": [ "48px", { "lineHeight": "56px", "letterSpacing": "-0.03em", "fontWeight": "700" } ], "headline-xl": [ "36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "600" } ], "label-numeric-md": [ "18px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" } ], "label-caps": [ "11px", { "lineHeight": "14px", "letterSpacing": "0.08em", "fontWeight": "700" } ], "body-md": [ "14px", { "lineHeight": "20px", "letterSpacing": "0em", "fontWeight": "400" } ], "headline-md": [ "24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" } ], "body-lg": [ "16px", { "lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "400" } ], "headline-xl-mobile": [ "28px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "600" } ] } } } };</script></head><body class="bg-background font-body-md text-on-surface antialiased min-h-screen selection:bg-primary selection:text-on-primary"><aside class="fixed left-0 top-0 bottom-0 w-72 bg-surface-container-low z-50 flex flex-col justify-between p-pad-terminal shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex flex-col gap-pad-card-lg"><div class="flex items-center gap-gap-standard"><img alt="Brand logo. - Primary color: #10b981
+- Font: spaceGrotesk
+- Mode: light
+- Roundness: rounded-full
+" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1VE-3_bnWGL8smsZAPyYO1-GEW49eAmPw7A6GIATlLaj81HtxALpAkAswdd0YlnaC5qdiVB9RRiZXLQKnkd_GOllraNp77m88u8waRd1PL3CpTneqanJBavEzkD9WVtNQjBjQLBd2Fb9hQYBCQjr110oFrmESQRr7xt3yDsmvlv0anyyaqdQUgAyeB3-cwAg3cYjFvBP_XFE2XoRqchk8CQ33V2bKF80cgqgSpcMETAxPfxNsXzlKxMxXGd"/><div class="flex flex-col"><div class="flex items-center gap-gap-compact"><span class="font-title-lg text-title-lg tracking-tight text-on-surface leading-none">Quantix</span><span class="font-label-caps text-label-caps px-2 py-0.5 rounded-full bg-primary text-on-primary tracking-widest uppercase">OS</span></div><span class="font-label-caps text-label-caps text-on-surface-variant font-medium tracking-wide mt-1">v4.2 Enterprise</span></div></div><div class="p-pad-card-sm rounded-lg bg-surface-container-lowest shadow-[0_1px_3px_0_rgba(15,23,42,0.04)] flex flex-col gap-gap-compact"><div class="flex items-center justify-between"><span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Rol Activo</span><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-label-caps font-bold bg-[#fef3c7] text-[#b45309]"><span class="w-1.5 h-1.5 rounded-full bg-[#f59e0b]"></span>TÁCTICO</span></div><div class="flex items-center gap-3 pt-1"><div class="relative"><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida/AEtjO1UsyQEj-N0hNZv5GPk7zALBRdTten_jJeaQquArl5HwMKN-wK1AHpmFU5eq-Rzbda93Zm-bnkNHyCo-x1XYKlUyc1_HNom2eFqxwwNkvkg_dHErkDWmHciJsf0fFw3HD1iYiN_3-j3WbQDe0206Sl32jLln5FsvQMs-KeG_En1_MhCKI_Gx9UBaSTkLs1D8DE7KZPUoKPGD3VI3tMU2JjtAyE74d0yGnjEaJizWmJBk3T5_3gm0QjgXNwo"/><span class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-primary ring-2 ring-surface-container-lowest"></span></div><div class="flex flex-col min-w-0"><span class="font-title-md text-title-md text-on-surface truncate leading-snug">Carlos Méndez</span><span class="font-label-caps text-label-caps text-on-surface-variant tracking-tight">SUPERVISOR GENERAL</span></div></div></div><nav class="flex flex-col gap-1" data-active-classes="bg-primary-container text-on-primary-container font-semibold shadow-[0_2px_6px_-2px_rgba(15,23,42,0.03)]"><a class="group flex items-center gap-3 px-3.5 py-2.5 rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all font-body-md text-body-md" data-path="punto-de-venta" href="#"><span class="material-symbols-outlined text-xl transition-colors group-hover:text-on-surface">point_of_sale</span><span>Punto de Venta</span></a><a class="group flex items-center gap-3 px-3.5 py-2.5 rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all font-body-md text-body-md" data-path="clientes-y-fidelizacion" href="#"><span class="material-symbols-outlined text-xl transition-colors group-hover:text-on-surface">groups</span><span>Clientes &amp; Fidelización</span></a><a class="group flex items-center gap-3 px-3.5 py-2.5 rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all font-body-md text-body-md" data-path="control-de-inventario" href="#"><span class="material-symbols-outlined text-xl transition-colors group-hover:text-on-surface">inventory_2</span><span>Control de Inventario</span></a><a class="group flex items-center gap-3 px-3.5 py-2.5 rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all font-body-md text-body-md" data-path="supervision-de-cajas" href="#"><span class="material-symbols-outlined text-xl transition-colors group-hover:text-on-surface">tune</span><span>Supervisión de Cajas</span></a><a class="group flex items-center gap-3 px-3.5 py-2.5 rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all font-body-md text-body-md" data-path="dashboard-bi" href="#"><span class="material-symbols-outlined text-xl transition-colors group-hover:text-on-surface">analytics</span><span>Dashboard BI</span></a><a class="group flex items-center gap-3 px-3.5 py-2.5 rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all font-body-md text-body-md" data-path="auditoria-y-accesos" href="#"><span class="material-symbols-outlined text-xl transition-colors group-hover:text-on-surface">admin_panel_settings</span><span>Auditoría &amp; Accesos</span></a></nav></div><div class="flex flex-col gap-pad-card-sm pt-4"><div class="p-3 rounded-lg bg-surface-container text-on-surface-variant flex items-center justify-between text-body-sm font-body-sm"><div class="flex items-center gap-2"><span class="material-symbols-outlined text-base">store</span><span>Sede Central 01</span></div><span class="font-label-caps text-label-caps px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface">POS-MX</span></div><div class="flex items-center justify-between px-2"><span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Servidor de Cajas</span><span class="font-label-caps text-label-caps text-primary font-bold">SYNC OK</span></div></div></aside><div class="pl-72"><header class="fixed top-0 left-72 right-0 h-16 bg-surface/85 backdrop-blur-xl z-40 px-pad-terminal shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-16 w-full flex items-center justify-between gap-gutter-split"><div class="flex items-center gap-gap-standard"><img alt="Brand logo. - Primary color: #10b981
+- Font: spaceGrotesk
+- Mode: light
+- Roundness: rounded-full
+" class="h-8 w-auto object-contain lg:hidden" src="https://lh3.googleusercontent.com/aida/AEtjO1VE-3_bnWGL8smsZAPyYO1-GEW49eAmPw7A6GIATlLaj81HtxALpAkAswdd0YlnaC5qdiVB9RRiZXLQKnkd_GOllraNp77m88u8waRd1PL3CpTneqanJBavEzkD9WVtNQjBjQLBd2Fb9hQYBCQjr110oFrmESQRr7xt3yDsmvlv0anyyaqdQUgAyeB3-cwAg3cYjFvBP_XFE2XoRqchk8CQ33V2bKF80cgqgSpcMETAxPfxNsXzlKxMxXGd"/><div class="flex items-center gap-2 font-body-md text-body-md text-on-surface-variant"><span class="hover:text-on-surface cursor-pointer">Quantix OS</span><span class="material-symbols-outlined text-sm">chevron_right</span><span class="font-semibold text-on-surface">Supervisión Táctica &amp; Control de Cajas</span></div></div><div class="flex items-center gap-gap-standard"><div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container-lowest shadow-[0_1px_3px_0_rgba(15,23,42,0.04)]"><span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span></span><span class="font-label-caps text-label-caps text-on-surface font-bold uppercase tracking-wider">ONLINE</span><span class="text-xs text-on-surface-variant font-body-sm">14ms</span></div><div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container-lowest shadow-[0_1px_3px_0_rgba(15,23,42,0.04)] text-body-sm font-body-sm"><span class="material-symbols-outlined text-base text-primary">point_of_sale</span><span class="text-on-surface-variant">Terminales:</span><span class="font-label-numeric-md text-label-numeric-md font-bold text-on-surface">6/8</span><span class="text-[11px] font-label-caps text-primary font-bold tracking-tight uppercase">Operando</span></div><div class="flex items-center gap-2 pl-2"><button aria-label="Cambiar tema" class="w-9 h-9 rounded-full flex items-center justify-center bg-surface-container-lowest text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors" type="button"><span class="material-symbols-outlined text-xl">light_mode</span></button><div class="relative"><button aria-label="Notificaciones y alertas" class="w-9 h-9 rounded-full flex items-center justify-center bg-surface-container-lowest text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors" type="button"><span class="material-symbols-outlined text-xl">notifications</span></button><span class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-error text-on-error font-label-caps text-[10px] font-bold flex items-center justify-center ring-2 ring-surface">3</span></div><div class="h-6 w-px bg-outline-variant/50 mx-1"></div><div class="flex items-center gap-2"><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida/AEtjO1UsyQEj-N0hNZv5GPk7zALBRdTten_jJeaQquArl5HwMKN-wK1AHpmFU5eq-Rzbda93Zm-bnkNHyCo-x1XYKlUyc1_HNom2eFqxwwNkvkg_dHErkDWmHciJsf0fFw3HD1iYiN_3-j3WbQDe0206Sl32jLln5FsvQMs-KeG_En1_MhCKI_Gx9UBaSTkLs1D8DE7KZPUoKPGD3VI3tMU2JjtAyE74d0yGnjEaJizWmJBk3T5_3gm0QjgXNwo"/><div class="hidden xl:flex flex-col text-left leading-tight"><span class="font-title-md text-body-md font-medium text-on-surface truncate">Carlos Méndez</span><span class="font-label-caps text-[10px] text-on-surface-variant">Turno AM • Caja 00</span></div></div></div></div></div></header><main class="w-full pt-16 bg-surface"><div class="flex flex-col w-full">
+<!-- Sub-navigation Tabs Strip -->
+<div class="px-pad-terminal pt-6 pb-2">
+<div class="flex items-center justify-between flex-wrap gap-4 bg-surface-container-low p-2 rounded-2xl shadow-sm">
+<div class="flex items-center gap-2 overflow-x-auto">
+<button class="flex items-center gap-2 px-5 py-3 rounded-xl font-title-md text-title-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all" type="button">
+<span class="material-symbols-outlined text-lg">point_of_sale</span>
+<span>Arqueos &amp; Monitor en Vivo</span>
+</button>
+<button class="flex items-center gap-2 px-5 py-3 rounded-xl font-title-md text-title-md bg-surface-container-lowest text-primary shadow-sm font-semibold transition-all" type="button">
+<span class="material-symbols-outlined text-lg">traffic</span>
+<span>Semáforo de Riesgo FEFO</span>
+<span class="ml-1 w-2 h-2 rounded-full bg-error animate-pulse"></span>
+</button>
+<button class="flex items-center gap-2 px-5 py-3 rounded-xl font-title-md text-title-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all" type="button">
+<span class="material-symbols-outlined text-lg">security_update_good</span>
+<span>Auditoría &amp; Overrides</span>
+</button>
+<button class="flex items-center gap-2 px-5 py-3 rounded-xl font-title-md text-title-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all" type="button">
+<span class="material-symbols-outlined text-lg">badge</span>
+<span>Desempeño de Cajeros</span>
+</button>
+</div>
+<div class="flex items-center gap-3 px-3">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Corte Activo:</span>
+<span class="px-3 py-1 bg-surface-container-highest text-on-surface font-label-numeric-md text-sm rounded-full">14:45 CST</span>
+</div>
+</div>
+</div>
+<div class="p-pad-terminal space-y-8">
+<!-- Top Strategic Warning Banner -->
+<section class="relative overflow-hidden rounded-3xl bg-surface-container-lowest p-pad-card-lg shadow-md">
+<div class="absolute -right-12 -top-12 w-64 h-64 bg-error/5 rounded-full blur-3xl pointer-events-none"></div>
+<div class="absolute -left-12 -bottom-12 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
+<div class="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-surface-container-high/60">
+<div class="space-y-2">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-error-container text-on-error-container text-xs font-label-caps font-bold tracking-wider uppercase">
+<span class="w-2 h-2 rounded-full bg-error animate-ping"></span>
+            Protocolo FEFO / Primeras Entradas, Primeras Salidas
+          </div>
+<h1 class="font-headline-md text-headline-md text-on-surface tracking-tight">
+            Valor Monetario Total en Riesgo de Merma:
+            <span class="font-label-numeric-lg text-label-numeric-lg text-error block sm:inline sm:ml-2 font-bold">
+              $18,450.00 MXN
+            </span>
+</h1>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">
+            16 lotes en piso de venta presentan riesgo de obsolescencia en los próximos 30 días. Requieren aceleración comercial táctica o ajuste de góndola inmediato.
+          </p>
+</div>
+<!-- Quick Tactic Actions -->
+<div class="flex flex-wrap items-center gap-3">
+<button class="flex items-center gap-2 px-4 py-3 rounded-full bg-surface-container-high text-on-surface font-title-md text-title-md hover:bg-surface-container-highest transition-transform active:scale-95 shadow-sm" type="button">
+<span class="material-symbols-outlined text-base">notifications_active</span>
+<span>Emitir Alerta a Bodega</span>
+</button>
+<button class="flex items-center gap-2 px-5 py-3 rounded-full bg-secondary text-on-secondary font-title-md text-title-md hover:opacity-95 transition-transform active:scale-95 shadow-md" type="button">
+<span class="material-symbols-outlined text-base">price_change</span>
+<span>Autorizar Remate (-30%)</span>
+</button>
+<button class="flex items-center gap-2 px-4 py-3 rounded-full bg-error-container text-on-error-container font-title-md text-title-md hover:bg-error hover:text-on-error transition-all active:scale-95 shadow-sm" type="button">
+<span class="material-symbols-outlined text-base">delete_sweep</span>
+<span>Programar Merma</span>
+</button>
+</div>
+</div>
+<!-- Tactical KPI Cards Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
+<!-- Lotes Críticos -->
+<div class="relative overflow-hidden p-6 rounded-2xl bg-error-container/30 transition-all hover:shadow-md">
+<div class="flex items-start justify-between">
+<div class="space-y-1">
+<span class="font-label-caps text-label-caps uppercase text-error font-bold tracking-wider">Prioridad Inmediata</span>
+<p class="font-title-lg text-title-lg text-on-surface font-semibold">Lotes Críticos (&lt;7 días)</p>
+</div>
+<div class="w-10 h-10 rounded-full bg-error text-on-error flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-xl">priority_high</span>
+</div>
+</div>
+<div class="mt-4 flex items-baseline gap-3">
+<span class="font-label-numeric-lg text-label-numeric-lg text-error font-bold">4</span>
+<span class="font-body-md text-body-md text-on-surface-variant">lotes identificados</span>
+</div>
+<div class="mt-3 flex items-center justify-between text-xs font-label-caps pt-2 border-t border-error/15 text-error">
+<span>Costo Expuesto:</span>
+<span class="font-label-numeric-md text-sm font-bold">$4,200.00 MXN</span>
+</div>
+</div>
+<!-- Lotes en Advertencia -->
+<div class="relative overflow-hidden p-6 rounded-2xl bg-amber-500/10 transition-all hover:shadow-md">
+<div class="flex items-start justify-between">
+<div class="space-y-1">
+<span class="font-label-caps text-label-caps uppercase text-amber-700 font-bold tracking-wider">Aceleración Requerida</span>
+<p class="font-title-lg text-title-lg text-on-surface font-semibold">Advertencia (7-30 días)</p>
+</div>
+<div class="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-xl">hourglass_bottom</span>
+</div>
+</div>
+<div class="mt-4 flex items-baseline gap-3">
+<span class="font-label-numeric-lg text-label-numeric-lg text-amber-700 font-bold">12</span>
+<span class="font-body-md text-body-md text-on-surface-variant">lotes bajo monitoreo</span>
+</div>
+<div class="mt-3 flex items-center justify-between text-xs font-label-caps pt-2 border-t border-amber-600/15 text-amber-800">
+<span>Costo Expuesto:</span>
+<span class="font-label-numeric-md text-sm font-bold">$14,250.00 MXN</span>
+</div>
+</div>
+<!-- Lotes Frescos -->
+<div class="relative overflow-hidden p-6 rounded-2xl bg-primary-fixed/20 transition-all hover:shadow-md">
+<div class="flex items-start justify-between">
+<div class="space-y-1">
+<span class="font-label-caps text-label-caps uppercase text-primary font-bold tracking-wider">Góndola Segura</span>
+<p class="font-title-lg text-title-lg text-on-surface font-semibold">Lotes Frescos (&gt;30 días)</p>
+</div>
+<div class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-xl">verified</span>
+</div>
+</div>
+<div class="mt-4 flex items-baseline gap-3">
+<span class="font-label-numeric-lg text-label-numeric-lg text-primary font-bold">148</span>
+<span class="font-body-md text-body-md text-on-surface-variant">lotes óptimos</span>
+</div>
+<div class="mt-3 flex items-center justify-between text-xs font-label-caps pt-2 border-t border-primary/20 text-on-primary-fixed-variant">
+<span>Capital Asegurado:</span>
+<span class="font-label-numeric-md text-sm font-bold">$210,400.00 MXN</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Main Grid: Section A (FEFO Matrix) and Section B (Cashier Performance) -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
+<!-- Section A: FEFO Matrix (7 Columns on XL) -->
+<section class="xl:col-span-8 flex flex-col gap-6 bg-surface-container-lowest p-pad-card-lg rounded-3xl shadow-md">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">shelves</span>
+<h2 class="font-headline-md text-headline-md text-on-surface">Matriz Semafórica de Lotes en Piso (FEFO)</h2>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant">Priorización dinámica basada en rotación y fecha de vencimiento.</p>
+</div>
+<div class="flex items-center gap-2">
+<button class="px-3.5 py-2 rounded-full bg-surface-container-low text-on-surface-variant font-label-caps text-label-caps hover:bg-surface-container-high transition-colors flex items-center gap-1.5" type="button">
+<span class="material-symbols-outlined text-sm">filter_alt</span>
+<span>Todos (164)</span>
+</button>
+<button class="px-3.5 py-2 rounded-full bg-error-container text-on-error-container font-label-caps text-label-caps flex items-center gap-1.5 shadow-sm" type="button">
+<span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+<span>Críticos (4)</span>
+</button>
+</div>
+</div>
+<!-- Table Container -->
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low text-on-surface-variant font-label-caps text-label-caps uppercase tracking-wider rounded-xl">
+<th class="py-3 px-4 rounded-l-xl">Lote &amp; Producto</th>
+<th class="py-3 px-4">Ubicación</th>
+<th class="py-3 px-4">Vencimiento</th>
+<th class="py-3 px-4 text-right">Piso / Costo</th>
+<th class="py-3 px-4 text-center">Estado</th>
+<th class="py-3 px-4 rounded-r-xl text-right">Acción Operativa</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container">
+<!-- Item 1: Leche Entera -->
+<tr class="group hover:bg-surface-container-low/60 transition-colors">
+<td class="py-4 px-4">
+<div class="flex items-center gap-3">
+<img class="w-10 h-10 rounded-xl object-cover shadow-sm bg-surface-container" data-alt="Tetra pack bottle of fresh whole organic milk displayed under supermarket aisle retail spotlight with clear labeling" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAlNX3eKDrdGT6Lv0PdEfs0vRTdum9l45vAN2QCu1zfgyuZRTwG2275RQtplpk6WgvGZFqG7aZFwVNoMZih3UDSxywTiTljqZMk3_nDlPmwoKRY3TbcQig3jFTX2Bi_XIMGL6FCPwxO5MhR6WsY2TfgCJJo6xMFoq2wFKkJSbU4WbjdsaIcjU_8g--jxU8nW16kX7bGwZPrlVsBQwZIbyOfwG-wFvUcATRDd05ESa-S_t5kGgoTSKJVSA"/>
+<div class="flex flex-col min-w-0">
+<span class="font-title-md text-title-md text-on-surface font-semibold">Leche Entera Orgánica 1L</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">LOT-2026-0412 • SKU: 3218-LECH</span>
+</div>
+</div>
+</td>
+<td class="py-4 px-4 font-body-md text-body-md text-on-surface-variant">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-sm text-secondary">ac_unit</span>
+<span>Góndola Fría C-02</span>
+</div>
+</td>
+<td class="py-4 px-4">
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-error font-bold">En 3 días</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">12 Sep 2026</span>
+</div>
+</td>
+<td class="py-4 px-4 text-right">
+<div class="flex flex-col">
+<span class="font-label-numeric-md text-label-numeric-md text-on-surface font-bold">24 pzas</span>
+<span class="font-body-sm text-body-sm text-error font-medium">$828.00 MXN</span>
+</div>
+</td>
+<td class="py-4 px-4 text-center">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-error-container text-on-error-container text-xs font-label-caps font-bold uppercase tracking-wider">
+<span class="w-2 h-2 rounded-full bg-error animate-ping"></span>
+                    CRÍTICO
+                  </span>
+</td>
+<td class="py-4 px-4 text-right">
+<button class="px-4 py-2 rounded-full bg-error text-on-error font-title-md text-sm hover:opacity-90 transition-transform active:scale-95 shadow-sm inline-flex items-center gap-1" type="button">
+<span class="material-symbols-outlined text-xs">percent</span>
+<span>Remate 40%</span>
+</button>
+</td>
+</tr>
+<!-- Item 2: Pan de Barra -->
+<tr class="group hover:bg-surface-container-low/60 transition-colors">
+<td class="py-4 px-4">
+<div class="flex items-center gap-3">
+<img class="w-10 h-10 rounded-xl object-cover shadow-sm bg-surface-container" data-alt="Artisanal seeded sliced loaf bread packaged in craft paper bag on clean retail shelf surface with warm spotlight" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBfiCplKujIU9NAHtmFkbwxXngp-MlCFdV2kVQ6rN_S275M-O3Ynh7pzL9vQnXzUZ_oBejmMeUfZehpGyxNHRW7u5qsWrodYxcPR-mYpLu_dCJtfnGAkWB6jBr8NYsB5J8rexHqTnxKslxzcDOEz-S6fbBNUCWVfSwRugOKcl4m_zU_jgfvgXAsAcUXxYLkQevZ-ZAcnUCLah59zBG50ZY64RL8CgG8BrdOJ7ZY8L_LYKh94AoVRZoIfA"/>
+<div class="flex flex-col min-w-0">
+<span class="font-title-md text-title-md text-on-surface font-semibold">Pan de Barra Artesanal</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">LOT-2026-0918 • SKU: 4902-PAN</span>
+</div>
+</div>
+</td>
+<td class="py-4 px-4 font-body-md text-body-md text-on-surface-variant">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-sm text-amber-600">bakery_dining</span>
+<span>Pasillo Panadería P-01</span>
+</div>
+</td>
+<td class="py-4 px-4">
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-error font-bold">En 6 días</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">15 Sep 2026</span>
+</div>
+</td>
+<td class="py-4 px-4 text-right">
+<div class="flex flex-col">
+<span class="font-label-numeric-md text-label-numeric-md text-on-surface font-bold">18 pzas</span>
+<span class="font-body-sm text-body-sm text-error font-medium">$810.00 MXN</span>
+</div>
+</td>
+<td class="py-4 px-4 text-center">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-error-container text-on-error-container text-xs font-label-caps font-bold uppercase tracking-wider">
+<span class="w-2 h-2 rounded-full bg-error"></span>
+                    CRÍTICO
+                  </span>
+</td>
+<td class="py-4 px-4 text-right">
+<button class="px-4 py-2 rounded-full bg-secondary-container text-on-secondary-container font-title-md text-sm hover:opacity-90 transition-transform active:scale-95 shadow-sm inline-flex items-center gap-1" type="button">
+<span class="material-symbols-outlined text-xs">local_offer</span>
+<span>Combo 2x1</span>
+</button>
+</td>
+</tr>
+<!-- Item 3: Chocolate Amargo -->
+<tr class="group hover:bg-surface-container-low/60 transition-colors">
+<td class="py-4 px-4">
+<div class="flex items-center gap-3">
+<img class="w-10 h-10 rounded-xl object-cover shadow-sm bg-surface-container" data-alt="Dark gourmet chocolate bar with minimal dark wrapping and foil showing cacao pods on wooden shelf backdrop" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAfZlNt6ht2ZemwkRfGvNcqh-P4bol5AK1WGkpLan8CZXqg94h2lHqAuhIx2kwunrOflqCq2oOulGDaTMBAftoCgZxsz94qvGdlxX_uhsiScoxLNJnFwDRMfuFoAHoMam8-AS2MDHSGjkwXH8ArtEQlI6id6Q-a0-xQC158RoAj5DcAyobh9ZMINypVqTX4-urmxK0SzQa-x3FYYbQhRbC615bkIAxI9EJV3rVe48NB4Te_v63w7yyr2w"/>
+<div class="flex flex-col min-w-0">
+<span class="font-title-md text-title-md text-on-surface font-semibold">Chocolate Amargo 85% Criollo</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">LOT-2026-1002 • SKU: 6712-CHOC</span>
+</div>
+</div>
+</td>
+<td class="py-4 px-4 font-body-md text-body-md text-on-surface-variant">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-sm text-tertiary">storefront</span>
+<span>Góndola Dulces D-04</span>
+</div>
+</td>
+<td class="py-4 px-4">
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-amber-700 font-bold">En 22 días</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">01 Oct 2026</span>
+</div>
+</td>
+<td class="py-4 px-4 text-right">
+<div class="flex flex-col">
+<span class="font-label-numeric-md text-label-numeric-md text-on-surface font-bold">45 pzas</span>
+<span class="font-body-sm text-body-sm text-amber-700 font-medium">$2,250.00 MXN</span>
+</div>
+</td>
+<td class="py-4 px-4 text-center">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-800 text-xs font-label-caps font-bold uppercase tracking-wider">
+<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                    ADVERTENCIA
+                  </span>
+</td>
+<td class="py-4 px-4 text-right">
+<button class="px-4 py-2 rounded-full bg-surface-container-high text-on-surface font-title-md text-sm hover:bg-surface-container-highest transition-transform active:scale-95 shadow-sm inline-flex items-center gap-1" type="button">
+<span class="material-symbols-outlined text-xs">fast_forward</span>
+<span>Priorizar Salida</span>
+</button>
+</td>
+</tr>
+<!-- Item 4: Café Tostado -->
+<tr class="group hover:bg-surface-container-low/60 transition-colors">
+<td class="py-4 px-4">
+<div class="flex items-center gap-3">
+<img class="w-10 h-10 rounded-xl object-cover shadow-sm bg-surface-container" data-alt="Matte black bag of whole bean espresso coffee beans on a modern retail supermarket display shelf" src="https://lh3.googleusercontent.com/aida-public/AB6AXuArmkwth64X10O1B18bLzViFYS7DUkeZLWktZ6-5xQ72vYvLrEEkJnTuxgJH0YiT3wWtdlssCl54MUnFtiL9YoABVNagmeWKBE3SLESRkB22lDIDKIBDg0Lvvf-J5KvYBIBuxojgMj-84ktE1ANgSKRLfH08N-THgzB1A_1dAYD5zVxF8JrM7r6r6uQvoajsw_qyW_G6hZfHR6toNwkpKyjplKRqe7AZWdPuu-OX6xymntpxNrXt63pwg"/>
+<div class="flex flex-col min-w-0">
+<span class="font-title-md text-title-md text-on-surface font-semibold">Café Tostado Espresso 500g</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">LOT-2026-1115 • SKU: 1092-CAFE</span>
+</div>
+</div>
+</td>
+<td class="py-4 px-4 font-body-md text-body-md text-on-surface-variant">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-sm text-primary">coffee</span>
+<span>Estante Gourmet G-01</span>
+</div>
+</td>
+<td class="py-4 px-4">
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-primary font-bold">En 68 días</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">16 Nov 2026</span>
+</div>
+</td>
+<td class="py-4 px-4 text-right">
+<div class="flex flex-col">
+<span class="font-label-numeric-md text-label-numeric-md text-on-surface font-bold">85 pzas</span>
+<span class="font-body-sm text-body-sm text-primary font-medium">$12,750.00 MXN</span>
+</div>
+</td>
+<td class="py-4 px-4 text-center">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-fixed/20 text-on-primary-fixed-variant text-xs font-label-caps font-bold uppercase tracking-wider">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+                    FRESCO
+                  </span>
+</td>
+<td class="py-4 px-4 text-right">
+<span class="inline-flex items-center gap-1 text-on-surface-variant text-xs font-label-caps">
+<span class="material-symbols-outlined text-sm text-primary">check</span>
+                    Rotación Óptima
+                  </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Inline Visual Chart: Expiration Distribution Bar -->
+<div class="p-4 bg-surface-container-low rounded-2xl flex flex-col gap-2">
+<div class="flex items-center justify-between text-xs font-label-caps text-on-surface-variant">
+<span>Composición de Riesgo del Inventario en Piso</span>
+<span>Total 164 Lotes</span>
+</div>
+<div class="w-full h-3 bg-surface-container-highest rounded-full overflow-hidden flex">
+<div class="bg-error h-full" style="width: 2.4%;" title="Críticos: 4"></div>
+<div class="bg-amber-500 h-full" style="width: 7.3%;" title="Advertencia: 12"></div>
+<div class="bg-primary h-full" style="width: 90.3%;" title="Frescos: 148"></div>
+</div>
+<div class="flex items-center gap-6 pt-1 text-xs font-body-sm text-on-surface-variant">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-error"></span>
+<span>Crítico (&lt;7d): 2.4%</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+<span>Advertencia (7-30d): 7.3%</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span>Frescos (&gt;30d): 90.3%</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Section B: Cashier Tactical Ranking (4 Columns on XL) -->
+<section class="xl:col-span-4 flex flex-col gap-6 bg-surface-container-lowest p-pad-card-lg rounded-3xl shadow-md">
+<div class="flex items-center justify-between">
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">insights</span>
+<h2 class="font-headline-md text-headline-md text-on-surface">Ranking Operativo de Cajeros</h2>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant">Métricas en vivo del turno matutino.</p>
+</div>
+<button class="w-9 h-9 rounded-full bg-surface-container-low flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors" type="button">
+<span class="material-symbols-outlined text-lg">tune</span>
+</button>
+</div>
+<div class="space-y-4">
+<!-- Cajero 1: María Elena Morales -->
+<div class="relative p-5 rounded-2xl bg-surface-container-low/70 hover:bg-surface-container-low transition-all shadow-sm">
+<div class="flex items-start justify-between gap-3">
+<div class="flex items-center gap-3">
+<div class="relative">
+<img class="w-12 h-12 rounded-full object-cover" data-alt="Portrait of a smiling professional female supermarket cashier wearing a corporate green apron and head mic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBR8wUnA-CGDU-vYp8phVSrkxo1TYS3o1wapzk_b1HqwWCtH7elE3NJ6GkHFLZGbapXm92fSeYH4qqg0kN7K8j-YCZxGUOXO7e2OZzexsqFye0uyY_qlYaa7L-DfUY6MOtT6Xg2wWKVSZfA2ThIJVaJiHpTVqZbZESX4vJCv_mcTADDd_5rnLKYfUS7DDxFStZKJSxu6uP6dJnMwwS3xrFyhqB7R2421XaxP78IM-ndAiAuEpChNdUKSw"/>
+<span class="absolute -top-1 -left-1 w-5 h-5 rounded-full bg-amber-400 text-amber-950 font-label-caps text-[10px] font-bold flex items-center justify-center shadow-sm">1</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="font-title-md text-title-md text-on-surface font-bold">María Elena Morales</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Caja 02 • Turno AM</span>
+</div>
+</div>
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-400/20 text-amber-900 text-xs font-label-caps font-bold uppercase tracking-tight">
+<span class="material-symbols-outlined text-sm text-amber-500" style="font-variation-settings: 'FILL' 1;">star</span>
+                Destacada
+              </span>
+</div>
+<div class="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-surface-container-highest/60 text-center">
+<div>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase block">Tickets Hoy</span>
+<span class="font-label-numeric-md text-label-numeric-md text-on-surface font-bold">142</span>
+<span class="text-[10px] font-body-sm text-on-surface-variant block">$14,200.00</span>
+</div>
+<div>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase block">Velocidad</span>
+<span class="font-label-numeric-md text-label-numeric-md text-primary font-bold">28 t/h</span>
+<span class="text-[10px] font-body-sm text-primary block">Top de Tienda</span>
+</div>
+<div>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase block">Precisión</span>
+<span class="font-label-numeric-md text-label-numeric-md text-on-surface font-bold">100%</span>
+<span class="text-[10px] font-body-sm text-primary block">0 descuadres (30d)</span>
+</div>
+</div>
+</div>
+<!-- Cajero 2: Sofía Valenzuela -->
+<div class="relative p-5 rounded-2xl bg-surface-container-low/70 hover:bg-surface-container-low transition-all shadow-sm">
+<div class="flex items-start justify-between gap-3">
+<div class="flex items-center gap-3">
+<div class="relative">
+<img class="w-12 h-12 rounded-full object-cover" data-alt="Close up portrait of a focused Hispanic female retail cashier in uniform with badge" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBQVq8p5eiWL6M7_WSvITShen9ERMn3pdnOMk6a9NGtimQVwHse73Oa1ew64nwvoYSO3hh79ltLlb87dBslSJeYrH07PIEYk4ej6Ghl0dMZnS2YiLL4Wjn6PXw5bwqaqIHjS6v3GBcXv42WYyExxyKHlSh3YLQ5Z_-8KlUdFtzH2ug2VKQRVIZxf8MfV0c_WqoBr4jQg9Q6hGLOrDCbOhmAgW8Hpx-v05B-D0UqusJ--RAgX6ruO91ekg"/>
+<span class="absolute -top-1 -left-1 w-5 h-5 rounded-full bg-surface-container-highest text-on-surface font-label-caps text-[10px] font-bold flex items-center justify-center">2</span>
+</div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface font-bold">Sofía Valenzuela</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Caja 04 • Turno AM</span>
+</div>
+</div>
+<span class="px-2.5 py-0.5 rounded-full bg-primary-fixed/30 text-on-primary-fixed-variant text-xs font-label-caps font-bold uppercase">
+                Consistente
+              </span>
+</div>
+<div class="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-surface-container-highest/60 text-center">
+<div>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase block">Tickets Hoy</span>
+<span class="font-label-numeric-md text-label-numeric-md text-on-surface font-bold">118</span>
+<span class="text-[10px] font-body-sm text-on-surface-variant block">$11,840.00</span>
+</div>
+<div>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase block">Velocidad</span>
+<span class="font-label-numeric-md text-label-numeric-md text-on-surface font-bold">24 t/h</span>
+<span class="text-[10px] font-body-sm text-on-surface-variant block">Meta: 22 t/h</span>
+</div>
+<div>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase block">Precisión</span>
+<span class="font-label-numeric-md text-label-numeric-md text-on-surface font-bold">99.8%</span>
+<span class="text-[10px] font-body-sm text-primary block">+$30 saldo neto</span>
+</div>
+</div>
+</div>
+<!-- Cajero 3: Juan Carlos Nava -->
+<div class="relative p-5 rounded-2xl bg-surface-container-low/70 hover:bg-surface-container-low transition-all shadow-sm">
+<div class="flex items-start justify-between gap-3">
+<div class="flex items-center gap-3">
+<div class="relative">
+<img class="w-12 h-12 rounded-full object-cover" data-alt="Portrait of a young male cashier in retail uniform with a badge and confident expression" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBLBJfre97PzhVmQDcNuJQ5YV7_AA8O7bbr7O_UqHj9FyHgGmGY6_rI1Oqv_g8sQo_AS7vrzFQMLRXgYCwZehznlqW3FXUB58RDM6nng0vj368YBHORDV8ByNPEpUEWVdjv-J7zJW_-BcFU_NqOpSO4TarOlLRF6n3b0cO1Lts9IQ0rxzRVi4l6Ut0xRHysWgXHnmMLJ91k9jmoibpFe2ga5InYhQeoKV8vzgM16261-F1EJJovWMMtGQ"/>
+<span class="absolute -top-1 -left-1 w-5 h-5 rounded-full bg-surface-container-highest text-on-surface font-label-caps text-[10px] font-bold flex items-center justify-center">3</span>
+</div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface font-bold">Juan Carlos Nava</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Caja 01 • Turno AM</span>
+</div>
+</div>
+<span class="px-2.5 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant text-xs font-label-caps uppercase">
+                Estable
+              </span>
+</div>
+<div class="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-surface-container-highest/60 text-center">
+<div>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase block">Tickets Hoy</span>
+<span class="font-label-numeric-md text-label-numeric-md text-on-surface font-bold">95</span>
+<span class="text-[10px] font-body-sm text-on-surface-variant block">$9,500.00</span>
+</div>
+<div>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase block">Velocidad</span>
+<span class="font-label-numeric-md text-label-numeric-md text-on-surface font-bold">21 t/h</span>
+<span class="text-[10px] font-body-sm text-on-surface-variant block">En rango</span>
+</div>
+<div>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase block">Precisión</span>
+<span class="font-label-numeric-md text-label-numeric-md text-on-surface font-bold">100%</span>
+<span class="text-[10px] font-body-sm text-primary block">Gaveta Cuadrada</span>
+</div>
+</div>
+</div>
+<!-- Cajero 4: Roberto Alarcón (Con Alerta) -->
+<div class="relative p-5 rounded-2xl bg-error-container/20 hover:bg-error-container/30 transition-all shadow-sm">
+<div class="flex items-start justify-between gap-3">
+<div class="flex items-center gap-3">
+<div class="relative">
+<img class="w-12 h-12 rounded-full object-cover" data-alt="Portrait of a young male store cashier looking slightly stressed under fluorescent supermarket lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDFjDegD06fJ51BJZvWc2MXQV1D9QdRZRp4zXheHVef1cllKpsqn_IZc3RK5sGlhfgfmyXHP4WOyIrktzV7mxEiZBdhfhe6qrnZJ4jfro-LFfYSjpqImC_zsjNeqmuriRN6UT3zRTd9FF_GJoXVMVD-ubbZejidAMSjLrLQSOsmobeoFFttla7QPfvMlApyPkp1VrfeTgXzUhT6sTWSckT7avDm8wGPxUpvKgxMmi2i8jnvUtk5FCDSCQ"/>
+<span class="absolute -top-1 -left-1 w-5 h-5 rounded-full bg-error text-on-error font-label-caps text-[10px] font-bold flex items-center justify-center">4</span>
+</div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface font-bold">Roberto Alarcón</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Caja 05 • Turno AM</span>
+</div>
+</div>
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-error-container text-on-error-container text-xs font-label-caps font-bold uppercase">
+<span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+                Atención
+              </span>
+</div>
+<div class="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-error/15 text-center">
+<div>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase block">Tickets Hoy</span>
+<span class="font-label-numeric-md text-label-numeric-md text-on-surface font-bold">82</span>
+<span class="text-[10px] font-body-sm text-on-surface-variant block">$8,200.00</span>
+</div>
+<div>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase block">Velocidad</span>
+<span class="font-label-numeric-md text-label-numeric-md text-error font-bold">18 t/h</span>
+<span class="text-[10px] font-body-sm text-error block">-18% vs meta</span>
+</div>
+<div>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase block">Precisión</span>
+<span class="font-label-numeric-md text-label-numeric-md text-error font-bold">96.2%</span>
+<span class="text-[10px] font-body-sm text-error block">2 descuadres sem.</span>
+</div>
+</div>
+<div class="mt-3 p-2.5 rounded-xl bg-surface-container-lowest text-xs font-body-sm text-error flex items-center justify-between">
+<div class="flex items-center gap-1.5 font-medium">
+<span class="material-symbols-outlined text-sm">school</span>
+<span>Capacitación en Conteo Sugerida</span>
+</div>
+<button class="px-2.5 py-1 rounded-full bg-error text-on-error font-label-caps text-[10px] hover:opacity-90 transition-opacity" type="button">
+                Asignar
+              </button>
+</div>
+</div>
+</div>
+<!-- Cashier Performance Sparkline / Summary -->
+<div class="p-4 rounded-2xl bg-surface-container-low flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Rendimiento Global Tienda</span>
+<span class="font-headline-md text-headline-md text-on-surface font-bold">22.7 <span class="text-sm font-body-md text-on-surface-variant font-normal">t/h promedio</span></span>
+</div>
+<!-- Sparkline representation -->
+<div class="flex items-end gap-1.5 h-10">
+<div class="w-2.5 bg-primary/40 rounded-t h-5"></div>
+<div class="w-2.5 bg-primary/50 rounded-t h-7"></div>
+<div class="w-2.5 bg-primary/70 rounded-t h-9"></div>
+<div class="w-2.5 bg-primary/80 rounded-t h-6"></div>
+<div class="w-2.5 bg-primary rounded-t h-10"></div>
+</div>
+</div>
+</section>
+</div>
+</div>
+</div></main></div></body></html>

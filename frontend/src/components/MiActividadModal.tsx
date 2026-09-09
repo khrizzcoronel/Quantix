@@ -1,8 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { 
-  X, UserCheck, Receipt, ShieldAlert, 
-  Clock, RefreshCw
-} from 'lucide-react';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
 
@@ -84,159 +80,166 @@ export default function MiActividadModal({ isOpen, onClose }: Props) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full border border-gray-100 flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 bg-inverse-surface/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-2xl w-full border border-outline-variant/30 flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         
         {/* Cabecera */}
-        <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-quantix-100 text-quantix-700 rounded-2xl">
-              <UserCheck className="w-6 h-6" />
+        <div className="p-5 border-b border-outline-variant/20 flex items-center justify-between bg-surface-container-low/40">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-primary-container text-on-primary-container flex items-center justify-center shadow-xs">
+              <span className="material-symbols-outlined text-2xl">badge</span>
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-black text-gray-900">Mi Turno / Mi Actividad</h2>
-                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-extrabold rounded-full uppercase">
+                <h2 className="font-headline-md text-title-lg text-on-surface">Mi Turno / Mi Actividad</h2>
+                <span className="px-2.5 py-0.5 bg-primary-fixed text-on-primary-fixed font-label-caps text-label-caps rounded-full uppercase">
                   Hoy
                 </span>
               </div>
-              <p className="text-xs text-gray-500 font-medium">
-                Operador: <strong className="text-gray-800">{user?.nombre || 'Usuario'}</strong> ({user?.rol || 'CAJERO'})
+              <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+                Operador: <strong className="text-on-surface font-headline-md">{user?.nombre || 'Usuario'}</strong> ({user?.rol || 'CAJERO'})
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={cargarActividad}
               disabled={loading}
-              className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+              className="w-10 h-10 rounded-full bg-surface-container-low hover:bg-surface-container text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer"
               title="Actualizar actividad"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <span className={`material-symbols-outlined text-lg ${loading ? 'animate-spin text-primary' : ''}`}>
+                refresh
+              </span>
             </button>
             <button
+              type="button"
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+              className="w-10 h-10 rounded-full bg-surface-container-low hover:bg-surface-container text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer"
               title="Cerrar ventana"
             >
-              <X className="w-5 h-5" />
+              <span className="material-symbols-outlined text-xl">close</span>
             </button>
           </div>
         </div>
 
         {/* Panel de Resumen Rápido de Turno */}
-        <div className="p-5 bg-gradient-to-br from-quantix-500 to-quantix-700 text-white">
+        <div className="p-5 bg-surface-container-low border-b border-outline-variant/20">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-            <div className="bg-white/10 backdrop-blur-xs p-3 rounded-2xl border border-white/15">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-white/80">Sesión Actual</span>
-              <p className="text-sm font-black mt-0.5 truncate">
-                {data?.sesion_activa ? data.sesion_activa.terminal_id : 'Sin sesión activa'}
+            <div className="bg-surface-container-lowest p-3.5 rounded-2xl border border-outline-variant/20 shadow-xs">
+              <span className="font-label-caps text-label-caps uppercase text-on-surface-variant block">Sesión Actual</span>
+              <p className="font-headline-md text-body-md text-on-surface mt-1 truncate">
+                {data?.sesion_activa ? data.sesion_activa.terminal_id : 'Sin sesión'}
               </p>
-              <span className="text-[10px] text-emerald-200 font-semibold">
+              <span className="inline-flex items-center gap-1 font-label-caps text-[10px] text-primary mt-0.5 uppercase">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
                 {data?.sesion_activa?.estado || 'Cerrada'}
               </span>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-xs p-3 rounded-2xl border border-white/15">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-white/80">Ventas Cobradas</span>
-              <p className="text-base font-black mt-0.5">
+            <div className="bg-surface-container-lowest p-3.5 rounded-2xl border border-outline-variant/20 shadow-xs">
+              <span className="font-label-caps text-label-caps uppercase text-on-surface-variant block">Ventas Cobradas</span>
+              <p className="font-label-numeric-md text-title-md font-bold text-primary mt-1">
                 ${Number(data?.resumen_hoy.total_monto || 0).toFixed(2)}
               </p>
-              <span className="text-[10px] text-white/70">Monto del día</span>
+              <span className="font-body-sm text-body-sm text-on-surface-variant">Monto del día</span>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-xs p-3 rounded-2xl border border-white/15">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-white/80">Tickets Emitidos</span>
-              <p className="text-base font-black mt-0.5">
+            <div className="bg-surface-container-lowest p-3.5 rounded-2xl border border-outline-variant/20 shadow-xs">
+              <span className="font-label-caps text-label-caps uppercase text-on-surface-variant block">Tickets Emitidos</span>
+              <p className="font-label-numeric-md text-title-md font-bold text-on-surface mt-1">
                 {data?.resumen_hoy.total_tickets || 0}
               </p>
-              <span className="text-[10px] text-white/70">
+              <span className="font-body-sm text-body-sm text-on-surface-variant">
                 {data?.resumen_hoy.tickets_anulados ? `${data.resumen_hoy.tickets_anulados} anulados` : '0 anulados'}
               </span>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-xs p-3 rounded-2xl border border-white/15">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-white/80">Fondo Inicial</span>
-              <p className="text-base font-black mt-0.5">
+            <div className="bg-surface-container-lowest p-3.5 rounded-2xl border border-outline-variant/20 shadow-xs">
+              <span className="font-label-caps text-label-caps uppercase text-on-surface-variant block">Fondo Inicial</span>
+              <p className="font-label-numeric-md text-title-md font-bold text-secondary mt-1">
                 ${Number(data?.sesion_activa?.fondo_inicial || 0).toFixed(2)}
               </p>
-              <span className="text-[10px] text-white/70">En gaveta</span>
+              <span className="font-body-sm text-body-sm text-on-surface-variant">En gaveta</span>
             </div>
           </div>
         </div>
 
-        {/* Pestañas de contenido */}
-        <div className="flex border-b border-gray-200 px-5 pt-3 gap-2 bg-gray-50/50">
+        {/* Pestañas de contenido con pills rounded-full */}
+        <div className="flex items-center gap-2 p-4 border-b border-outline-variant/15 bg-surface-container-low/20">
           <button
+            type="button"
             onClick={() => setTab('TICKETS')}
-            className={`pb-2.5 px-4 font-bold text-xs border-b-2 transition-all flex items-center gap-2 ${
+            className={`px-5 py-2 rounded-full font-headline-md text-body-sm transition-all flex items-center gap-2 cursor-pointer ${
               tab === 'TICKETS'
-                ? 'border-quantix-600 text-quantix-600'
-                : 'border-transparent text-gray-400 hover:text-gray-600'
+                ? 'bg-inverse-surface text-inverse-on-surface shadow-xs'
+                : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
             }`}
           >
-            <Receipt className="w-3.5 h-3.5" />
-            Mis Tickets de Hoy ({data?.tickets_hoy.length || 0})
+            <span className="material-symbols-outlined text-base">receipt_long</span>
+            <span>Mis Tickets de Hoy ({data?.tickets_hoy.length || 0})</span>
           </button>
 
           <button
+            type="button"
             onClick={() => setTab('EVENTOS')}
-            className={`pb-2.5 px-4 font-bold text-xs border-b-2 transition-all flex items-center gap-2 ${
+            className={`px-5 py-2 rounded-full font-headline-md text-body-sm transition-all flex items-center gap-2 cursor-pointer ${
               tab === 'EVENTOS'
-                ? 'border-quantix-600 text-quantix-600'
-                : 'border-transparent text-gray-400 hover:text-gray-600'
+                ? 'bg-inverse-surface text-inverse-on-surface shadow-xs'
+                : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
             }`}
           >
-            <ShieldAlert className="w-3.5 h-3.5" />
-            Bitácora de Mi Turno ({data?.eventos_auditoria_hoy.length || 0})
+            <span className="material-symbols-outlined text-base">shield</span>
+            <span>Bitácora de Mi Turno ({data?.eventos_auditoria_hoy.length || 0})</span>
           </button>
         </div>
 
         {/* Contenido scrolleable */}
         <div className="flex-1 overflow-y-auto p-5 space-y-3">
           {error && (
-            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm" role="alert">
+            <div className="p-3.5 rounded-2xl bg-error-container text-on-error-container border border-error/20 text-body-sm font-medium" role="alert">
               {error}
             </div>
           )}
           {loading && !data ? (
-            <div className="py-12 text-center text-gray-400 text-xs">
-              <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-quantix-500" />
+            <div className="py-12 text-center text-on-surface-variant text-body-sm">
+              <span className="material-symbols-outlined text-2xl animate-spin text-primary mx-auto mb-2 block">progress_activity</span>
               Cargando historial de tu turno...
             </div>
           ) : tab === 'TICKETS' ? (
             /* TAB TICKETS */
             data?.tickets_hoy && data.tickets_hoy.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {data.tickets_hoy.map((t) => (
                   <div
                     key={t.id}
-                    className="p-3 bg-white border border-gray-200 hover:border-quantix-300 rounded-2xl flex items-center justify-between transition-all shadow-2xs"
+                    className="p-3.5 bg-surface-container-low/50 hover:bg-surface-container-low border border-outline-variant/20 rounded-2xl flex items-center justify-between transition-all shadow-2xs"
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-xl ${
-                        t.estado === 'COMPLETADA' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-xs ${
+                        t.estado === 'COMPLETADA' ? 'bg-primary/10 text-primary' : 'bg-error-container text-on-error-container'
                       }`}>
-                        <Receipt className="w-4 h-4" />
+                        <span className="material-symbols-outlined text-lg">receipt</span>
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-xs text-gray-900">{t.folio_ticket}</span>
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
-                            t.estado === 'COMPLETADA' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          <span className="font-mono font-bold text-body-sm text-on-surface">{t.folio_ticket}</span>
+                          <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-label-caps uppercase ${
+                            t.estado === 'COMPLETADA' ? 'bg-primary/10 text-primary' : 'bg-error-container text-on-error-container'
                           }`}>
                             {t.estado}
                           </span>
                         </div>
-                        <p className="text-[11px] text-gray-500 mt-0.5">
-                          Cliente: <strong>{t.cliente_nombre || 'Público General'}</strong> • {new Date(t.fecha_hora).toLocaleTimeString()}
+                        <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+                          Cliente: <strong className="text-on-surface font-headline-md">{t.cliente_nombre || 'Público General'}</strong> • {new Date(t.fecha_hora).toLocaleTimeString()}
                         </p>
                       </div>
                     </div>
 
                     <div className="text-right">
-                      <span className="font-mono font-black text-sm text-gray-900">
+                      <span className="font-label-numeric-md font-bold text-title-md text-on-surface">
                         ${Number(t.total_pagar).toFixed(2)}
                       </span>
                     </div>
@@ -244,38 +247,38 @@ export default function MiActividadModal({ isOpen, onClose }: Props) {
                 ))}
               </div>
             ) : (
-              <div className="py-12 text-center text-gray-400 text-xs">
-                <Receipt className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+              <div className="py-12 text-center text-on-surface-variant text-body-sm">
+                <span className="material-symbols-outlined text-4xl text-on-surface-variant mx-auto mb-2 block">receipt_long</span>
                 No has emitido tickets en este turno todavía.
               </div>
             )
           ) : (
             /* TAB EVENTOS */
             data?.eventos_auditoria_hoy && data.eventos_auditoria_hoy.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {data.eventos_auditoria_hoy.map((ev) => (
                   <div
                     key={ev.id}
-                    className="p-3 bg-white border border-gray-200 rounded-2xl text-xs space-y-1"
+                    className="p-3.5 bg-surface-container-low/50 hover:bg-surface-container-low border border-outline-variant/20 rounded-2xl text-body-sm space-y-1.5 transition-all"
                   >
                     <div className="flex items-center justify-between">
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase ${
-                        ev.gravedad === 'CRITICA' ? 'bg-red-100 text-red-800 border border-red-200' :
-                        ev.gravedad === 'MEDIA' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
-                        'bg-blue-100 text-blue-800 border border-blue-200'
+                      <span className={`px-2.5 py-0.5 rounded-full font-label-caps text-label-caps uppercase ${
+                        ev.gravedad === 'CRITICA' ? 'bg-error-container text-on-error-container' :
+                        ev.gravedad === 'MEDIA' ? 'bg-amber-100 text-amber-900 border border-amber-300' :
+                        'bg-secondary-fixed text-on-secondary-fixed'
                       }`}>
                         {ev.tipo_evento}
                       </span>
-                      <span className="text-gray-400 text-[10px] flex items-center gap-1 font-mono">
-                        <Clock className="w-3 h-3" />
+                      <span className="text-on-surface-variant text-body-sm flex items-center gap-1 font-mono">
+                        <span className="material-symbols-outlined text-sm">schedule</span>
                         {new Date(ev.fecha_evento).toLocaleTimeString()}
                       </span>
                     </div>
-                    <p className="text-gray-700 text-xs font-medium pt-1">
+                    <p className="text-on-surface text-body-md pt-0.5">
                       {ev.descripcion}
                     </p>
                     {ev.ip_terminal && (
-                      <span className="text-[10px] text-gray-400 font-mono block">
+                      <span className="font-mono text-body-sm text-on-surface-variant block">
                         Terminal: {ev.ip_terminal}
                       </span>
                     )}
@@ -283,8 +286,8 @@ export default function MiActividadModal({ isOpen, onClose }: Props) {
                 ))}
               </div>
             ) : (
-              <div className="py-12 text-center text-gray-400 text-xs">
-                <ShieldAlert className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+              <div className="py-12 text-center text-on-surface-variant text-body-sm">
+                <span className="material-symbols-outlined text-4xl text-on-surface-variant mx-auto mb-2 block">security</span>
                 No hay eventos de auditoría registrados en este turno.
               </div>
             )
@@ -292,14 +295,14 @@ export default function MiActividadModal({ isOpen, onClose }: Props) {
         </div>
 
         {/* Footer con botón Cerrar */}
-        <div className="p-4 border-t border-gray-100 bg-gray-50/70 flex items-center justify-between">
-          <span className="text-[11px] text-gray-400">
+        <div className="p-4 border-t border-outline-variant/20 bg-surface-container-low/40 flex items-center justify-between">
+          <span className="font-body-sm text-body-sm text-on-surface-variant">
             Registro inmutable de seguridad Quantix
           </span>
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-xl text-xs shadow-sm transition-all"
+            className="h-11 px-6 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface font-headline-md text-body-md transition-all cursor-pointer shadow-xs"
           >
             Cerrar
           </button>

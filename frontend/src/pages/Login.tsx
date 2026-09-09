@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { Store, Loader2, Users } from 'lucide-react';
+import { Loader2, Users } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -58,118 +58,207 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md flex flex-col items-center">
-        <div className="bg-quantix-100 p-4 rounded-2xl text-quantix-600 mb-4 shadow-sm">
-          <Store className="w-12 h-12" />
-        </div>
-        <h2 className="text-center text-3xl font-black text-gray-900 tracking-tight">
-          Quantix Retail OS
-        </h2>
-        <p className="mt-1 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
-          Autenticación Centralizada por Roles (RBAC)
-        </p>
-      </div>
+    <div className="min-h-screen bg-background font-body-md text-on-surface antialiased flex flex-col justify-between relative overflow-hidden select-none">
+      {/* Ambient background glow blobs */}
+      <div className="absolute -top-24 -left-20 w-96 h-96 rounded-full bg-gradient-to-tr from-primary-container/15 via-secondary-container/10 to-transparent blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-24 -right-20 w-96 h-96 rounded-full bg-gradient-to-tr from-tertiary-container/15 via-primary-container/10 to-transparent blur-3xl pointer-events-none" />
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-6 shadow-xl sm:rounded-2xl sm:px-10 border border-gray-100">
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            {error && (
-              <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded-r-lg">
-                <p className="text-xs font-semibold text-red-700">{error}</p>
-              </div>
-            )}
+      {/* Top Header Strip — Neo-Retail Security & Edge Bar */}
+      <header className="w-full bg-surface-container-lowest/80 backdrop-blur-xl border-b border-surface-container-high/50 z-20">
+        <div className="max-w-7xl mx-auto px-6 py-3.5 flex items-center justify-between gap-4">
+          <div className="flex items-center">
+            <img 
+              src="/quantix_logo.png" 
+              alt="Quantix Retail OS" 
+              className="h-9 w-auto object-contain dark:brightness-125" 
+            />
+          </div>
 
-            <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
-                Correo Corporativo
-              </label>
-              <input 
-                type="email" 
-                required 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="usuario@quantix.local"
-                className="block w-full border border-gray-300 rounded-xl shadow-xs py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-quantix-500 transition-colors" 
-              />
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-surface-container-low rounded-full">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-container opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+              </span>
+              <span className="font-label-caps text-[11px] font-bold uppercase text-on-surface">
+                Online 12ms • Cluster Central
+              </span>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
-                Contraseña
-              </label>
-              <input 
-                type="password" 
-                required 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="block w-full border border-gray-300 rounded-xl shadow-xs py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-quantix-500 transition-colors" 
-              />
-            </div>
-
-            <button 
-              type="submit" 
-              disabled={isLoading}
-              className="w-full mt-2 flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-lg text-sm font-extrabold text-white bg-quantix-600 hover:bg-quantix-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-quantix-500 disabled:opacity-70 transition-all active:scale-95"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" />
-                  Verificando credenciales...
-                </>
-              ) : (
-                'Iniciar Sesión'
-              )}
-            </button>
-          </form>
-
-          {/* Accesos Rápidos de Prueba */}
-          <div className="mt-6 pt-5 border-t border-gray-100">
-            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-2 flex items-center gap-1">
-              <Users className="w-3.5 h-3.5" />
-              Cuentas demo para probar roles:
-            </span>
-            <div className="grid grid-cols-2 gap-2.5">
-              <button
-                type="button"
-                onClick={() => handleQuickFill('admin@quantix.local', 'Admin123!')}
-                className="p-2.5 text-left rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 transition-colors"
-              >
-                <span className="block text-xs font-bold text-purple-900">DIRECTOR</span>
-                <span className="block text-[10px] text-purple-600">Acceso Total / BI</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickFill('supervisor@quantix.local', 'Super123!')}
-                className="p-2.5 text-left rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-colors"
-              >
-                <span className="block text-xs font-bold text-amber-900">SUPERVISOR</span>
-                <span className="block text-[10px] text-amber-600">Auditoría & Mermas</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickFill('bodeguero@quantix.local', 'Bodega123!')}
-                className="p-2.5 text-left rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors"
-              >
-                <span className="block text-xs font-bold text-blue-900">BODEGUERO</span>
-                <span className="block text-[10px] text-blue-600">Inventario & Lotes</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickFill('cajero@quantix.local', 'Caja123!')}
-                className="p-2.5 text-left rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors"
-              >
-                <span className="block text-xs font-bold text-emerald-900">CAJERO</span>
-                <span className="block text-[10px] text-emerald-600">Caja & Arqueo Ciego</span>
-              </button>
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-surface-container-low rounded-full">
+              <span className="material-symbols-outlined text-primary text-[16px]">verified_user</span>
+              <span className="font-label-caps text-[10px] font-bold uppercase text-on-surface-variant">
+                PCI-DSS 4.0
+              </span>
             </div>
           </div>
         </div>
-      </div>
+      </header>
+
+      {/* Main Login Frame */}
+      <main className="flex-1 flex flex-col items-center justify-center px-4 py-8 relative z-10">
+        <div className="w-full max-w-lg mx-auto">
+          <div className="bg-surface-container-lowest rounded-3xl shadow-xl border border-surface-container-high/40 p-8 sm:p-10 flex flex-col gap-6">
+            
+            {/* Header del Formulario */}
+            <div className="flex flex-col items-center text-center">
+              <img 
+                src="/quantix_logo.png" 
+                alt="Quantix Retail OS" 
+                className="h-12 w-auto object-contain mb-3 dark:brightness-125" 
+              />
+              <span className="px-3 py-1 rounded-full bg-surface-container-low text-primary font-label-caps text-[11px] font-bold uppercase tracking-wider mb-2">
+                Autenticación Unificada (RBAC)
+              </span>
+              <h2 className="font-headline-xl text-2xl sm:text-3xl font-bold text-on-surface tracking-tight">
+                Iniciar Sesión
+              </h2>
+              <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">
+                Ingresa con tu correo corporativo y contraseña autorizada
+              </p>
+            </div>
+
+            {error && (
+              <div className="p-3.5 bg-error-container text-on-error-container rounded-2xl flex items-center gap-3 text-body-sm font-semibold">
+                <span className="material-symbols-outlined text-error text-[20px] shrink-0">error</span>
+                <span>{error}</span>
+              </div>
+            )}
+
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              <div>
+                <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                  Correo Corporativo
+                </label>
+                <div className="relative flex items-center">
+                  <span className="material-symbols-outlined absolute left-4 text-outline text-[20px] pointer-events-none">
+                    mail
+                  </span>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="usuario@quantix.local"
+                    className="w-full h-14 pl-12 pr-4 bg-surface-container-low rounded-2xl font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 focus:shadow-sm transition-all"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                  Contraseña
+                </label>
+                <div className="relative flex items-center">
+                  <span className="material-symbols-outlined absolute left-4 text-outline text-[20px] pointer-events-none">
+                    lock
+                  </span>
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full h-14 pl-12 pr-4 bg-surface-container-low rounded-2xl font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 focus:shadow-sm transition-all"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full h-14 mt-2 rounded-full bg-primary-container hover:bg-primary-container/90 active:scale-[0.99] text-on-primary-container font-headline-md text-title-md font-bold tracking-tight shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="animate-spin w-5 h-5 text-on-primary-container" />
+                    <span>Verificando Credenciales...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-[20px]">login</span>
+                    <span>Ingresar al Sistema</span>
+                  </>
+                )}
+              </button>
+            </form>
+
+            {/* Selector de Cuentas Demo por Roles */}
+            <div className="pt-4 border-t border-surface-container-high/50">
+              <span className="font-label-caps text-[11px] font-bold text-outline uppercase tracking-wider block mb-2.5 flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-primary" />
+                Accesos rápidos de prueba por rol:
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleQuickFill('admin@quantix.local', 'Admin123!')}
+                  className="p-3 text-left rounded-2xl bg-tertiary-fixed/30 hover:bg-tertiary-fixed/60 border border-tertiary-fixed transition-all cursor-pointer group"
+                >
+                  <span className="font-label-caps text-[10px] font-bold text-on-tertiary-fixed uppercase tracking-wider block">
+                    DIRECTOR
+                  </span>
+                  <span className="font-body-sm text-[11px] text-on-surface font-semibold group-hover:text-tertiary">
+                    Dashboard & BI Total
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleQuickFill('supervisor@quantix.local', 'Super123!')}
+                  className="p-3 text-left rounded-2xl bg-secondary-fixed/30 hover:bg-secondary-fixed/60 border border-secondary-fixed transition-all cursor-pointer group"
+                >
+                  <span className="font-label-caps text-[10px] font-bold text-on-secondary-fixed uppercase tracking-wider block">
+                    SUPERVISOR
+                  </span>
+                  <span className="font-body-sm text-[11px] text-on-surface font-semibold group-hover:text-secondary">
+                    Arqueos & Auditoría
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleQuickFill('bodeguero@quantix.local', 'Bodega123!')}
+                  className="p-3 text-left rounded-2xl bg-surface-container hover:bg-surface-container-high border border-surface-container-high transition-all cursor-pointer group"
+                >
+                  <span className="font-label-caps text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">
+                    BODEGUERO
+                  </span>
+                  <span className="font-body-sm text-[11px] text-on-surface font-semibold">
+                    Inventario & FEFO
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleQuickFill('cajero@quantix.local', 'Cajero123!')}
+                  className="p-3 text-left rounded-2xl bg-primary-fixed/30 hover:bg-primary-fixed/60 border border-primary-fixed transition-all cursor-pointer group"
+                >
+                  <span className="font-label-caps text-[10px] font-bold text-on-primary-fixed uppercase tracking-wider block">
+                    CAJERO
+                  </span>
+                  <span className="font-body-sm text-[11px] text-on-surface font-semibold group-hover:text-primary">
+                    Punto de Venta POS
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Pie de Página */}
+      <footer className="w-full bg-surface-container-lowest/60 border-t border-surface-container-high/30 py-3 select-none">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-on-surface-variant font-body-sm text-[11px]">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-primary-container" />
+            <span>Quantix Retail OS v4.2 • PostgreSQL + DuckDB Gold</span>
+          </div>
+          <span className="font-label-caps uppercase text-outline">
+            Terminal Node ID: QTX-TER-01 • © 2026 Quantix Enterprise
+          </span>
+        </div>
+      </footer>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import {
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { exportToCSV, formatBoolean, formatDate } from '../utils/exportUtils';
+import { mostrarToast } from '../hooks/useWebSocket';
 
 interface UsuarioItem {
   id: string;
@@ -44,6 +45,11 @@ export default function Usuarios() {
 
   const showToast = useCallback((tipo: 'success' | 'error', mensaje: string) => {
     setFeedback({ tipo, mensaje });
+    mostrarToast({
+      titulo: tipo === 'success' ? 'Operación de Usuarios' : 'Error en Usuarios',
+      mensaje,
+      severidad: tipo === 'success' ? 'SUCCESS' : 'CRITICO',
+    });
     setTimeout(() => setFeedback(null), 4000);
   }, []);
 
@@ -144,17 +150,17 @@ export default function Usuarios() {
     return matchSearch && matchRol;
   });
 
-  const getRoleBadge = (rol: string) => {
-    switch (rol) {
+  const getRoleBadge = (r: string) => {
+    switch (r) {
       case 'DIRECTOR':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
+        return 'bg-tertiary-fixed text-on-tertiary-fixed border-tertiary-fixed';
       case 'SUPERVISOR':
-        return 'bg-amber-100 text-amber-800 border-amber-200';
+        return 'bg-secondary-fixed text-on-secondary-fixed-variant border-secondary-fixed';
       case 'BODEGUERO':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'bg-surface-container-high text-on-surface border-surface-container-high';
       case 'CAJERO':
       default:
-        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+        return 'bg-primary-fixed text-on-primary-fixed-variant border-primary-fixed';
     }
   };
 
@@ -166,45 +172,49 @@ export default function Usuarios() {
   const countBodegueros = usuarios.filter(u => u.rol === 'BODEGUERO' && u.activo).length;
 
   return (
-    <div className="h-full overflow-y-auto bg-gray-50 p-6 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-300">
+    <div className="h-full overflow-y-auto bg-background text-on-surface p-6 md:p-8 select-none">
+      <div className="w-full space-y-6 animate-in fade-in duration-300">
       
       {/* Toast Feedback */}
       {feedback && (
-        <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl border text-sm font-bold ${
+        <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl border text-body-sm font-bold ${
           feedback.tipo === 'success' 
-            ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
-            : 'bg-red-50 text-red-800 border-red-200'
+            ? 'bg-primary-fixed/30 text-on-primary-fixed-variant border-primary-fixed' 
+            : 'bg-error-container text-on-error-container border-error'
         }`}>
-          {feedback.tipo === 'success' ? <CheckCircle2 className="w-5 h-5 text-emerald-600" /> : <AlertCircle className="w-5 h-5 text-red-600" />}
+          {feedback.tipo === 'success' ? <CheckCircle2 className="w-5 h-5 text-primary" /> : <AlertCircle className="w-5 h-5 text-error" />}
           <span>{feedback.mensaje}</span>
         </div>
       )}
 
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 pb-5">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-surface-container-high/60 pb-5">
         <div>
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-quantix-50 text-quantix-600 rounded-2xl border border-quantix-100 shadow-sm">
+            <div className="w-11 h-11 bg-surface-container-low text-primary rounded-2xl flex items-center justify-center shadow-xs">
               <Users className="w-6 h-6" />
             </div>
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="px-2.5 py-0.5 bg-amber-100 text-amber-800 rounded-md text-[10px] font-black uppercase tracking-wider">
-                  Táctico • Supervisión
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="px-2.5 py-0.5 bg-secondary-fixed text-on-secondary-fixed rounded-full font-label-caps text-[10px] font-bold uppercase tracking-wider">
+                  Nivel Táctico • Supervisión
                 </span>
               </div>
-              <h1 className="text-2xl font-black text-gray-900 tracking-tight">Usuarios y Accesos</h1>
-              <p className="text-gray-500 text-xs font-medium">Control de acceso RBAC, roles operacionales y auditoría de credenciales</p>
+              <h1 className="font-headline-xl text-2xl md:text-3xl font-bold text-on-surface tracking-tight">
+                Directorio Maestro & Accesos RBAC
+              </h1>
+              <p className="font-body-sm text-body-sm text-on-surface-variant">
+                Control de identidades, jerarquías operacionales y auditoría de credenciales
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={cargarUsuarios}
             disabled={loading}
-            className="p-2.5 text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors shadow-sm"
+            className="p-2.5 text-on-surface-variant bg-surface-container-lowest hover:bg-surface-container border border-surface-container-high rounded-full transition-all shadow-xs cursor-pointer"
             title="Recargar usuarios"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -224,17 +234,17 @@ export default function Usuarios() {
                 ]
               });
             }}
-            className="flex items-center gap-2 px-3.5 py-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2.5 bg-surface-container-lowest border border-surface-container-high text-on-surface hover:bg-surface-container rounded-full font-title-md text-body-sm font-semibold shadow-xs transition-all cursor-pointer"
             title="Exportar directorio de operadores a CSV / Excel"
           >
-            <Download className="w-3.5 h-3.5 text-quantix-600" />
+            <Download className="w-4 h-4 text-primary" />
             <span>Exportar CSV</span>
           </button>
           
           {isDirector && (
             <button
               onClick={handleAbrirCrear}
-              className="flex items-center gap-2 px-4 py-2.5 bg-quantix-600 hover:bg-quantix-700 text-white rounded-xl font-bold text-sm shadow-md transition-all active:scale-95"
+              className="flex items-center gap-2 px-5 py-2.5 bg-primary-container hover:bg-primary-container/90 text-on-primary-container rounded-full font-title-md text-body-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer"
             >
               <PlusCircle className="w-4 h-4" />
               <span>Nuevo Usuario</span>
@@ -244,95 +254,95 @@ export default function Usuarios() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
-          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Total Activos</span>
-          <div className="text-2xl font-black text-gray-900">{totalActivos}</div>
-          <span className="text-[11px] text-gray-400 mt-1 block">Operadores vigentes</span>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="bg-surface-container-lowest p-4 rounded-3xl border border-surface-container-high/60 shadow-sm flex flex-col justify-between">
+          <span className="font-label-caps text-[10px] font-bold text-outline uppercase tracking-wider block mb-1">Total Activos</span>
+          <div className="font-label-numeric-lg text-2xl font-bold text-on-surface">{totalActivos}</div>
+          <span className="font-body-sm text-[11px] text-on-surface-variant mt-1 block">Operadores vigentes</span>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
-          <span className="text-xs font-bold text-purple-700 uppercase tracking-wider block mb-1">Directores</span>
-          <div className="text-2xl font-black text-purple-900">{countDirectores}</div>
-          <span className="text-[11px] text-purple-600 mt-1 block">Acceso gerencial total</span>
+        <div className="bg-surface-container-lowest p-4 rounded-3xl border border-surface-container-high/60 shadow-sm flex flex-col justify-between">
+          <span className="font-label-caps text-[10px] font-bold text-tertiary uppercase tracking-wider block mb-1">Directores</span>
+          <div className="font-label-numeric-lg text-2xl font-bold text-on-surface">{countDirectores}</div>
+          <span className="font-body-sm text-[11px] text-outline mt-1 block">Acceso gerencial total</span>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
-          <span className="text-xs font-bold text-amber-700 uppercase tracking-wider block mb-1">Supervisores</span>
-          <div className="text-2xl font-black text-amber-900">{countSupervisores}</div>
-          <span className="text-[11px] text-amber-600 mt-1 block">Control de turno y caja</span>
+        <div className="bg-surface-container-lowest p-4 rounded-3xl border border-surface-container-high/60 shadow-sm flex flex-col justify-between">
+          <span className="font-label-caps text-[10px] font-bold text-secondary uppercase tracking-wider block mb-1">Supervisores</span>
+          <div className="font-label-numeric-lg text-2xl font-bold text-on-surface">{countSupervisores}</div>
+          <span className="font-body-sm text-[11px] text-outline mt-1 block">Control de turno y caja</span>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
-          <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider block mb-1">Cajeros</span>
-          <div className="text-2xl font-black text-emerald-900">{countCajeros}</div>
-          <span className="text-[11px] text-emerald-600 mt-1 block">Punto de venta y cobro</span>
+        <div className="bg-surface-container-lowest p-4 rounded-3xl border border-surface-container-high/60 shadow-sm flex flex-col justify-between">
+          <span className="font-label-caps text-[10px] font-bold text-primary uppercase tracking-wider block mb-1">Cajeros</span>
+          <div className="font-label-numeric-lg text-2xl font-bold text-on-surface">{countCajeros}</div>
+          <span className="font-body-sm text-[11px] text-outline mt-1 block">Piso y cobro POS</span>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
-          <span className="text-xs font-bold text-blue-700 uppercase tracking-wider block mb-1">Bodegueros</span>
-          <div className="text-2xl font-black text-blue-900">{countBodegueros}</div>
-          <span className="text-[11px] text-blue-600 mt-1 block">Entradas y lotes FEFO</span>
+        <div className="bg-surface-container-lowest p-4 rounded-3xl border border-surface-container-high/60 shadow-sm flex flex-col justify-between col-span-2 sm:col-span-1">
+          <span className="font-label-caps text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">Bodegueros</span>
+          <div className="font-label-numeric-lg text-2xl font-bold text-on-surface">{countBodegueros}</div>
+          <span className="font-body-sm text-[11px] text-outline mt-1 block">Lotes FEFO y almacén</span>
         </div>
       </div>
 
       {/* Barra de Filtros */}
-      <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="bg-surface-container-lowest p-4 rounded-3xl border border-surface-container-high/60 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3 w-full md:w-auto flex-1">
           <div className="relative flex-1 max-w-md">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-outline absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               placeholder="Buscar por nombre o correo electrónico..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-quantix-500 font-medium"
+              className="w-full pl-11 pr-4 py-2.5 bg-surface-container-low rounded-full font-body-md text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all"
             />
           </div>
 
           <select
             value={rolFiltro}
             onChange={(e) => setRolFiltro(e.target.value)}
-            className="px-3 py-2 border rounded-xl text-sm font-semibold text-gray-700 focus:ring-2 focus:ring-quantix-500"
+            className="px-4 py-2.5 bg-surface-container-low rounded-full font-title-md text-body-sm font-semibold text-on-surface border-none focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
           >
             <option value="">Todos los Roles</option>
-            <option value="DIRECTOR">Director</option>
-            <option value="SUPERVISOR">Supervisor</option>
-            <option value="CAJERO">Cajero</option>
-            <option value="BODEGUERO">Bodeguero</option>
+            <option value="DIRECTOR">Director (C-Level)</option>
+            <option value="SUPERVISOR">Supervisor (Táctico)</option>
+            <option value="CAJERO">Cajero (Operativo)</option>
+            <option value="BODEGUERO">Bodeguero (Almacén)</option>
           </select>
         </div>
 
-        <label className="flex items-center gap-2 text-xs font-bold text-gray-600 cursor-pointer select-none">
+        <label className="flex items-center gap-2 font-title-md text-body-sm text-on-surface-variant cursor-pointer select-none">
           <input
             type="checkbox"
             checked={mostrarInactivos}
             onChange={(e) => setMostrarInactivos(e.target.checked)}
-            className="rounded border-gray-300 text-quantix-600 focus:ring-quantix-500 w-4 h-4"
+            className="rounded-lg text-primary focus:ring-primary accent-primary w-4 h-4 cursor-pointer"
           />
-          Mostrar usuarios dados de baja
+          <span>Mostrar bajas lógicas</span>
         </label>
       </div>
 
-      {/* Tabla de Usuarios */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      {/* Tabla de Usuarios — Neo-Retail */}
+      <div className="bg-surface-container-lowest rounded-3xl border border-surface-container-high/60 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left font-body-md text-body-md border-collapse">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50/50 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                <th className="py-3 px-4">Operador</th>
-                <th className="py-3 px-4">Correo Electrónico</th>
-                <th className="py-3 px-4 text-center">Rol Asignado</th>
-                <th className="py-3 px-4 text-center">Fecha Alta</th>
-                <th className="py-3 px-4 text-center">Estado</th>
-                <th className="py-3 px-4 text-right">Acciones</th>
+              <tr className="bg-surface-container-low/70 text-on-surface-variant font-label-caps text-label-caps uppercase tracking-wider select-none">
+                <th className="py-3.5 px-5 rounded-l-2xl">Colaborador</th>
+                <th className="py-3.5 px-4">Correo Institucional</th>
+                <th className="py-3.5 px-4 text-center">Rol & Nivel</th>
+                <th className="py-3.5 px-4 text-center">Fecha Alta</th>
+                <th className="py-3.5 px-4 text-center">Estatus</th>
+                <th className="py-3.5 px-5 rounded-r-2xl text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 text-sm">
+            <tbody className="divide-y divide-surface-container-low">
               {usuariosFiltrados.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-gray-400 font-medium">
-                    No se encontraron usuarios registrados con los criterios seleccionados.
+                  <td colSpan={6} className="py-12 text-center text-on-surface-variant font-body-md">
+                    No se encontraron colaboradores registrados con los criterios seleccionados.
                   </td>
                 </tr>
               ) : (
@@ -340,42 +350,49 @@ export default function Usuarios() {
                   <tr
                     key={u.id}
                     onClick={() => setDetalleUsuario(u)}
-                    title="Haz clic para ver la ficha detallada del operador"
-                    className={`cursor-pointer hover:bg-quantix-50/60 transition-colors ${!u.activo ? 'opacity-60 bg-gray-50/30' : ''}`}
+                    title="Haz clic para ver la ficha del colaborador"
+                    className={`cursor-pointer hover:bg-surface-container-low/60 transition-colors group ${!u.activo ? 'opacity-60 bg-surface-container-low/20' : ''}`}
                   >
-                    <td className="py-3.5 px-4 font-bold text-gray-900 flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-quantix-100 text-quantix-700 flex items-center justify-center font-black text-xs">
+                    <td className="py-3.5 px-5 font-bold text-on-surface flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-surface-container text-primary font-headline-md text-title-md flex items-center justify-center font-bold ring-1 ring-surface-container-high">
                         {u.nombre.slice(0, 2).toUpperCase()}
                       </div>
-                      <div>
-                        <span>{u.nombre}</span>
+                      <div className="flex items-center">
+                        <span className="font-title-md text-on-surface group-hover:text-primary transition-colors">{u.nombre}</span>
                         {currentUser?.id === u.id && (
-                          <span className="ml-2 text-[10px] px-1.5 py-0.5 bg-quantix-50 text-quantix-700 rounded-md font-bold">Tú</span>
+                          <span className="ml-2 font-label-caps text-[9px] px-2 py-0.5 bg-primary-fixed text-on-primary-fixed font-bold rounded-full uppercase">
+                            Tú
+                          </span>
                         )}
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 font-mono text-gray-600 text-xs">{u.email}</td>
+                    <td className="py-3.5 px-4 font-mono text-on-surface-variant text-body-sm">{u.email}</td>
                     <td className="py-3.5 px-4 text-center">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-black border ${getRoleBadge(u.rol)}`}>
+                      <span className={`inline-block px-3 py-0.5 rounded-full font-label-caps text-[10px] font-bold uppercase tracking-wider border ${getRoleBadge(u.rol)}`}>
                         {u.rol}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-center text-xs text-gray-500 font-mono">
-                      {u.creado_en ? new Date(u.creado_en).toLocaleDateString() : 'N/A'}
+                    <td className="py-3.5 px-4 text-center font-mono text-body-sm text-outline">
+                      {u.creado_en ? new Date(u.creado_en).toLocaleDateString('es-MX') : 'N/A'}
                     </td>
                     <td className="py-3.5 px-4 text-center">
                       {u.activo ? (
-                        <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold">Activo</span>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-fixed/30 text-on-primary-fixed-variant font-label-caps text-[10px] font-bold uppercase">
+                          <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                          Activo
+                        </span>
                       ) : (
-                        <span className="px-2.5 py-0.5 bg-gray-200 text-gray-700 rounded-full text-xs font-bold">Baja Lógica</span>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant font-label-caps text-[10px] font-bold uppercase">
+                          Baja Lógica
+                        </span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1.5">
+                    <td className="py-3.5 px-5 text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => setDetalleUsuario(u)}
                           title="Ver Ficha de Usuario"
-                          className="p-1.5 text-quantix-600 hover:bg-quantix-50 rounded-lg transition-colors"
+                          className="p-2 text-on-surface-variant hover:text-primary hover:bg-surface-container rounded-full transition-colors cursor-pointer"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
@@ -384,15 +401,15 @@ export default function Usuarios() {
                             <button
                               onClick={() => handleAbrirEditar(u)}
                               title="Editar Usuario o Cambiar Contraseña"
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              className="p-2 text-secondary hover:bg-secondary-fixed/50 rounded-full transition-colors cursor-pointer"
                             >
                               <Edit className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => handleToggleActivo(u)}
                               title={u.activo ? 'Dar de baja lógica' : 'Reactivar usuario'}
-                              className={`p-1.5 rounded-lg transition-colors ${
-                                u.activo ? 'text-red-500 hover:bg-red-50' : 'text-emerald-600 hover:bg-emerald-50'
+                              className={`p-2 rounded-full transition-colors cursor-pointer ${
+                                u.activo ? 'text-error hover:bg-error-container' : 'text-primary hover:bg-primary-fixed/50'
                               }`}
                             >
                               {u.activo ? <Trash2 className="w-4 h-4" /> : <RotateCcw className="w-4 h-4" />}
@@ -411,59 +428,61 @@ export default function Usuarios() {
 
       {/* Modal Ficha Detallada de Usuario */}
       {detalleUsuario && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-start bg-gradient-to-r from-quantix-50 to-white">
+        <div className="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-surface-container-high/40 animate-in zoom-in-95">
+            <div className="p-6 border-b border-surface-container-low flex justify-between items-start bg-surface-container-low/50">
               <div>
-                <span className="px-2.5 py-0.5 bg-quantix-600 text-white rounded-md text-[11px] font-black uppercase tracking-wider">
+                <span className="px-2.5 py-0.5 bg-primary text-on-primary rounded-full font-label-caps text-[10px] font-bold uppercase tracking-wider">
                   Ficha de Operador
                 </span>
-                <h3 className="text-xl font-black text-gray-900 mt-1">{detalleUsuario.nombre}</h3>
-                <p className="text-xs font-mono text-gray-500">{detalleUsuario.email}</p>
+                <h3 className="font-headline-md text-title-lg font-bold text-on-surface mt-1.5">{detalleUsuario.nombre}</h3>
+                <p className="font-body-sm font-mono text-outline">{detalleUsuario.email}</p>
               </div>
               <button 
                 onClick={() => setDetalleUsuario(null)} 
-                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl"
+                className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+            <div className="p-6 space-y-4 text-body-sm">
+              <div className="grid grid-cols-2 gap-3 bg-surface-container-low p-4 rounded-2xl border border-surface-container-high/40">
                 <div>
-                  <span className="text-gray-400 block font-bold uppercase mb-0.5">Rol en el Sistema</span>
-                  <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-black border mt-1 ${getRoleBadge(detalleUsuario.rol)}`}>
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Rol Operacional</span>
+                  <span className={`inline-block px-2.5 py-0.5 rounded-full font-label-caps text-[10px] font-bold uppercase border ${getRoleBadge(detalleUsuario.rol)}`}>
                     {detalleUsuario.rol}
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-400 block font-bold uppercase mb-0.5">Estado</span>
-                  <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold mt-1 ${
-                    detalleUsuario.activo ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-200 text-gray-700'
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Estado de Cuenta</span>
+                  <span className={`inline-block px-2.5 py-0.5 rounded-full font-label-caps text-[10px] font-bold uppercase ${
+                    detalleUsuario.activo ? 'bg-primary-fixed/30 text-on-primary-fixed-variant' : 'bg-surface-container-highest text-on-surface-variant'
                   }`}>
                     {detalleUsuario.activo ? 'Activo en Turno' : 'Baja Lógica'}
                   </span>
                 </div>
-                <div>
-                  <span className="text-gray-400 block font-bold uppercase mb-0.5">ID UUID</span>
-                  <span className="font-mono text-gray-700 text-[11px] truncate block">{detalleUsuario.id}</span>
+                <div className="col-span-2">
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-0.5">Identificador UUID</span>
+                  <span className="font-mono text-[11px] text-on-surface truncate block">{detalleUsuario.id}</span>
                 </div>
-                <div>
-                  <span className="text-gray-400 block font-bold uppercase mb-0.5">Fecha de Alta</span>
-                  <span className="font-semibold text-gray-800">
-                    {detalleUsuario.creado_en ? new Date(detalleUsuario.creado_en).toLocaleString() : 'N/A'}
+                <div className="col-span-2">
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-0.5">Fecha de Registro</span>
+                  <span className="font-mono text-body-sm text-on-surface">
+                    {detalleUsuario.creado_en ? new Date(detalleUsuario.creado_en).toLocaleString('es-MX') : 'N/A'}
                   </span>
                 </div>
               </div>
 
-              <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-100 text-blue-900 leading-relaxed text-[11px]">
-                <Shield className="w-4 h-4 inline mr-1.5 text-blue-600" />
-                <strong>Políticas RBAC:</strong> Las operaciones críticas en POS, arqueos y administración requieren verificación de credenciales y autorización por jerarquía.
+              <div className="p-3.5 bg-surface-container-low rounded-2xl border border-surface-container-high/50 text-on-surface leading-relaxed text-body-sm flex items-start gap-2.5">
+                <Shield className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                <span>
+                  <strong>Políticas de Seguridad RBAC:</strong> Las operaciones críticas en POS, arqueos y administración requieren verificación de credenciales y autorización por jerarquía.
+                </span>
               </div>
             </div>
 
-            <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-2">
+            <div className="p-4 bg-surface-container-low/50 border-t border-surface-container-low flex justify-end gap-2">
               {isDirector && (
                 <>
                   <button
@@ -472,7 +491,7 @@ export default function Usuarios() {
                       setDetalleUsuario(null);
                       handleAbrirEditar(u);
                     }}
-                    className="px-3.5 py-2 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl"
+                    className="px-4 py-2 font-title-md text-body-sm font-bold text-secondary bg-surface-container-lowest hover:bg-secondary-fixed/30 rounded-full cursor-pointer transition-colors shadow-xs"
                   >
                     Editar Credenciales
                   </button>
@@ -481,8 +500,8 @@ export default function Usuarios() {
                       const u = detalleUsuario;
                       handleToggleActivo(u);
                     }}
-                    className={`px-3.5 py-2 text-xs font-bold rounded-xl ${
-                      detalleUsuario.activo ? 'text-red-700 bg-red-50 hover:bg-red-100' : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
+                    className={`px-4 py-2 font-title-md text-body-sm font-bold rounded-full cursor-pointer transition-colors shadow-xs ${
+                      detalleUsuario.activo ? 'text-error bg-surface-container-lowest hover:bg-error-container' : 'text-primary bg-surface-container-lowest hover:bg-primary-fixed/30'
                     }`}
                   >
                     {detalleUsuario.activo ? 'Dar de Baja' : 'Reactivar'}
@@ -491,7 +510,7 @@ export default function Usuarios() {
               )}
               <button
                 onClick={() => setDetalleUsuario(null)}
-                className="px-4 py-2 text-xs font-bold text-gray-700 hover:bg-gray-200 rounded-xl"
+                className="px-4 py-2 font-title-md text-body-sm font-bold text-on-surface hover:bg-surface-container rounded-full cursor-pointer transition-colors"
               >
                 Cerrar
               </button>
@@ -502,51 +521,57 @@ export default function Usuarios() {
 
       {/* Modal Crear / Editar Usuario */}
       {modalUsuario.open && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-              <h3 className="font-extrabold text-gray-900 text-lg">
-                {modalUsuario.editando ? 'Modificar Usuario / Credenciales' : 'Registrar Nuevo Operador'}
+        <div className="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-surface-container-high/40 animate-in zoom-in-95">
+            <div className="p-6 border-b border-surface-container-low flex justify-between items-center bg-surface-container-low/50">
+              <h3 className="font-headline-md text-title-lg font-bold text-on-surface">
+                {modalUsuario.editando ? 'Modificar Credenciales de Operador' : 'Registrar Nuevo Operador'}
               </h3>
-              <button onClick={() => setModalUsuario({ open: false })} className="p-1 text-gray-400 hover:text-gray-600 rounded-lg">
+              <button onClick={() => setModalUsuario({ open: false })} className="p-1 text-on-surface-variant hover:text-on-surface rounded-full cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleGuardarUsuario} className="p-6 space-y-4 text-xs">
+            <form onSubmit={handleGuardarUsuario} className="p-6 space-y-4 text-body-sm">
               <div>
-                <label className="block font-bold text-gray-700 uppercase mb-1">Nombre Completo *</label>
+                <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                  Nombre Completo *
+                </label>
                 <input
                   type="text"
                   required
                   value={formUser.nombre}
                   onChange={(e) => setFormUser({ ...formUser, nombre: e.target.value })}
                   placeholder="Ej. Juan Pérez López"
-                  className="w-full px-3 py-2.5 border rounded-xl text-sm font-semibold focus:ring-2 focus:ring-quantix-500"
+                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-title-md text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-gray-700 uppercase mb-1">Correo Electrónico (Login) *</label>
+                <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                  Correo Electrónico (Login) *
+                </label>
                 <input
                   type="email"
                   required
                   disabled={!!modalUsuario.editando}
                   value={formUser.email}
                   onChange={(e) => setFormUser({ ...formUser, email: e.target.value })}
-                  placeholder="operador@quantix.com"
-                  className={`w-full px-3 py-2.5 border rounded-xl text-sm font-semibold focus:ring-2 focus:ring-quantix-500 ${
-                    modalUsuario.editando ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
+                  placeholder="operador@quantix.local"
+                  className={`w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-title-md text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all ${
+                    modalUsuario.editando ? 'opacity-60 cursor-not-allowed' : ''
                   }`}
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-gray-700 uppercase mb-1">Rol Operacional *</label>
+                <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                  Rol Operacional *
+                </label>
                 <select
                   value={formUser.rol}
                   onChange={(e) => setFormUser({ ...formUser, rol: e.target.value as any })}
-                  className="w-full px-3 py-2.5 border rounded-xl text-sm font-bold text-gray-800 focus:ring-2 focus:ring-quantix-500"
+                  className="w-full px-4 py-2.5 bg-surface-container-low rounded-2xl font-title-md text-body-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 cursor-pointer"
                 >
                   <option value="CAJERO">CAJERO (Punto de Venta & Cobro)</option>
                   <option value="SUPERVISOR">SUPERVISOR (Arqueos, Anulaciones, Auditoría)</option>
@@ -556,35 +581,35 @@ export default function Usuarios() {
               </div>
 
               <div>
-                <label className="block font-bold text-gray-700 uppercase mb-1">
-                  {modalUsuario.editando ? 'Nueva Contraseña (dejar en blanco para conservar actual)' : 'Contraseña de Acceso *'}
+                <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                  {modalUsuario.editando ? 'Nueva Contraseña (en blanco para conservar actual)' : 'Contraseña de Acceso *'}
                 </label>
-                <div className="relative">
-                  <Key className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <div className="relative flex items-center">
+                  <Key className="w-4 h-4 text-outline absolute left-3.5 pointer-events-none" />
                   <input
                     type="password"
                     required={!modalUsuario.editando}
                     value={formUser.password}
                     onChange={(e) => setFormUser({ ...formUser, password: e.target.value })}
                     placeholder={modalUsuario.editando ? '•••••••• (sin cambios)' : 'Contraseña segura'}
-                    className="w-full pl-9 pr-3 py-2.5 border rounded-xl text-sm font-mono focus:ring-2 focus:ring-quantix-500"
+                    className="w-full pl-10 pr-4 py-2.5 bg-surface-container-low rounded-2xl font-mono text-body-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all"
                   />
                 </div>
               </div>
 
-              <div className="pt-4 flex justify-end gap-3 border-t border-gray-100">
+              <div className="pt-4 flex justify-end gap-2.5 border-t border-surface-container-high/50">
                 <button
                   type="button"
                   onClick={() => setModalUsuario({ open: false })}
-                  className="px-4 py-2 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-xl"
+                  className="px-5 py-2.5 font-title-md text-body-sm text-on-surface-variant hover:bg-surface-container rounded-full cursor-pointer transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 text-sm font-bold text-white bg-quantix-600 hover:bg-quantix-700 rounded-xl shadow-md"
+                  className="px-6 py-2.5 font-title-md text-body-sm font-bold text-on-primary-container bg-primary-container hover:opacity-95 rounded-full shadow-md cursor-pointer transition-all active:scale-95"
                 >
-                  {modalUsuario.editando ? 'Guardar Cambios' : 'Registrar Usuario'}
+                  {modalUsuario.editando ? 'Guardar Cambios' : 'Registrar Operador'}
                 </button>
               </div>
             </form>

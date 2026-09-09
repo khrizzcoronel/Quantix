@@ -5,11 +5,13 @@ from decimal import Decimal
 from datetime import datetime
 
 class ClienteCreate(BaseModel):
+    cedula: Optional[str] = Field(None, max_length=30, description="Cédula de identidad / RFC / DNI")
     telefono: str = Field(..., description="Teléfono celular (Usado como ID rápido en caja)")
     nombre: str = Field(..., max_length=255)
     email: Optional[EmailStr] = None
 
 class ClienteUpdate(BaseModel):
+    cedula: Optional[str] = Field(None, max_length=30)
     telefono: Optional[str] = Field(None, max_length=20)
     nombre: Optional[str] = Field(None, max_length=255)
     email: Optional[EmailStr] = None
@@ -18,6 +20,7 @@ class ClienteUpdate(BaseModel):
 
 class ClienteResponse(BaseModel):
     id: UUID
+    cedula: Optional[str] = None
     telefono: str
     nombre: str
     email: Optional[str] = None
