@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, ConfigDict
 from typing import Optional
 from uuid import UUID
 from decimal import Decimal
@@ -9,23 +9,63 @@ class ClienteCreate(BaseModel):
     nombre: str = Field(..., max_length=255)
     email: Optional[EmailStr] = None
 
+class ClienteUpdate(BaseModel):
+    telefono: Optional[str] = Field(None, max_length=20)
+    nombre: Optional[str] = Field(None, max_length=255)
+    email: Optional[EmailStr] = None
+    puntos_acumulados: Optional[int] = Field(None, ge=0)
+    activo: Optional[bool] = None
+
 class ClienteResponse(BaseModel):
     id: UUID
     telefono: str
     nombre: str
-    email: Optional[str]
-    puntos_acumulados: int
+    email: Optional[str] = None
+    puntos_acumulados: int = 0
+    activo: bool = True
     fecha_registro: datetime
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ValidarCuponRequest(BaseModel):
     codigo: str = Field(..., description="Código alfanumérico del cupón")
-    
+
 class ValidarCuponResponse(BaseModel):
     valido: bool
     mensaje: str
     tipo_descuento: Optional[str] = None # PORCENTAJE o MONTO_FIJO
     valor_descuento: Optional[Decimal] = None
     cupon_id: Optional[UUID] = None
+
+class CuponCreate(BaseModel):
+    cliente_id: UUID
+    codigo: str = Field(..., max_length=50)
+    tipo: str = Field(default="MANUAL", description="CUMPLEANIOS, REACTIVACION, COMBO, MANUAL")
+    descuento_tipo: str = Field(default="PORCENTAJE", description="PORCENTAJE, MONTO_FIJO")
+    descuento_valor: Decimal = Field(gt=0)
+    valido_desde: Optional[datetime] = None
+    valido_hasta: Optional[datetime] = None
+
+class CuponResponse(BaseModel):
+    id: UUID
+    cliente_id: UUID
+    cliente_nombre: Optional[str] = None
+    codigo: str
+    tipo: str
+    descuento_tipo: str
+    descuento_valor: Decimal
+    valido_desde: Optional[datetime] = None
+    valido_hasta: Optional[datetime] = None
+    estado: str
+    creado_en: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+class HistorialVentaClienteResponse(BaseModel):
+    id: UUID
+    folio_ticket: str
+    fecha_hora: datetime
+    total_bruto: Decimal
+    total_descuento: Decimal
+    total_pagar: Decimal
+    estado: str
+    model_config = ConfigDict(from_attributes=True)
+

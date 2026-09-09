@@ -4,7 +4,7 @@ from decimal import Decimal
 from typing import List, Optional
 from enum import Enum
 
-from sqlalchemy import String, Integer, Numeric, DateTime, Date, ForeignKey
+from sqlalchemy import String, Integer, Numeric, DateTime, Date, ForeignKey, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base
 
@@ -45,6 +45,7 @@ class Cliente(Base):
     email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     fecha_registro: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     puntos_acumulados: Mapped[int] = mapped_column(Integer, default=0)
+    activo: Mapped[bool] = mapped_column(Boolean, default=True)
 
     # Relaciones
     cupones: Mapped[List["Cupon"]] = relationship(back_populates="cliente")
@@ -76,6 +77,7 @@ class Venta(Base):
     sesion_caja_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("sesion_caja.id"))
     cliente_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("clientes.id"), nullable=True)
     folio_ticket: Mapped[str] = mapped_column(String(50), unique=True, index=True)
+    idempotency_key: Mapped[Optional[str]] = mapped_column(String(64), unique=True, index=True, nullable=True)
     fecha_hora: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     total_bruto: Mapped[Decimal] = mapped_column(Numeric(12, 2))
     total_descuento: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0)

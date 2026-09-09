@@ -11,6 +11,7 @@ class ProductoBuscado(BaseModel):
     precio_venta: Decimal
     requiere_pesaje: bool
     stock_total: int
+    imagen: Optional[str] = None
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -26,12 +27,81 @@ class PagoCheckout(BaseModel):
 class CheckoutRequest(BaseModel):
     sesion_caja_id: UUID
     cliente_id: Optional[UUID] = None
-    items: List[ItemCarrito] = Field(..., min_length=1)
-    pagos: List[PagoCheckout] = Field(..., min_length=1)
+    items: Optional[List[ItemCarrito]] = None
+    productos_solicitados: Optional[List[dict]] = None
+    pagos: Optional[List[PagoCheckout]] = None
+    metodo_pago: Optional[str] = None
+    codigo_cupon: Optional[str] = None
+    idempotency_key: Optional[str] = Field(default=None, min_length=8, max_length=64)
 
 class CheckoutResponse(BaseModel):
     venta_id: UUID
     folio_ticket: str
+    subtotal: Decimal
+    total_descuento: Decimal
+    total_impuestos: Decimal
     total_pagar: Decimal
     estado: str
     mensaje: str
+
+class DetalleVentaItemResponse(BaseModel):
+    id: UUID
+    producto_id: UUID
+    producto_nombre: str
+    producto_sku: str
+    lote_id: UUID
+    lote_codigo: Optional[str] = None
+    cantidad: Decimal
+    costo_unitario_lote: Decimal
+    precio_unitario_venta: Decimal
+    subtotal: Decimal
+    margen_ganancia: Decimal
+
+    model_config = ConfigDict(from_attributes=True)
+
+class PagoVentaItemResponse(BaseModel):
+    id: UUID
+    metodo_pago: str
+    monto: Decimal
+    referencia_pasarela: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class VentaResumenResponse(BaseModel):
+    id: UUID
+    sesion_caja_id: UUID
+    cliente_id: Optional[UUID] = None
+    cliente_nombre: Optional[str] = None
+    cliente_telefono: Optional[str] = None
+    folio_ticket: str
+    fecha_hora: datetime
+    total_bruto: Decimal
+    total_descuento: Decimal
+    total_impuestos: Decimal
+    total_pagar: Decimal
+    estado: str
+    items_count: int = 0
+
+    model_config = ConfigDict(from_attributes=True)
+
+class VentaDetalleResponse(BaseModel):
+    id: UUID
+    sesion_caja_id: UUID
+    cliente_id: Optional[UUID] = None
+    cliente_nombre: Optional[str] = None
+    cliente_telefono: Optional[str] = None
+    folio_ticket: str
+    fecha_hora: datetime
+    total_bruto: Decimal
+    total_descuento: Decimal
+    total_impuestos: Decimal
+    total_pagar: Decimal
+    estado: str
+    detalles: List[DetalleVentaItemResponse] = []
+    pagos: List[PagoVentaItemResponse] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
+class AnularVentaRequest(BaseModel):
+    motivo: Optional[str] = "Cancelación y baja lógica autorizada por supervisor"
+    supervisor_password: Optional[str] = None

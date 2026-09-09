@@ -3,7 +3,7 @@ from datetime import datetime, date
 from typing import Optional, List
 import enum
 
-from sqlalchemy import String, Integer, Float, Boolean, ForeignKey, DateTime, Date, Enum, Numeric
+from sqlalchemy import String, Integer, Float, Boolean, ForeignKey, DateTime, Date, Enum, Numeric, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 
@@ -67,6 +67,7 @@ class Categoria(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     nombre: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
     descripcion: Mapped[Optional[str]] = mapped_column(String)
+    activo: Mapped[bool] = mapped_column(Boolean, default=True)
 
     productos: Mapped[List["Producto"]] = relationship("Producto", back_populates="categoria")
 
@@ -83,6 +84,7 @@ class Producto(Base):
     margen_minimo_pct: Mapped[Optional[Numeric]] = mapped_column(Numeric(5, 2))
     requiere_pesaje: Mapped[bool] = mapped_column(Boolean, default=False)
     clasificacion_abc: Mapped[Optional[str]] = mapped_column(String(1))
+    imagen: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     activo: Mapped[bool] = mapped_column(Boolean, default=True)
 
     categoria: Mapped["Categoria"] = relationship("Categoria", back_populates="productos")

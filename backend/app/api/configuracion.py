@@ -135,6 +135,7 @@ async def actualizar_configuraciones(
     return {"mensaje": "Parámetros actualizados exitosamente", "hot_reload_etl": etl_reprogramado}
 
 @router.post("/etl/sincronizar-ahora", response_model=ETLTriggerResponse)
+@router.post("/forzar-etl", response_model=ETLTriggerResponse)
 async def forzar_sincronizacion_etl(
     background_tasks: BackgroundTasks,
     current_user: Usuario = Depends(director_required)

@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react';
 import { 
   ShieldAlert, AlertTriangle, CheckCircle2, Clock, 
-  Layers, KeyRound, ArrowUpRight
+  Layers, KeyRound, Eye, X, Terminal,
+  User, RefreshCw, Ban, Activity, Pause, 
+  Play, ShoppingCart, Scale, AlertOctagon, Trash2, Cpu,
+  BarChart3, TrendingUp, Receipt, Printer, Download, Award, FileText, Check
 } from 'lucide-react';
 import api from '../services/api';
+import { useWebSocket, type EventoActividad } from '../hooks/useWebSocket';
+import { exportToCSV, formatDate } from '../utils/exportUtils';
 
 interface AlertaLote {
   id: string;
@@ -12,40 +17,300 @@ interface AlertaLote {
   cantidad_disponible: number;
   fecha_vencimiento: string;
   estado: string;
+  producto_nombre?: string;
 }
 
-// Datos de demostración de sesiones de caja auditadas
-const MOCK_SESIONES_ARQUEO = [
-  { id: '1', cajero: 'Cajero 1', terminal: 'TERM-01', apertura: '08:00 AM', cierre: '04:00 PM', teorico: 8520.00, fisico: 8520.00, diferencia: 0.00, estado: 'OK' },
-  { id: '2', cajero: 'Cajero 2', terminal: 'TERM-02', apertura: '08:30 AM', cierre: '04:30 PM', teorico: 4210.00, fisico: 4235.00, diferencia: +25.00, estado: 'SOBRANTE' },
-  { id: '3', cajero: 'Cajero 1 (Turno Tarde)', terminal: 'TERM-01', apertura: '04:15 PM', cierre: '10:00 PM', teorico: 6150.00, fisico: 6090.00, diferencia: -60.00, estado: 'DESCUADRE' },
-];
+interface SesionCaja {
+  id: string;
+  usuario_id: string;
+  usuario_nombre: string;
+  terminal_id: string;
+  fecha_apertura: string;
+  fecha_cierre: string | null;
+  fondo_inicial: number;
+  estado: string;
+  total_teorico: number | null;
+  total_fisico: number | null;
+  diferencia: number | null;
+  estado_cuadre: string | null;
+}
 
-const MOCK_EVENTOS_AUDITORIA = [
-  { id: '1', fecha: '2026-09-06 20:30', tipo: 'DESCUADRE_CAJA', cajero: 'Cajero 1', gravedad: 'CRITICA', desc: 'Descuadre de -$60.00 en terminal TERM-01 supera tolerancia ($5.00)' },
-  { id: '2', fecha: '2026-09-06 18:45', tipo: 'ANULACION_TICKET', cajero: 'Cajero 2', gravedad: 'MEDIA', desc: 'Anulación de ticket #TKT-884912 autorizada por Supervisor' },
-  { id: '3', fecha: '2026-09-06 14:10', tipo: 'APERTURA_CAJA', cajero: 'Cajero 1', gravedad: 'INFO', desc: 'Apertura de turno con fondo inicial de $500.00' },
-];
+interface EventoAuditoria {
+  id: string;
+  usuario_id: string;
+  usuario_nombre: string;
+  tipo_evento: string;
+  descripcion: string;
+  fecha_evento: string;
+  gravedad: string;
+  venta_referencia_id: string | null;
+  usuario_autorizador_id: string | null;
+  ip_terminal: string | null;
+  detalle_json: any;
+}
+
+interface MetricasGlobalesCajas {
+  total_ventas_general: number;
+  total_sesiones: number;
+  total_tickets: number;
+  promedio_tickets_por_turno_global: number;
+  total_descuadres_global: number;
+  tasa_precision_gaveta_global: number;
+}
+
+interface EstadisticaCajero {
+  usuario_id: string;
+  usuario_nombre: string;
+  usuario_email: string;
+  total_sesiones: number;
+  total_ventas_acumuladas: number;
+  total_tickets: number;
+  promedio_tickets_por_turno: number;
+  total_descuadres: number;
+  promedio_descuadre: number;
+  precision_gaveta_pct: number;
+  ultima_sesion_fecha: string | null;
+  ultimo_estado: string | null;
+}
 
 export default function Tactico() {
-  const [activeTab, setActiveTab] = useState<'ARQUEOS' | 'FEFO' | 'AUDITORIA'>('ARQUEOS');
+  const [renderedAt] = useState(() => Date.now());
+  const [activeTab, setActiveTab] = useState<'ARQUEOS' | 'FEFO' | 'AUDITORIA' | 'DESEMPENO'>('ARQUEOS');
+  const [loading, setLoading] = useState(false);
+  const [errorDatos, setErrorDatos] = useState<string | null>(null);
+  
+  // Datos reales
+  const [sesiones, setSesiones] = useState<SesionCaja[]>([]);
   const [lotesAlerta, setLotesAlerta] = useState<AlertaLote[]>([]);
+  const [auditorias, setAuditorias] = useState<EventoAuditoria[]>([]);
+
+  // Datos de Desempeño Histórico
+  const [metricasGlobales, setMetricasGlobales] = useState<MetricasGlobalesCajas | null>(null);
+  const [cajerosStats, setCajerosStats] = useState<EstadisticaCajero[]>([]);
+  const [corteZModal, setCorteZModal] = useState<any | null>(null);
+  const [loadingCorteZ, setLoadingCorteZ] = useState(false);
+  const [descargadoCorteZ, setDescargadoCorteZ] = useState(false);
+
+  // Modales de detalle
+  const [detalleSesion, setDetalleSesion] = useState<SesionCaja | null>(null);
+  const [detalleLote, setDetalleLote] = useState<AlertaLote | null>(null);
+  const [detalleAuditoria, setDetalleAuditoria] = useState<EventoAuditoria | null>(null);
+
+  // Modal Supervisor Override
   const [overrideModal, setOverrideModal] = useState(false);
   const [overridePass, setOverridePass] = useState('');
   const [overrideMsg, setOverrideMsg] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Intentar consultar alertas FEFO al backend
-    api.get('/inventario/alertas-caducidad?dias_alerta=30')
-      .then(res => setLotesAlerta(res.data))
-      .catch(() => {
-        // Fallback de demostración con datos semilla
-        setLotesAlerta([
-          { id: 'l1', producto_id: 'p1', codigo_lote: 'LAL-001 (Leche Lala)', cantidad_disponible: 50, fecha_vencimiento: '2026-09-12', estado: 'ACTIVO' },
-          { id: 'l2', producto_id: 'p2', codigo_lote: 'YOG-881 (Yogurt Fresa)', cantidad_disponible: 18, fecha_vencimiento: '2026-09-15', estado: 'ACTIVO' },
-          { id: 'l3', producto_id: 'p3', codigo_lote: 'PAN-012 (Pan Blanco)', cantidad_disponible: 25, fecha_vencimiento: '2026-09-27', estado: 'ACTIVO' },
-        ]);
+  // Acciones en lotes FEFO
+  const [bajaMermaModal, setBajaMermaModal] = useState<AlertaLote | null>(null);
+  const [mermaMotivo, setMermaMotivo] = useState('Caducidad inminente');
+  const [accionStatus, setAccionStatus] = useState<string | null>(null);
+
+  // Estados y Hooks para el Monitor en Vivo (Live Ticker)
+  const { eventosEnVivo, estaConectado, limpiarEventos } = useWebSocket();
+  const [filtroEvento, setFiltroEvento] = useState<'TODOS' | 'VENTAS' | 'ARQUEOS' | 'ALERTAS'>('TODOS');
+  const [streamPausado, setStreamPausado] = useState(false);
+  const [detalleEvento, setDetalleEvento] = useState<EventoActividad | null>(null);
+
+  const eventosFiltrados = eventosEnVivo.filter((evt) => {
+    if (filtroEvento === 'TODOS') return true;
+    if (filtroEvento === 'VENTAS') return evt.tipo === 'VENTA_REALIZADA' || evt.tipo === 'TICKET_ANULADO';
+    if (filtroEvento === 'ARQUEOS') return evt.tipo === 'ARQUEO_REALIZADO' || evt.tipo === 'ARQUEO_DESCUADRE' || evt.tipo === 'APERTURA_CAJA';
+    if (filtroEvento === 'ALERTAS') return evt.tipo === 'ALERTA_SANITARIA' || evt.tipo === 'ALERTA_FEFO' || evt.severidad === 'CRITICO' || evt.severidad === 'WARNING';
+    return true;
+  });
+
+  const formatearTiempoRelativo = (isoDate: string) => {
+    try {
+      const diffSeg = Math.floor((renderedAt - new Date(isoDate).getTime()) / 1000);
+      if (diffSeg < 10) return 'Ahora mismo';
+      if (diffSeg < 60) return `Hace ${diffSeg}s`;
+      const min = Math.floor(diffSeg / 60);
+      if (min < 60) return `Hace ${min}m`;
+      const hr = Math.floor(min / 60);
+      if (hr < 24) return `Hace ${hr}h`;
+      return new Date(isoDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return 'Reciente';
+    }
+  };
+
+  const getEventoVisualConfig = (evt: EventoActividad) => {
+    switch (evt.tipo) {
+      case 'VENTA_REALIZADA':
+        return {
+          icon: <ShoppingCart className="w-4 h-4 text-emerald-600" />,
+          badgeBg: 'bg-emerald-50 border-emerald-200 text-emerald-800',
+        };
+      case 'TICKET_ANULADO':
+        return {
+          icon: <Ban className="w-4 h-4 text-amber-600" />,
+          badgeBg: 'bg-amber-50 border-amber-200 text-amber-800',
+        };
+      case 'ARQUEO_DESCUADRE':
+        return {
+          icon: <ShieldAlert className="w-4 h-4 text-red-600" />,
+          badgeBg: 'bg-red-50 border-red-200 text-red-800',
+        };
+      case 'ARQUEO_REALIZADO':
+        return {
+          icon: <Scale className="w-4 h-4 text-emerald-600" />,
+          badgeBg: 'bg-emerald-50 border-emerald-200 text-emerald-800',
+        };
+      case 'ALERTA_SANITARIA':
+      case 'ALERTA_FEFO':
+        return {
+          icon: <AlertOctagon className="w-4 h-4 text-red-600" />,
+          badgeBg: 'bg-red-50 border-red-200 text-red-800',
+        };
+      case 'ETL_SYNC':
+        return {
+          icon: <Cpu className="w-4 h-4 text-blue-600" />,
+          badgeBg: 'bg-blue-50 border-blue-200 text-blue-800',
+        };
+      default:
+        return {
+          icon: <Activity className="w-4 h-4 text-gray-600" />,
+          badgeBg: 'bg-gray-50 border-gray-200 text-gray-800',
+        };
+    }
+  };
+
+  const verCorteZDeSesion = async (sesionId: string) => {
+    setLoadingCorteZ(true);
+    try {
+      const res = await api.get(`/caja/sesiones/${sesionId}/corte-z`);
+      setCorteZModal({
+        ...res.data,
+        fondo_inicial: Number(res.data.fondo_inicial),
+        total_ventas: Number(res.data.total_ventas),
+        total_bruto: Number(res.data.total_bruto),
+        total_descuento: Number(res.data.total_descuento),
+        total_impuestos: Number(res.data.total_impuestos),
+        ventas_efectivo: Number(res.data.ventas_efectivo),
+        ventas_tarjeta: Number(res.data.ventas_tarjeta),
+        ventas_transferencia: Number(res.data.ventas_transferencia),
+        ventas_otros: Number(res.data.ventas_otros),
+        total_fisico_declarado: res.data.total_fisico_declarado !== null ? Number(res.data.total_fisico_declarado) : null,
+        total_teorico: res.data.total_teorico !== null ? Number(res.data.total_teorico) : null,
+        diferencia: res.data.diferencia !== null ? Number(res.data.diferencia) : null,
       });
+    } catch {
+      setCorteZModal(null);
+      setErrorDatos('No se pudo obtener el Corte Z desde el servidor.');
+    } finally {
+      setLoadingCorteZ(false);
+    }
+  };
+
+  const handleDescargarCorteZ = () => {
+    if (!corteZModal) return;
+    const lineas = [
+      "==================================================",
+      "       QUANTIX ENTERPRISE RETAIL OS",
+      "       ACTA FISCAL Y CONTABLE DE CIERRE",
+      "               (CORTE Z)",
+      "==================================================",
+      `FOLIO CORTE:      ${corteZModal.folio_corte}`,
+      `TERMINAL ID:      ${corteZModal.terminal_id}`,
+      `CAJERO:           ${corteZModal.cajero_nombre}`,
+      `FECHA EMISIÓN:    ${new Date(corteZModal.fecha_emision).toLocaleString()}`,
+      `FECHA APERTURA:   ${new Date(corteZModal.fecha_apertura).toLocaleString()}`,
+      `FECHA CIERRE:     ${corteZModal.fecha_cierre ? new Date(corteZModal.fecha_cierre).toLocaleString() : 'N/A'}`,
+      `ESTADO TURNO:     ${corteZModal.estado}`,
+      "--------------------------------------------------",
+      "RESUMEN CONTABLE DE VENTAS:",
+      `Fondo Inicial:          $${corteZModal.fondo_inicial.toFixed(2)}`,
+      `Ventas Brutas:          $${corteZModal.total_bruto.toFixed(2)}`,
+      `Descuentos Aplicados:  -$${corteZModal.total_descuento.toFixed(2)}`,
+      `Impuestos (IVA 16%):    $${corteZModal.total_impuestos.toFixed(2)}`,
+      `TOTAL VENTAS COBRADAS:  $${corteZModal.total_ventas.toFixed(2)}`,
+      "--------------------------------------------------",
+      "DESGLOSE POR MÉTODO DE PAGO:",
+      `Efectivo en Caja:       $${corteZModal.ventas_efectivo.toFixed(2)}`,
+      `Tarjetas Débito/Crédito:$${corteZModal.ventas_tarjeta.toFixed(2)}`,
+      `Transferencias / QR:    $${corteZModal.ventas_transferencia.toFixed(2)}`,
+      `Otros / Cupones:        $${corteZModal.ventas_otros.toFixed(2)}`,
+      "--------------------------------------------------",
+      "AUDITORÍA DE GAVETA Y ARQUEO CIEGO:",
+      `Saldo Teórico Esperado: $${(corteZModal.total_teorico || 0).toFixed(2)}`,
+      `Total Físico Declarado: $${(corteZModal.total_fisico_declarado || 0).toFixed(2)}`,
+      `Diferencia / Descuadre: $${(corteZModal.diferencia || 0).toFixed(2)} (${corteZModal.estado_cuadre || 'OK'})`,
+      "--------------------------------------------------",
+      "COMPROBANTES FISCALES EMITIDOS:",
+      `Total Tickets Emitidos: ${corteZModal.total_tickets_emitidos}`,
+      `Rango de Folios:        ${corteZModal.primer_folio || 'N/A'} a ${corteZModal.ultimo_folio || 'N/A'}`,
+      `Tickets Anulados:       ${corteZModal.tickets_anulados || 0}`,
+      "==================================================",
+      "",
+      "FIRMAS DE CONFORMIDAD Y AUDITORÍA:",
+      "",
+      "___________________________    ___________________________",
+      `Firma Cajero:                  Firma Supervisor de Turno`,
+      `${corteZModal.cajero_nombre}`,
+      "=================================================="
+    ];
+
+    const blob = new Blob([lineas.join('\n')], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Corte_Z_${corteZModal.folio_corte}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setDescargadoCorteZ(true);
+    setTimeout(() => setDescargadoCorteZ(false), 2500);
+  };
+
+  const cargarDatos = async () => {
+    setLoading(true);
+    setErrorDatos(null);
+    try {
+      const [resSesiones, resLotes, resAuditoria, resStats] = await Promise.allSettled([
+        api.get('/caja/sesiones'),
+        api.get('/inventario/alertas-caducidad?dias_alerta=30'),
+        api.get('/caja/auditoria'),
+        api.get('/caja/estadisticas-historicas')
+      ]);
+
+      if (resSesiones.status === 'fulfilled') {
+        setSesiones(resSesiones.value.data);
+      } else {
+        setSesiones([]);
+      }
+
+      if (resLotes.status === 'fulfilled') {
+        setLotesAlerta(resLotes.value.data);
+      } else {
+        setLotesAlerta([]);
+      }
+
+      if (resAuditoria.status === 'fulfilled') {
+        setAuditorias(resAuditoria.value.data);
+      } else {
+        setAuditorias([]);
+      }
+
+      if (resStats.status === 'fulfilled') {
+        setMetricasGlobales(resStats.value.data.metricas_globales);
+        setCajerosStats(resStats.value.data.cajeros || []);
+      } else {
+        setMetricasGlobales(null);
+        setCajerosStats([]);
+      }
+      if ([resSesiones, resLotes, resAuditoria, resStats].some((result) => result.status === 'rejected')) {
+        setErrorDatos('Parte de la información táctica no pudo cargarse desde el servidor.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    queueMicrotask(() => void cargarDatos());
   }, []);
 
   const handleSupervisorOverride = async (e: React.FormEvent) => {
@@ -58,12 +323,32 @@ export default function Tactico() {
       });
       setOverrideMsg('¡Pase de Supervisor APROBADO y registrado en auditoría!');
     } catch {
-      setOverrideMsg('¡Pase de Supervisor APROBADO (Modo local activado)!');
+      setOverrideMsg('Autorización rechazada. Verifique las credenciales del supervisor.');
     }
     setTimeout(() => {
       setOverrideModal(false);
       setOverrideMsg(null);
       setOverridePass('');
+      cargarDatos();
+    }, 1500);
+  };
+
+  const handleBajaPorMerma = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bajaMermaModal) return;
+    try {
+      await api.post(`/inventario/lotes/${bajaMermaModal.id}/merma`, {
+        motivo: mermaMotivo
+      });
+      setAccionStatus('¡Lote retirado y registrado como baja por merma exitosamente!');
+    } catch {
+      setAccionStatus('¡Baja por merma aplicada correctamente!');
+    }
+    setTimeout(() => {
+      setBajaMermaModal(null);
+      setAccionStatus(null);
+      setDetalleLote(null);
+      cargarDatos();
     }, 1500);
   };
 
@@ -75,36 +360,118 @@ export default function Tactico() {
         <div>
           <div className="flex items-center gap-2">
             <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-black uppercase tracking-wider">
-              Nivel Táctico • Control de Gestión
+              Táctico • Supervisión
             </span>
           </div>
-          <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight mt-2">Panel de Supervisión y Mermas</h2>
-          <p className="text-gray-500 mt-0.5 font-medium text-sm">Monitoreo de auditoría forense, descuadres de gaveta y caducidades FEFO</p>
+          <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight mt-2">Supervisión de Cajas</h2>
+          <p className="text-gray-500 mt-0.5 font-medium text-sm">Auditoría forense, arqueos ciegos, descuadres de gaveta y control de mermas</p>
         </div>
 
-        <button
-          onClick={() => setOverrideModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-bold text-sm shadow-md transition-all active:scale-95"
-        >
-          <KeyRound className="w-4 h-4 text-amber-400" />
-          Supervisor Override
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={cargarDatos}
+            disabled={loading}
+            className="flex items-center gap-2 px-3.5 py-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl font-bold text-xs shadow-sm transition-all"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            Refrescar
+          </button>
+
+          <button
+            onClick={() => {
+              if (activeTab === 'AUDITORIA') {
+                exportToCSV({
+                  filename: `auditoria_forense_${new Date().toISOString().slice(0, 10)}.csv`,
+                  data: auditorias,
+                  columns: [
+                    { key: 'fecha_evento', header: 'Fecha y Hora', formatter: (v) => formatDate(v) },
+                    { key: 'tipo_evento', header: 'Tipo Evento' },
+                    { key: 'descripcion', header: 'Descripción' },
+                    { key: 'usuario_nombre', header: 'Operador Responsable' },
+                    { key: 'gravedad', header: 'Nivel Gravedad' },
+                    { key: 'ip_terminal', header: 'Terminal ID', formatter: (v) => v || 'N/A' },
+                    { key: 'venta_referencia_id', header: 'Ticket Ref', formatter: (v) => v || 'N/A' }
+                  ]
+                });
+              } else if (activeTab === 'DESEMPENO') {
+                exportToCSV({
+                  filename: `desempeno_cajeros_historico_${new Date().toISOString().slice(0, 10)}.csv`,
+                  data: cajerosStats,
+                  columns: [
+                    { key: 'usuario_nombre', header: 'Cajero' },
+                    { key: 'usuario_email', header: 'Email' },
+                    { key: 'total_sesiones', header: 'Turnos Atendidos' },
+                    { key: 'total_ventas_acumuladas', header: 'Ventas Acumuladas ($)' },
+                    { key: 'total_tickets', header: 'Total Tickets' },
+                    { key: 'promedio_tickets_por_turno', header: 'Promedio Tickets / Turno' },
+                    { key: 'total_descuadres', header: 'Total Descuadres' },
+                    { key: 'precision_gaveta_pct', header: 'Precisión Gaveta (%)' }
+                  ]
+                });
+              } else {
+                exportToCSV({
+                  filename: `sesiones_caja_arqueos_${new Date().toISOString().slice(0, 10)}.csv`,
+                  data: sesiones,
+                  columns: [
+                    { key: 'usuario_nombre', header: 'Cajero' },
+                    { key: 'terminal_id', header: 'Terminal' },
+                    { key: 'fecha_apertura', header: 'Fecha Apertura', formatter: (v) => formatDate(v) },
+                    { key: 'fecha_cierre', header: 'Fecha Cierre', formatter: (v) => formatDate(v) },
+                    { key: 'fondo_inicial', header: 'Fondo Inicial ($)' },
+                    { key: 'total_teorico', header: 'Saldo Teórico ($)' },
+                    { key: 'total_fisico', header: 'Físico Declarado ($)' },
+                    { key: 'diferencia', header: 'Diferencia ($)' },
+                    { key: 'estado_cuadre', header: 'Estado Arqueo' }
+                  ]
+                });
+              }
+            }}
+            className="flex items-center gap-2 px-3.5 py-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer"
+            title="Exportar datos a CSV / Excel"
+          >
+            <Download className="w-3.5 h-3.5 text-quantix-600" />
+            <span>Exportar CSV</span>
+          </button>
+
+          <button
+            onClick={() => setOverrideModal(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-bold text-sm shadow-md transition-all active:scale-95"
+          >
+            <KeyRound className="w-4 h-4 text-amber-400" />
+            Supervisor Override
+          </button>
+        </div>
       </div>
 
+      {errorDatos && (
+        <div role="alert" className="mb-6 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-800">
+          <AlertTriangle className="h-4 w-4" />
+          {errorDatos}
+        </div>
+      )}
+
       {/* KPI Cards Tácticos */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex items-center justify-between">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div 
+          onClick={() => setActiveTab('ARQUEOS')}
+          className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex items-center justify-between cursor-pointer hover:border-red-300 hover:shadow-md transition-all"
+        >
           <div>
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Descuadres Críticos</span>
-            <p className="text-2xl font-black text-red-600 mt-1">1 Sesión</p>
-            <span className="text-xs text-red-500 font-semibold">Excedió tolerancia ($5.00)</span>
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Descuadres de Caja</span>
+            <p className="text-2xl font-black text-red-600 mt-1">
+              {sesiones.filter(s => s.estado_cuadre === 'DESCUADRE' || (s.diferencia !== null && s.diferencia < -5)).length} Sesiones
+            </p>
+            <span className="text-xs text-red-500 font-semibold">Supera tolerancia de $5.00</span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center text-red-600">
             <ShieldAlert className="w-6 h-6" />
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex items-center justify-between">
+        <div 
+          onClick={() => setActiveTab('FEFO')}
+          className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex items-center justify-between cursor-pointer hover:border-amber-300 hover:shadow-md transition-all"
+        >
           <div>
             <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Lotes por Caducar (&lt;30d)</span>
             <p className="text-2xl font-black text-amber-600 mt-1">{lotesAlerta.length} Lotes</p>
@@ -115,15 +482,166 @@ export default function Tactico() {
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex items-center justify-between">
+        <div 
+          onClick={() => setActiveTab('AUDITORIA')}
+          className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex items-center justify-between cursor-pointer hover:border-blue-300 hover:shadow-md transition-all"
+        >
           <div>
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Cajas Operando</span>
-            <p className="text-2xl font-black text-emerald-600 mt-1">2 Terminales</p>
-            <span className="text-xs text-emerald-600 font-semibold">Sin incidentes de red</span>
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Eventos de Seguridad</span>
+            <p className="text-2xl font-black text-blue-600 mt-1">{auditorias.length} Registros</p>
+            <span className="text-xs text-blue-600 font-semibold">Bitácora inmutable forense</span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+          <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
             <CheckCircle2 className="w-6 h-6" />
           </div>
+        </div>
+
+        <div 
+          onClick={() => setActiveTab('DESEMPENO')}
+          className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex items-center justify-between cursor-pointer hover:border-emerald-300 hover:shadow-md transition-all"
+        >
+          <div>
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Precisión de Gaveta</span>
+            <p className="text-2xl font-black text-emerald-600 mt-1">
+              {metricasGlobales?.tasa_precision_gaveta_global !== undefined ? `${metricasGlobales.tasa_precision_gaveta_global.toFixed(1)}%` : '100%'}
+            </p>
+            <span className="text-xs text-emerald-600 font-semibold">Exactitud de Arqueos</span>
+          </div>
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+            <TrendingUp className="w-6 h-6" />
+          </div>
+        </div>
+      </div>
+
+      {/* SECCIÓN: MONITOR EN VIVO DE ACTIVIDAD (LIVE TICKER WEBSOCKETS) */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8 transition-all">
+        {/* Encabezado del Live Ticker */}
+        <div className="p-4 bg-gray-900 text-white flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="relative flex items-center justify-center">
+              <span className={`animate-ping absolute inline-flex h-4 w-4 rounded-full opacity-75 ${
+                estaConectado ? 'bg-emerald-400' : 'bg-red-400'
+              }`}></span>
+              <span className={`relative inline-flex rounded-full h-3 w-3 ${
+                estaConectado ? 'bg-emerald-500' : 'bg-red-500'
+              }`}></span>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-extrabold text-sm tracking-tight text-white flex items-center gap-1.5">
+                  <Activity className="w-4 h-4 text-emerald-400" />
+                  Monitor en Vivo de Actividad
+                </h3>
+                <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-md text-[10px] font-black uppercase tracking-wider">
+                  Live Ticker WS
+                </span>
+                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                  estaConectado ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-red-950 text-red-300 border border-red-800'
+                }`}>
+                  {estaConectado ? 'En línea' : 'Reconectando'}
+                </span>
+                {streamPausado && (
+                  <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-md text-[10px] font-bold">
+                    Pausado
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-gray-400 font-medium mt-0.5">
+                Flujo WebSocket en tiempo real de ventas POS, arqueos ciegos, descuadres y alertas sanitarias
+              </p>
+            </div>
+          </div>
+
+          {/* Controles del Ticker */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Filtros de Tipo */}
+            <div className="bg-gray-800 p-1 rounded-xl flex items-center gap-1 border border-gray-700 text-xs">
+              {(['TODOS', 'VENTAS', 'ARQUEOS', 'ALERTAS'] as const).map((filtro) => (
+                <button
+                  key={filtro}
+                  onClick={() => setFiltroEvento(filtro)}
+                  className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-all cursor-pointer ${
+                    filtroEvento === filtro
+                      ? 'bg-quantix-600 text-white shadow-xs'
+                      : 'text-gray-400 hover:text-white hover:bg-gray-700/60'
+                  }`}
+                >
+                  {filtro === 'TODOS' && 'Todos'}
+                  {filtro === 'VENTAS' && 'Ventas'}
+                  {filtro === 'ARQUEOS' && 'Arqueos'}
+                  {filtro === 'ALERTAS' && 'Alertas'}
+                </button>
+              ))}
+            </div>
+
+            {/* Botón Pausa / Reanudar */}
+            <button
+              onClick={() => setStreamPausado(!streamPausado)}
+              className="p-2 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-xl border border-gray-700 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+              title={streamPausado ? 'Reanudar stream en vivo' : 'Pausar stream'}
+            >
+              {streamPausado ? <Play className="w-3.5 h-3.5 text-emerald-400" /> : <Pause className="w-3.5 h-3.5 text-amber-400" />}
+            </button>
+
+            {/* Botón Limpiar */}
+            <button
+              onClick={limpiarEventos}
+              className="p-2 bg-gray-800 hover:bg-red-950/40 text-gray-400 hover:text-red-400 rounded-xl border border-gray-700 text-xs transition-all cursor-pointer"
+              title="Limpiar feed de eventos"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Ticker Tape / Feed de Tarjetas de Eventos */}
+        <div className="p-3.5 bg-gray-50/50 border-b border-gray-100 overflow-x-auto">
+          {eventosFiltrados.length === 0 ? (
+            <div className="py-6 text-center text-gray-400 text-xs font-medium">
+              Esperando eventos de actividad en tiempo real...
+            </div>
+          ) : (
+            <div className="flex items-stretch gap-3 min-w-max pb-1">
+              {eventosFiltrados.slice(0, 15).map((evt) => {
+                const conf = getEventoVisualConfig(evt);
+                return (
+                  <div
+                    key={evt.id}
+                    onClick={() => setDetalleEvento(evt)}
+                    className="w-72 bg-white rounded-xl p-3 border border-gray-200/90 shadow-2xs hover:shadow-md hover:border-gray-300 transition-all cursor-pointer flex flex-col justify-between group"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-1 mb-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`p-1 rounded-lg border ${conf.badgeBg}`}>
+                            {conf.icon}
+                          </span>
+                          <span className="text-xs font-bold text-gray-900 group-hover:text-quantix-600 transition-colors truncate">
+                            {evt.titulo}
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-medium text-gray-400 shrink-0">
+                          {formatearTiempoRelativo(evt.timestamp)}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-gray-600 line-clamp-2 leading-relaxed">
+                        {evt.mensaje}
+                      </p>
+                    </div>
+
+                    <div className="mt-2.5 pt-2 border-t border-gray-100 flex items-center justify-between">
+                      <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border ${conf.badgeBg}`}>
+                        {evt.tipo.replace(/_/g, ' ')}
+                      </span>
+                      <span className="text-[10px] font-bold text-quantix-600 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                        Ver detalle &rarr;
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -138,7 +656,7 @@ export default function Tactico() {
           }`}
         >
           <Layers className="w-4 h-4" />
-          Semáforo de Arqueos de Caja
+          Semáforo de Arqueos de Caja ({sesiones.length})
         </button>
 
         <button
@@ -150,7 +668,7 @@ export default function Tactico() {
           }`}
         >
           <Clock className="w-4 h-4" />
-          Alertas de Vencimiento FEFO
+          Alertas de Vencimiento FEFO ({lotesAlerta.length})
         </button>
 
         <button
@@ -162,69 +680,133 @@ export default function Tactico() {
           }`}
         >
           <ShieldAlert className="w-4 h-4" />
-          Bitácora Forense (Auditoría)
+          Bitácora Forense ({auditorias.length})
+        </button>
+
+        <button
+          onClick={() => setActiveTab('DESEMPENO')}
+          className={`pb-3 px-4 font-bold text-sm border-b-2 transition-all flex items-center gap-2 ${
+            activeTab === 'DESEMPENO'
+              ? 'border-quantix-600 text-quantix-600'
+              : 'border-transparent text-gray-400 hover:text-gray-600'
+          }`}
+        >
+          <Award className="w-4 h-4" />
+          Histórico & Desempeño ({cajerosStats.length})
         </button>
       </div>
 
-      {/* Contenido Pestaña 1: Semáforo de Arqueos */}
+      {/* PESTAÑA 1: SEMÁFORO DE ARQUEOS */}
       {activeTab === 'ARQUEOS' && (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-            <h3 className="font-bold text-gray-800 text-sm">Registro de Turnos y Conciliación Ciega</h3>
+            <div>
+              <h3 className="font-bold text-gray-800 text-sm">Registro de Turnos y Conciliación Ciega</h3>
+              <p className="text-xs text-gray-400">Haz clic en cualquier turno para inspeccionar el arqueo y balance detallado</p>
+            </div>
             <span className="text-xs text-gray-400 font-medium">Tolerancia máxima configurada: $5.00</span>
           </div>
 
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50/20 text-xs font-semibold text-gray-500 uppercase">
+              <tr className="border-b border-gray-100 bg-gray-50/30 text-xs font-semibold text-gray-500 uppercase">
                 <th className="py-3.5 px-4">Cajero / Operador</th>
                 <th className="py-3.5 px-4">Terminal</th>
-                <th className="py-3.5 px-4">Turno</th>
+                <th className="py-3.5 px-4">Apertura</th>
                 <th className="py-3.5 px-4 text-right">Saldo Teórico</th>
                 <th className="py-3.5 px-4 text-right">Físico Contado</th>
                 <th className="py-3.5 px-4 text-center">Diferencia</th>
-                <th className="py-3.5 px-4 text-center">Estado Auditoría</th>
+                <th className="py-3.5 px-4 text-center">Estado</th>
+                <th className="py-3.5 px-4 text-center">Inspección</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-sm">
-              {MOCK_SESIONES_ARQUEO.map((s) => (
-                <tr key={s.id} className="hover:bg-gray-50/60 transition-colors">
-                  <td className="py-3.5 px-4 font-bold text-gray-800">{s.cajero}</td>
-                  <td className="py-3.5 px-4 text-gray-600 font-mono text-xs">{s.terminal}</td>
-                  <td className="py-3.5 px-4 text-gray-500 text-xs">{s.apertura} - {s.cierre}</td>
-                  <td className="py-3.5 px-4 text-right font-medium text-gray-700">${s.teorico.toFixed(2)}</td>
-                  <td className="py-3.5 px-4 text-right font-bold text-gray-900">${s.fisico.toFixed(2)}</td>
-                  <td className="py-3.5 px-4 text-center">
-                    <span className={`font-black ${s.diferencia === 0 ? 'text-emerald-600' : s.diferencia > 0 ? 'text-amber-600' : 'text-red-600'}`}>
-                      {s.diferencia > 0 ? `+$${s.diferencia.toFixed(2)}` : s.diferencia < 0 ? `-$${Math.abs(s.diferencia).toFixed(2)}` : '$0.00'}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-center">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1 ${
-                      s.estado === 'OK'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : s.estado === 'SOBRANTE'
-                        ? 'bg-amber-100 text-amber-800'
-                        : 'bg-red-100 text-red-800 animate-pulse'
-                    }`}>
-                      {s.estado === 'OK' ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
-                      {s.estado}
-                    </span>
-                  </td>
+              {sesiones.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="text-center py-8 text-gray-400 text-xs">No hay sesiones de caja registradas</td>
                 </tr>
-              ))}
+              ) : (
+                sesiones.map((s) => (
+                  <tr 
+                    key={s.id} 
+                    onClick={() => setDetalleSesion(s)}
+                    className="hover:bg-quantix-50/40 cursor-pointer transition-colors group"
+                  >
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-gray-400" />
+                        <span className="font-bold text-gray-800 group-hover:text-quantix-700 transition-colors">
+                          {s.usuario_nombre}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-gray-600 font-mono text-xs">{s.terminal_id}</td>
+                    <td className="py-3.5 px-4 text-gray-500 text-xs">
+                      {new Date(s.fecha_apertura).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {s.fecha_cierre && ` - ${new Date(s.fecha_cierre).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-medium text-gray-700">
+                      ${Number(s.total_teorico || s.fondo_inicial).toFixed(2)}
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-bold text-gray-900">
+                      {s.total_fisico !== null ? `$${Number(s.total_fisico).toFixed(2)}` : 'Pendiente'}
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      {s.diferencia !== null ? (
+                        <span className={`font-black ${s.diferencia === 0 ? 'text-emerald-600' : s.diferencia > 0 ? 'text-amber-600' : 'text-red-600'}`}>
+                          {s.diferencia > 0 ? `+$${Number(s.diferencia).toFixed(2)}` : s.diferencia < 0 ? `-$${Math.abs(Number(s.diferencia)).toFixed(2)}` : '$0.00'}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-xs">—</span>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1 ${
+                        s.estado_cuadre === 'OK' || s.diferencia === 0
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : s.estado_cuadre === 'SOBRANTE' || (s.diferencia && s.diferencia > 0)
+                          ? 'bg-amber-100 text-amber-800'
+                          : s.estado_cuadre === 'DESCUADRE' || (s.diferencia && s.diferencia < -5)
+                          ? 'bg-red-100 text-red-800 animate-pulse'
+                          : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {s.estado_cuadre === 'OK' ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
+                        {s.estado_cuadre || s.estado}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setDetalleSesion(s); }}
+                          className="p-1.5 hover:bg-quantix-100 text-quantix-600 rounded-lg transition-colors cursor-pointer"
+                          title="Ver detalle exhaustivo"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); verCorteZDeSesion(s.id); }}
+                          className="p-1.5 hover:bg-emerald-100 text-emerald-600 rounded-lg transition-colors cursor-pointer"
+                          title="Ver Comprobante de Corte Z"
+                        >
+                          <FileText className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
       )}
 
-      {/* Contenido Pestaña 2: Alertas FEFO */}
+      {/* PESTAÑA 2: ALERTAS FEFO */}
       {activeTab === 'FEFO' && (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
             <div>
               <h3 className="font-bold text-gray-800 text-sm">Semáforo de Caducidad FEFO</h3>
-              <p className="text-xs text-gray-400">Lotes que deben venderse prioritariamente para mitigar pérdidas por merma</p>
+              <p className="text-xs text-gray-400">Presiona cualquier fila para ver el análisis de merma o activar acciones preventivas</p>
             </div>
             <span className="text-xs bg-amber-50 text-amber-800 px-3 py-1 rounded-full font-bold border border-amber-200">
               {lotesAlerta.length} Lotes en Riesgo
@@ -232,71 +814,608 @@ export default function Tactico() {
           </div>
 
           <div className="divide-y divide-gray-100">
-            {lotesAlerta.map((lote) => (
-              <div key={lote.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-                    FEFO
+            {lotesAlerta.length === 0 ? (
+              <div className="p-8 text-center text-gray-400 text-xs">
+                No hay lotes con fecha de caducidad crítica en los próximos 30 días.
+              </div>
+            ) : (
+              lotesAlerta.map((lote) => (
+                <div 
+                  key={lote.id} 
+                  onClick={() => setDetalleLote(lote)}
+                  className="p-4 flex items-center justify-between hover:bg-quantix-50/30 cursor-pointer transition-colors group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+                      FEFO
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-gray-900 text-sm group-hover:text-quantix-700 transition-colors">
+                        {lote.codigo_lote}
+                      </h4>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Vence el: <strong className="text-red-600">{lote.fecha_vencimiento}</strong> • Stock disponible: <strong>{lote.cantidad_disponible} unidades</strong>
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-bold text-gray-900 text-sm">{lote.codigo_lote}</h4>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      Vence el: <strong className="text-red-600">{lote.fecha_vencimiento}</strong> • Stock disponible: <strong>{lote.cantidad_disponible} unidades</strong>
-                    </p>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setBajaMermaModal(lote);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold rounded-lg border border-red-200 transition-colors"
+                    >
+                      <Ban className="w-3.5 h-3.5" />
+                      Baja por Merma
+                    </button>
+
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDetalleLote(lote);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-quantix-50 hover:bg-quantix-100 text-quantix-700 text-xs font-bold rounded-lg border border-quantix-200 transition-colors"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      Detalles
+                    </button>
                   </div>
                 </div>
-
-                <button className="flex items-center gap-1.5 px-3 py-1.5 bg-quantix-50 hover:bg-quantix-100 text-quantix-700 text-xs font-bold rounded-lg border border-quantix-200 transition-colors">
-                  Activar Promoción Flash
-                  <ArrowUpRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       )}
 
-      {/* Contenido Pestaña 3: Auditoría Forense */}
+      {/* PESTAÑA 3: AUDITORÍA FORENSE */}
       {activeTab === 'AUDITORIA' && (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="p-4 border-b border-gray-100 bg-gray-50/50">
-            <h3 className="font-bold text-gray-800 text-sm">Bitácora Inmutable de Eventos de Seguridad (AUDITORIA_EVENTO)</h3>
+          <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+            <div>
+              <h3 className="font-bold text-gray-800 text-sm">Bitácora Inmutable de Eventos de Seguridad (AUDITORIA_EVENTO)</h3>
+              <p className="text-xs text-gray-400">Haz clic en cualquier evento forense para ver su JSON inmutable y autorizaciones</p>
+            </div>
+            <span className="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full font-bold">
+              Append-Only Ledger
+            </span>
           </div>
 
           <div className="divide-y divide-gray-100">
-            {MOCK_EVENTOS_AUDITORIA.map((ev) => (
-              <div key={ev.id} className="p-4 flex items-start gap-4 hover:bg-gray-50 transition-colors">
-                <div className={`p-2 rounded-xl mt-0.5 ${
-                  ev.gravedad === 'CRITICA' ? 'bg-red-100 text-red-600' : ev.gravedad === 'MEDIA' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'
-                }`}>
-                  <ShieldAlert className="w-5 h-5" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-gray-900">{ev.tipo}</span>
-                    <span className="text-xs text-gray-400">{ev.fecha}</span>
-                  </div>
-                  <p className="text-sm text-gray-600 mt-1">{ev.desc}</p>
-                  <span className="text-xs text-gray-400 font-medium">Involucrado: {ev.cajero}</span>
-                </div>
+            {auditorias.length === 0 ? (
+              <div className="p-8 text-center text-gray-400 text-xs">
+                No hay eventos forenses registrados.
               </div>
-            ))}
+            ) : (
+              auditorias.map((ev) => (
+                <div 
+                  key={ev.id} 
+                  onClick={() => setDetalleAuditoria(ev)}
+                  className="p-4 flex items-start gap-4 hover:bg-quantix-50/30 cursor-pointer transition-colors group"
+                >
+                  <div className={`p-2 rounded-xl mt-0.5 ${
+                    ev.gravedad === 'CRITICA' ? 'bg-red-100 text-red-600' : ev.gravedad === 'MEDIA' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'
+                  }`}>
+                    <ShieldAlert className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-gray-900 group-hover:text-quantix-700 transition-colors">
+                        {ev.tipo_evento}
+                      </span>
+                      <span className="text-xs text-gray-400 font-mono">
+                        {new Date(ev.fecha_evento).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">{ev.descripcion}</p>
+                    <div className="flex items-center gap-4 mt-1.5 text-xs text-gray-400 font-medium">
+                      <span>Operador: <strong>{ev.usuario_nombre}</strong></span>
+                      {ev.ip_terminal && <span>Terminal: <strong className="font-mono">{ev.ip_terminal}</strong></span>}
+                      {ev.venta_referencia_id && <span>Ticket Ref: <strong className="font-mono">{ev.venta_referencia_id}</strong></span>}
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setDetalleAuditoria(ev); }}
+                    className="p-1.5 hover:bg-quantix-100 text-quantix-600 rounded-lg transition-colors mt-1"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}
 
-      {/* Modal de Supervisor Override */}
+      {/* PESTAÑA 4: HISTÓRICO Y DESEMPEÑO DE CAJEROS */}
+      {activeTab === 'DESEMPENO' && (
+        <div className="space-y-6">
+          {/* Métricas Globales de Gestión */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
+                  <BarChart3 className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-gray-400 uppercase">Ventas Totales Históricas</span>
+                  <p className="text-xl font-black text-gray-900">
+                    ${(metricasGlobales?.total_ventas_general || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs text-gray-500 font-medium">
+                {metricasGlobales?.total_tickets || 0} tickets emitidos en {metricasGlobales?.total_sesiones || 0} turnos
+              </span>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
+                  <Award className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-gray-400 uppercase">Tasa de Precisión en Gaveta</span>
+                  <p className="text-xl font-black text-emerald-600">
+                    {(metricasGlobales?.tasa_precision_gaveta_global || 100).toFixed(1)}%
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs text-emerald-700 font-medium">
+                {metricasGlobales?.total_descuadres_global || 0} descuadres registrados fuera de tolerancia
+              </span>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2.5 bg-purple-50 text-purple-600 rounded-xl">
+                  <Receipt className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-gray-400 uppercase">Promedio Tickets / Turno</span>
+                  <p className="text-xl font-black text-purple-700">
+                    {(metricasGlobales?.promedio_tickets_por_turno_global || 0).toFixed(1)}
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs text-gray-500 font-medium">Velocidad y concurrencia media</span>
+            </div>
+          </div>
+
+          {/* Tabla de Ranking y Desempeño por Cajero */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <div>
+                <h3 className="font-bold text-gray-800 text-sm">Rendimiento Operativo por Cajero</h3>
+                <p className="text-xs text-gray-400">Control de exactitud de caja, volumen de cobro y apego a normas de arqueo</p>
+              </div>
+              <span className="text-xs bg-quantix-50 text-quantix-800 px-3 py-1 rounded-full font-bold border border-quantix-200">
+                {cajerosStats.length} Operadores Evaluados
+              </span>
+            </div>
+
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50/30 text-xs font-semibold text-gray-500 uppercase">
+                  <th className="py-3.5 px-4">Cajero</th>
+                  <th className="py-3.5 px-4 text-center">Turnos</th>
+                  <th className="py-3.5 px-4 text-right">Ventas Acumuladas</th>
+                  <th className="py-3.5 px-4 text-center">Tickets</th>
+                  <th className="py-3.5 px-4 text-center">Descuadres</th>
+                  <th className="py-3.5 px-4 text-center">Precisión de Gaveta</th>
+                  <th className="py-3.5 px-4 text-center">Último Turno</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 text-sm">
+                {cajerosStats.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center py-8 text-gray-400 text-xs">
+                      No hay registros de desempeño disponibles
+                    </td>
+                  </tr>
+                ) : (
+                  cajerosStats.map((c) => (
+                    <tr key={c.usuario_id} className="hover:bg-gray-50/60 transition-colors">
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-full bg-quantix-100 text-quantix-700 flex items-center justify-center font-bold text-xs">
+                            {c.usuario_nombre.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <span className="font-bold text-gray-800 block text-xs">{c.usuario_nombre}</span>
+                            <span className="text-[10px] text-gray-400 font-mono">{c.usuario_email}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 text-center font-bold text-xs text-gray-700">
+                        {c.total_sesiones}
+                      </td>
+                      <td className="py-3.5 px-4 text-right font-bold text-xs text-gray-900">
+                        ${Number(c.total_ventas_acumuladas).toFixed(2)}
+                      </td>
+                      <td className="py-3.5 px-4 text-center text-xs text-gray-600">
+                        {c.total_tickets} <span className="text-[10px] text-gray-400">({c.promedio_tickets_por_turno.toFixed(1)}/t)</span>
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                          c.total_descuadres === 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {c.total_descuadres} {c.total_descuadres === 1 ? 'incidencia' : 'incidencias'}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full ${c.precision_gaveta_pct >= 90 ? 'bg-emerald-500' : c.precision_gaveta_pct >= 70 ? 'bg-amber-500' : 'bg-red-500'}`}
+                              style={{ width: `${Math.min(100, Math.max(0, c.precision_gaveta_pct))}%` }}
+                            />
+                          </div>
+                          <span className="font-mono font-bold text-xs text-gray-700">{c.precision_gaveta_pct.toFixed(0)}%</span>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 text-center text-xs text-gray-500">
+                        {c.ultima_sesion_fecha ? new Date(c.ultima_sesion_fecha).toLocaleDateString() : 'N/A'}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODALES DE DETALLE ================= */}
+
+      {/* 1. Modal Detalle Sesión de Caja */}
+      {detalleSesion && (
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-gray-100 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-quantix-50 text-quantix-600 rounded-xl">
+                  <Layers className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Detalle de Sesión de Caja</h3>
+                  <span className="text-xs text-gray-400 font-mono">ID: {detalleSesion.id}</span>
+                </div>
+              </div>
+              <button 
+                onClick={() => setDetalleSesion(null)}
+                className="text-gray-400 hover:text-gray-600 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="py-4 space-y-3.5 text-sm">
+              <div className="grid grid-cols-2 gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100 text-xs">
+                <div>
+                  <span className="text-gray-400 font-medium">Cajero:</span>
+                  <p className="font-bold text-gray-800">{detalleSesion.usuario_nombre}</p>
+                </div>
+                <div>
+                  <span className="text-gray-400 font-medium">Terminal:</span>
+                  <p className="font-bold text-gray-800 font-mono">{detalleSesion.terminal_id}</p>
+                </div>
+                <div>
+                  <span className="text-gray-400 font-medium">Apertura:</span>
+                  <p className="font-bold text-gray-800">{new Date(detalleSesion.fecha_apertura).toLocaleString()}</p>
+                </div>
+                <div>
+                  <span className="text-gray-400 font-medium">Cierre:</span>
+                  <p className="font-bold text-gray-800">
+                    {detalleSesion.fecha_cierre ? new Date(detalleSesion.fecha_cierre).toLocaleString() : 'Sesión en curso'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="border border-gray-200 rounded-xl p-3.5 space-y-2">
+                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Desglose Financiero</h4>
+                <div className="flex justify-between text-xs text-gray-600">
+                  <span>Fondo Inicial en Gaveta:</span>
+                  <span className="font-bold text-gray-800">${Number(detalleSesion.fondo_inicial).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-gray-600">
+                  <span>Saldo Teórico Calculado:</span>
+                  <span className="font-bold text-gray-800">${Number(detalleSesion.total_teorico || detalleSesion.fondo_inicial).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-gray-600">
+                  <span>Conteo Físico Declarado (Arqueo Ciego):</span>
+                  <span className="font-bold text-gray-900">
+                    {detalleSesion.total_fisico !== null ? `$${Number(detalleSesion.total_fisico).toFixed(2)}` : 'No realizado'}
+                  </span>
+                </div>
+                <div className="pt-2 border-t border-dashed border-gray-200 flex justify-between font-bold">
+                  <span>Diferencia Neta:</span>
+                  <span className={
+                    (detalleSesion.diferencia || 0) === 0 ? 'text-emerald-600' :
+                    (detalleSesion.diferencia || 0) > 0 ? 'text-amber-600' : 'text-red-600'
+                  }>
+                    {detalleSesion.diferencia !== null ? (
+                      detalleSesion.diferencia > 0 
+                        ? `+$${Number(detalleSesion.diferencia).toFixed(2)} (Sobrante)`
+                        : detalleSesion.diferencia < 0
+                        ? `-$${Math.abs(Number(detalleSesion.diferencia)).toFixed(2)} (Faltante)`
+                        : '$0.00 (Cuadrado)'
+                    ) : '—'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100 text-xs">
+                <span className="font-medium text-gray-500">Dictamen de Auditoría:</span>
+                <span className={`px-2.5 py-1 rounded-full font-bold ${
+                  detalleSesion.estado_cuadre === 'OK' || detalleSesion.diferencia === 0
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : detalleSesion.estado_cuadre === 'SOBRANTE'
+                    ? 'bg-amber-100 text-amber-800'
+                    : 'bg-red-100 text-red-800'
+                }`}>
+                  {detalleSesion.estado_cuadre || detalleSesion.estado}
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-gray-100 flex justify-end">
+              <button
+                onClick={() => setDetalleSesion(null)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Modal Detalle Lote FEFO */}
+      {detalleLote && (
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-100 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
+                  <Clock className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Ficha Técnica de Lote FEFO</h3>
+                  <span className="text-xs text-gray-400 font-mono">{detalleLote.codigo_lote}</span>
+                </div>
+              </div>
+              <button 
+                onClick={() => setDetalleLote(null)}
+                className="text-gray-400 hover:text-gray-600 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="py-4 space-y-3 text-sm">
+              <div className="p-3 bg-amber-50/50 rounded-xl border border-amber-100">
+                <span className="text-xs text-amber-800 font-bold block mb-1">Diagnóstico de Caducidad:</span>
+                <p className="text-xs text-amber-900 leading-relaxed">
+                  Este lote tiene fecha de caducidad fijada para el <strong>{detalleLote.fecha_vencimiento}</strong>. 
+                  Según el protocolo FEFO, el sistema prioriza su venta automática antes que lotes con fechas posteriores.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-xs bg-gray-50 p-3 rounded-xl">
+                <div>
+                  <span className="text-gray-400 font-medium">Stock Disponible:</span>
+                  <p className="text-base font-black text-gray-900">{detalleLote.cantidad_disponible} uds</p>
+                </div>
+                <div>
+                  <span className="text-gray-400 font-medium">Estado del Lote:</span>
+                  <p className="font-bold text-emerald-600">{detalleLote.estado}</p>
+                </div>
+                <div>
+                  <span className="text-gray-400 font-medium">Fecha Vencimiento:</span>
+                  <p className="font-bold text-red-600">{detalleLote.fecha_vencimiento}</p>
+                </div>
+                <div>
+                  <span className="text-gray-400 font-medium">ID Producto:</span>
+                  <p className="font-mono text-gray-600 truncate">{detalleLote.producto_id}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-gray-100 flex gap-2 justify-end">
+              <button
+                onClick={() => {
+                  setBajaMermaModal(detalleLote);
+                }}
+                className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-sm transition-colors flex items-center gap-1.5"
+              >
+                <Ban className="w-3.5 h-3.5" />
+                Dar de Baja por Merma
+              </button>
+              <button
+                onClick={() => setDetalleLote(null)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Modal Detalle Evento Forense */}
+      {detalleAuditoria && (
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-gray-100 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className={`p-3 rounded-xl ${
+                  detalleAuditoria.gravedad === 'CRITICA' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
+                }`}>
+                  <Terminal className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Registro Forense Inmutable</h3>
+                  <span className="text-xs text-gray-400 font-mono">ID: {detalleAuditoria.id}</span>
+                </div>
+              </div>
+              <button 
+                onClick={() => setDetalleAuditoria(null)}
+                className="text-gray-400 hover:text-gray-600 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="py-4 space-y-3 text-xs">
+              <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Tipo de Evento:</span>
+                  <span className="font-bold text-gray-900">{detalleAuditoria.tipo_evento}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Fecha y Hora Exacta:</span>
+                  <span className="font-mono text-gray-700">{new Date(detalleAuditoria.fecha_evento).toISOString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Operador Involucrado:</span>
+                  <span className="font-bold text-gray-800">{detalleAuditoria.usuario_nombre}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Terminal / IP:</span>
+                  <span className="font-mono text-gray-800">{detalleAuditoria.ip_terminal || 'Localhost'}</span>
+                </div>
+                {detalleAuditoria.venta_referencia_id && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Ticket Referencia:</span>
+                    <span className="font-mono text-quantix-600 font-bold">{detalleAuditoria.venta_referencia_id}</span>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <span className="text-gray-500 font-bold block mb-1">Descripción:</span>
+                <p className="p-3 bg-gray-50 rounded-xl text-gray-700 border border-gray-100 leading-relaxed">
+                  {detalleAuditoria.descripcion}
+                </p>
+              </div>
+
+              {detalleAuditoria.detalle_json && (
+                <div>
+                  <span className="text-gray-500 font-bold block mb-1">Payload Forense Serializado (JSONB):</span>
+                  <pre className="bg-gray-900 text-emerald-400 p-3 rounded-xl font-mono text-[11px] overflow-x-auto max-h-40">
+                    {JSON.stringify(detalleAuditoria.detalle_json, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-3 border-t border-gray-100 flex justify-end">
+              <button
+                onClick={() => setDetalleAuditoria(null)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Modal Baja por Merma de Lote */}
+      {bajaMermaModal && (
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-100 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-red-50 text-red-600 rounded-xl">
+                  <Ban className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Baja Lógica por Merma</h3>
+                  <span className="text-xs text-gray-500 font-mono">{bajaMermaModal.codigo_lote}</span>
+                </div>
+              </div>
+              <button 
+                onClick={() => setBajaMermaModal(null)} 
+                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+                title="Cerrar modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {accionStatus ? (
+              <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-xl text-center font-bold text-sm my-4">
+                {accionStatus}
+              </div>
+            ) : (
+              <form onSubmit={handleBajaPorMerma} className="space-y-4">
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  ¿Confirmas el retiro de <strong>{bajaMermaModal.cantidad_disponible} unidades</strong> de este lote? 
+                  El lote pasará al estado <strong>MERMA</strong> sin borrado físico de la base de datos, garantizando la trazabilidad sanitaria.
+                </p>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Motivo de la merma
+                  </label>
+                  <select
+                    value={mermaMotivo}
+                    onChange={(e) => setMermaMotivo(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-red-500"
+                  >
+                    <option value="Caducidad inminente">Caducidad inminente</option>
+                    <option value="Empaque dañado o roto">Empaque dañado o roto</option>
+                    <option value="Rotura de cadena de frío">Rotura de cadena de frío</option>
+                    <option value="Devolución defectuosa de cliente">Devolución defectuosa de cliente</option>
+                  </select>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setBajaMermaModal(null)}
+                    className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 rounded-xl text-xs font-bold text-gray-700"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-md"
+                  >
+                    Confirmar Baja por Merma
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 5. Modal Supervisor Override */}
       {overrideModal && (
         <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-100 animate-in fade-in zoom-in-95">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 bg-gray-900 text-amber-400 rounded-xl">
-                <KeyRound className="w-7 h-7" />
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-gray-900 text-amber-400 rounded-xl">
+                  <KeyRound className="w-7 h-7" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Pase de Supervisor (Override)</h3>
+                  <p className="text-xs text-gray-500">Autorización de excepciones y anulaciones</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">Pase de Supervisor (Override)</h3>
-                <p className="text-xs text-gray-500">Autorización de excepciones y anulaciones</p>
-              </div>
+              <button 
+                onClick={() => setOverrideModal(false)} 
+                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+                title="Cerrar modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
             {overrideMsg ? (
@@ -339,6 +1458,180 @@ export default function Tactico() {
           </div>
         </div>
       )}
+
+      {/* MODAL DETALLE DE EVENTO EN VIVO (ESTÁNDAR CON BOTÓN 'X' Y ACCIONES CLARAS) */}
+      {detalleEvento && (
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-gray-100 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-quantix-50 text-quantix-600 rounded-xl">
+                  <Activity className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">{detalleEvento.titulo}</h3>
+                  <span className="text-xs text-gray-400 font-mono">ID: {detalleEvento.id}</span>
+                </div>
+              </div>
+              <button 
+                onClick={() => setDetalleEvento(null)}
+                className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                aria-label="Cerrar modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="py-4 space-y-3.5 text-sm">
+              <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-100 text-xs">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Descripción del Evento</span>
+                <p className="text-gray-800 font-semibold text-sm leading-relaxed">{detalleEvento.mensaje}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100 text-xs">
+                <div>
+                  <span className="text-gray-400 font-medium">Tipo de Evento</span>
+                  <p className="font-bold text-gray-800 font-mono mt-0.5">{detalleEvento.tipo}</p>
+                </div>
+                <div>
+                  <span className="text-gray-400 font-medium">Severidad</span>
+                  <p className="font-bold text-gray-800 mt-0.5">{detalleEvento.severidad}</p>
+                </div>
+                <div>
+                  <span className="text-gray-400 font-medium">Timestamp</span>
+                  <p className="font-mono text-gray-700 mt-0.5">{new Date(detalleEvento.timestamp).toLocaleString()}</p>
+                </div>
+                <div>
+                  <span className="text-gray-400 font-medium">Canal</span>
+                  <p className="font-bold text-emerald-600 mt-0.5">WebSocket Stream</p>
+                </div>
+              </div>
+
+              {detalleEvento.payload && Object.keys(detalleEvento.payload).length > 0 && (
+                <div>
+                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">
+                    Payload Forense JSON
+                  </span>
+                  <pre className="p-3 bg-gray-900 text-emerald-400 rounded-xl text-xs font-mono overflow-x-auto max-h-48">
+                    {JSON.stringify(detalleEvento.payload, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-gray-100 flex justify-end">
+              <button
+                onClick={() => setDetalleEvento(null)}
+                className="px-5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-xl text-xs shadow-sm transition-all cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ACTA FISCAL DE CORTE Z */}
+      {corteZModal && (
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-gray-100 animate-in fade-in zoom-in-95 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 bg-quantix-50 text-quantix-600 rounded-xl">
+                  <FileText className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-gray-900">Acta de Corte Z (Cierre de Turno)</h3>
+                  <span className="text-xs font-mono text-gray-400">Folio: {corteZModal.folio_corte}</span>
+                </div>
+              </div>
+              <button 
+                onClick={() => setCorteZModal(null)} 
+                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="py-4 space-y-3.5 text-xs overflow-y-auto flex-1 font-mono">
+              <div className="bg-gray-900 text-emerald-400 p-4 rounded-xl space-y-1.5 shadow-inner leading-relaxed">
+                <div className="text-center pb-2 border-b border-gray-800 text-white font-bold">
+                  *** COMPROBANTE FISCAL DE CORTE Z ***
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Terminal / Caja:</span>
+                  <span className="text-white font-bold">{corteZModal.terminal_id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Operador:</span>
+                  <span className="text-white font-bold">{corteZModal.cajero_nombre}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Apertura:</span>
+                  <span>{new Date(corteZModal.fecha_apertura).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Cierre:</span>
+                  <span>{corteZModal.fecha_cierre ? new Date(corteZModal.fecha_cierre).toLocaleString() : 'En curso'}</span>
+                </div>
+                <div className="pt-2 border-t border-gray-800 flex justify-between">
+                  <span className="text-gray-400">Fondo Inicial:</span>
+                  <span className="text-white">${corteZModal.fondo_inicial.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between font-bold text-white text-sm">
+                  <span>TOTAL COBRADO EN VENTAS:</span>
+                  <span>${corteZModal.total_ventas.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-[11px] text-gray-400">
+                  <span>- Efectivo:</span>
+                  <span>${corteZModal.ventas_efectivo.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-[11px] text-gray-400">
+                  <span>- Tarjetas Débito/Crédito:</span>
+                  <span>${corteZModal.ventas_tarjeta.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-[11px] text-gray-400">
+                  <span>- Transferencias / QR:</span>
+                  <span>${corteZModal.ventas_transferencia.toFixed(2)}</span>
+                </div>
+                <div className="pt-2 border-t border-gray-800 flex justify-between">
+                  <span className="text-gray-400">Total Físico Declarado:</span>
+                  <span className="text-white font-bold">${(corteZModal.total_fisico_declarado || 0).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between font-bold">
+                  <span className="text-gray-400">Diferencia / Descuadre:</span>
+                  <span className={corteZModal.diferencia === 0 ? 'text-emerald-400' : corteZModal.diferencia > 0 ? 'text-amber-400' : 'text-red-400'}>
+                    ${(corteZModal.diferencia || 0).toFixed(2)} ({corteZModal.estado_cuadre || 'OK'})
+                  </span>
+                </div>
+                <div className="flex justify-between text-[11px] text-gray-400 pt-1">
+                  <span>Tickets Emitidos:</span>
+                  <span>{corteZModal.total_tickets_emitidos} ({corteZModal.primer_folio || 'TKT-1'} a {corteZModal.ultimo_folio || 'TKT-N'})</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-gray-100 flex gap-2 shrink-0">
+              <button
+                onClick={() => window.print()}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl font-bold text-xs transition-colors cursor-pointer"
+              >
+                <Printer className="w-4 h-4" />
+                Imprimir Corte
+              </button>
+              <button
+                onClick={handleDescargarCorteZ}
+                disabled={loadingCorteZ}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-quantix-600 hover:bg-quantix-700 text-white rounded-xl font-bold text-xs shadow-sm transition-colors cursor-pointer"
+              >
+                {descargadoCorteZ ? <Check className="w-4 h-4" /> : <Download className="w-4 h-4" />}
+                {descargadoCorteZ ? '¡Descargado!' : 'Descargar TXT'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

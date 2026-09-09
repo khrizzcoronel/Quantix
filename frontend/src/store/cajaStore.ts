@@ -24,6 +24,7 @@ export interface ResultadoArqueo {
 interface CajaState {
   sesionActiva: SesionCajaActiva | null;
   estaAbierta: boolean;
+  recuperarSesionActiva: () => Promise<void>;
   abrirCaja: (fondoInicial: number, terminalId: string) => Promise<void>;
   realizarArqueoCiego: (conteo: { efectivo: number; tarjeta: number; transferencia: number; otros: number }) => Promise<ResultadoArqueo>;
   cerrarSesionLocal: () => void;
@@ -31,9 +32,24 @@ interface CajaState {
 
 export const useCajaStore = create<CajaState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       sesionActiva: null,
       estaAbierta: false,
+
+      recuperarSesionActiva: async () => {
+        const response = await api.get('/caja/sesion-activa');
+        if (!response.data) {
+          set({ sesionActiva: null, estaAbierta: false });
+          return;
+        }
+        set({
+          sesionActiva: {
+            ...response.data,
+            fondo_inicial: Number(response.data.fondo_inicial),
+          },
+          estaAbierta: true,
+        });
+      },
 
       abrirCaja: async (fondoInicial: number, terminalId: string) => {
         try {
@@ -49,17 +65,13 @@ export const useCajaStore = create<CajaState>()(
             estaAbierta: true 
           });
         } catch (error: any) {
-          // Si el backend responde que ya tiene una abierta o si estamos en modo offline
           if (error.response?.data?.detail?.includes('ya tiene una sesión')) {
-            // Asumimos sesión activa restaurada
+            const response = await api.get('/caja/sesion-activa');
+            if (!response.data) throw error;
             set({
               sesionActiva: {
-                id: 'sesion-activa-recuperada',
-                usuario_id: 'user-actual',
-                terminal_id: terminalId,
-                fecha_apertura: new Date().toISOString(),
-                fondo_inicial: Number(fondoInicial),
-                estado: 'ABIERTA',
+                ...response.data,
+                fondo_inicial: Number(response.data.fondo_inicial),
               },
               estaAbierta: true,
             });
@@ -70,36 +82,17 @@ export const useCajaStore = create<CajaState>()(
       },
 
       realizarArqueoCiego: async (conteo) => {
-        try {
-          const response = await api.post('/caja/arqueo-ciego', {
-            conteo_declarado: conteo,
-          });
-          const resultado: ResultadoArqueo = {
-            ...response.data,
-            total_teorico: Number(response.data.total_teorico),
-            total_fisico_declarado: Number(response.data.total_fisico_declarado),
-            diferencia: Number(response.data.diferencia),
-          };
-          set({ sesionActiva: null, estaAbierta: false });
-          return resultado;
-        } catch (error: any) {
-          // Fallback de cálculo en memoria si el backend estuviera en mantenimiento
-          const fondo = get().sesionActiva?.fondo_inicial || 0;
-          const fisico = conteo.efectivo + conteo.tarjeta + conteo.transferencia + conteo.otros;
-          const diferencia = fisico - fondo;
-          const estado = Math.abs(diferencia) <= 5 ? 'OK' : diferencia > 5 ? 'SOBRANTE' : 'FALTANTE';
-          const mockResultado: ResultadoArqueo = {
-            sesion_caja_id: get().sesionActiva?.id || 'id-mock',
-            total_teorico: fondo,
-            total_fisico_declarado: fisico,
-            diferencia,
-            estado,
-            requiere_auditoria: estado !== 'OK',
-            mensaje: 'Arqueo procesado localmente',
-          };
-          set({ sesionActiva: null, estaAbierta: false });
-          return mockResultado;
-        }
+        const response = await api.post('/caja/arqueo-ciego', {
+          conteo_declarado: conteo,
+        });
+        const resultado: ResultadoArqueo = {
+          ...response.data,
+          total_teorico: Number(response.data.total_teorico),
+          total_fisico_declarado: Number(response.data.total_fisico_declarado),
+          diferencia: Number(response.data.diferencia),
+        };
+        set({ sesionActiva: null, estaAbierta: false });
+        return resultado;
       },
 
       cerrarSesionLocal: () => {

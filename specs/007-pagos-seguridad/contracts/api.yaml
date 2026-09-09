@@ -1,120 +1,68 @@
 openapi: 3.0.3
 info:
-  title: Quantix - API de Pagos y Seguridad (Módulo 007)
-  version: 1.0.0
-  description: Integración de pasarelas de pago multimodal, webhooks de confirmación y seguridad PCI.
+  title: Quantix - API de Pagos Simulados (Módulo 007)
+  version: 2.0.0
+  description: Contrato implementado para seguimiento y conciliación de intentos de pago simulados.
 paths:
-  /api/v1/pagos/iniciar:
-    post:
-      summary: Iniciar procesamiento de pago con pasarela o terminal
+  /api/v1/pagos/intentos/{checkout_key}:
+    get:
+      summary: Consultar los intentos asociados a un checkout idempotente
       parameters:
-        - name: Idempotency-Key
-          in: header
+        - name: checkout_key
+          in: path
           required: true
-          schema:
-            type: string
-          description: Clave única de idempotencia (folio_ticket + metodo_pago)
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/IniciarPagoRequest'
+          schema: {type: string}
       responses:
         '200':
-          description: Pago procesado o iniciado para confirmación
+          description: Intentos visibles para el operador autenticado o para supervisión
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PagoResponse'
-        '409':
-          description: Pago duplicado o conflicto de idempotencia
-
-  /api/v1/pagos/webhook:
+                type: array
+                items: {$ref: '#/components/schemas/IntentoPago'}
+        '401': {description: JWT ausente o inválido}
+  /api/v1/pagos/intentos/{intento_id}/conciliar:
     post:
-      summary: Webhook para recibir confirmaciones asíncronas de la pasarela
+      summary: Resolver manualmente un intento INICIADO o INCIERTO
       parameters:
-        - name: X-Signature
-          in: header
+        - name: intento_id
+          in: path
           required: true
-          schema:
-            type: string
-          description: Firma criptográfica HMAC de la pasarela
+          schema: {type: string, format: uuid}
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              required: [resultado]
+              properties:
+                resultado: {type: string, enum: [APROBADO, RECHAZADO]}
+                detalle: {type: string, nullable: true}
       responses:
         '200':
-          description: Webhook procesado exitosamente
-        '400':
-          description: Firma inválida o payload corrupto
-
-  /api/v1/pagos/{id}/estado:
-    get:
-      summary: Consultar estado actual de una transacción de pago
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Estado del pago
+          description: Intento conciliado y evento de auditoría creado
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/PagoResponse'
-
+              schema: {$ref: '#/components/schemas/IntentoPago'}
+        '403': {description: Requiere rol SUPERVISOR o DIRECTOR}
+        '409': {description: El intento ya tiene un estado definitivo}
 components:
   schemas:
-    IniciarPagoRequest:
-      type: object
-      required:
-        - venta_id
-        - metodo_pago
-        - monto
-      properties:
-        venta_id:
-          type: string
-          format: uuid
-        metodo_pago:
-          type: string
-          enum: [EFECTIVO, TARJETA_DEBITO, TARJETA_CREDITO, QR_TRANSFERENCIA]
-        monto:
-          type: number
-          format: double
-        token_pasarela:
-          type: string
-          nullable: true
-          description: Token temporal devuelto por SDK del datáfono/pasarela
-
-    PagoResponse:
+    IntentoPago:
       type: object
       properties:
-        id:
-          type: string
-          format: uuid
-        venta_id:
-          type: string
-          format: uuid
-        metodo_pago:
-          type: string
-        monto:
-          type: number
-        estado_pago:
-          type: string
-          enum: [PENDIENTE_CONFIRMACION, CONFIRMADO, RECHAZADO, REEMBOLSADO]
-        referencia_transaccion:
-          type: string
-        autorizacion_bancaria:
-          type: string
-        ultimos_4_digitos:
-          type: string
-        fecha_hora:
-          type: string
-          format: date-time
+        id: {type: string, format: uuid}
+        checkout_idempotency_key: {type: string}
+        indice: {type: integer}
+        usuario_id: {type: string, format: uuid}
+        sesion_caja_id: {type: string, format: uuid}
+        venta_id: {type: string, format: uuid, nullable: true}
+        metodo_pago: {type: string}
+        monto: {type: number}
+        estado: {type: string, enum: [INICIADO, APROBADO, RECHAZADO, INCIERTO, VINCULADO]}
+        referencia_pasarela: {type: string, nullable: true}
+        codigo_respuesta: {type: string, nullable: true}
+        detalle: {type: string, nullable: true}
+        creado_en: {type: string, format: date-time}
+        actualizado_en: {type: string, format: date-time}

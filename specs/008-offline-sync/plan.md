@@ -2,6 +2,9 @@
 
 **Módulo:** 008-offline-sync  
 
+> Plan operativo actualizado y contexto de relevo: `docs/PLAN_CONTINUACION_ANTIGRAVITY.md`.
+> Este archivo describe la arquitectura objetivo; no implica que el módulo esté implementado.
+
 ---
 
 ## 1. Arquitectura de Sincronización
@@ -11,7 +14,7 @@ flowchart TD
     subgraph Terminal_POS ["Terminal POS (Cliente Local)"]
         UI["Interfaz POS"]
         Heartbeat["Health Monitor (Polling cada 5s)"]
-        SQLiteLocal[("SQLite Local / IndexedDB")]
+        SQLiteLocal[("IndexedDB")]
         SyncQueue["Cola FIFO de Sincronización"]
     end
 
@@ -21,7 +24,7 @@ flowchart TD
         PostgresCentral[("PostgreSQL 16 Central")]
     end
 
-    Heartbeat -->|GET /api/v1/health| SyncRouter
+    Heartbeat -->|GET /health| SyncRouter
     UI -->|Si Offline| SQLiteLocal
     SQLiteLocal --> SyncQueue
     SyncQueue -->|Al Reconectar: POST lote| SyncRouter
@@ -34,7 +37,7 @@ flowchart TD
 ## 2. Componentes Clave
 
 1. **Monitor de Conectividad (Heartbeat):**
-   * Petición periódica `GET /api/v1/health` cada 5 segundos con timeout de 2 segundos.
+   * Petición periódica `GET /health` cada 5 segundos con timeout de 2 segundos.
    * Dos fallos consecutivos activan inmediatamente el *Modo Offline*.
 2. **Caché Local de Catálogo:**
    * Al iniciar el turno y cada vez que hay red activa, la terminal descarga un snapshot de `productos_cache` (id, codigo_barras, nombre, precio_venta).

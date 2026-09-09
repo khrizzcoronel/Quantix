@@ -2,7 +2,7 @@
 
 **Módulo:** 008-offline-sync  
 **Nivel Organizacional:** Operativo (TPS / POS)  
-**Estado:** DRAFT / LISTO PARA IMPLEMENTACIÓN  
+**Estado:** PENDIENTE / NO IMPLEMENTADO  
 **Dependencias:** 001-core-ventas-inventario, 007-pagos-seguridad  
 
 ---
@@ -10,7 +10,11 @@
 ## 1. Declaración del Problema y Objetivos
 En el comercio físico minorista, un corte de suministro de internet no puede detener la fila de cobro. Si el sistema se bloquea cuando no hay conectividad, el cliente abandona la compra y la pérdida es inmediata.
 
-Este módulo implementa:
+Este módulo especifica una fase futura; el código actual **no** persiste ventas
+offline ni simula ventas exitosas cuando falla la API. Hoy el POS conserva el
+carrito y muestra el error para evitar tickets, stock o cobros ficticios.
+
+La implementación pendiente debe incluir:
 * **Modo degradado de contingencia:** Detección automática de desconexión y habilitación instantánea de cobro en efectivo con almacenamiento local.
 * **Cola de sincronización FIFO:** Envío automático de las transacciones almacenadas localmente hacia el backend central cuando se restablece la red.
 * **Resolución de conflictos de stock:** Reglas deterministas para procesar ventas offline cuando el inventario central fluctuó durante la desconexión.

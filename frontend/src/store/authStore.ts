@@ -7,6 +7,7 @@ export interface User {
   email: string;
   nombre: string;
   rol: string;
+  avatar?: string | null;
 }
 
 interface AuthState {
@@ -15,6 +16,7 @@ interface AuthState {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<User>;
   logout: () => void;
+  updateAvatar: (avatar: string) => void;
 }
 
 // Función auxiliar para decodificar el payload del token JWT de forma segura
@@ -36,7 +38,7 @@ const decodeJwt = (token: string): { sub?: string; rol?: string } | null => {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       token: null,
       user: null,
       isAuthenticated: false,
@@ -76,6 +78,13 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         set({ token: null, user: null, isAuthenticated: false });
         localStorage.removeItem('quantix-caja-activa');
+      },
+
+      updateAvatar: (avatar: string) => {
+        const currentUser = get().user;
+        if (currentUser) {
+          set({ user: { ...currentUser, avatar } });
+        }
       },
     }),
     {

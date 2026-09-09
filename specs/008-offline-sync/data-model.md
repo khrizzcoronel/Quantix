@@ -5,7 +5,11 @@
 
 ---
 
-## 1. Esquema SQLite Local en Terminal POS
+## 1. Modelo conceptual local para IndexedDB
+
+> Los bloques SQL siguientes documentan entidades y restricciones conceptuales
+> heredadas. La implementación web debe traducirlas a object stores de IndexedDB;
+> no debe incorporar SQLite al bundle del navegador.
 
 ```sql
 -- Catálogo descargado para búsqueda offline rápida

@@ -7,6 +7,9 @@ while ! nc -z "${POSTGRES_SERVER}" "${POSTGRES_PORT}"; do
 done
 echo "PostgreSQL esta listo."
 
+echo "Aplicando migraciones de base de datos..."
+alembic upgrade head
+
 if [ "${AUTO_SEED:-true}" = "true" ]; then
   echo "Comprobando esquema y datos base..."
   python -c "
@@ -21,14 +24,14 @@ async def check():
             res = await session.execute(select(Usuario))
             if not res.scalars().first():
                 print('Sembrando datos demo iniciales...')
-                from app.seed import seed_database
-                await seed_database()
+                from app.seed import seed_data
+                await seed_data()
             else:
                 print('Base de datos ya cuenta con registros.')
     except Exception as e:
         print('Inicializando tablas y sembrando datos...', e)
-        from app.seed import seed_database
-        await seed_database()
+        from app.seed import seed_data
+        await seed_data()
 
 asyncio.run(check())
 " || true

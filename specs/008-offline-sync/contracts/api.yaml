@@ -4,7 +4,7 @@ info:
   version: 1.0.0
   description: Endpoints para heartbeat de red y sincronización por lotes de ventas offline.
 paths:
-  /api/v1/health:
+  /health:
     get:
       summary: Health check ultra-rápido para comprobación de conectividad
       responses:

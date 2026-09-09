@@ -1,7 +1,8 @@
 import uuid
 import enum
 from datetime import datetime, timezone
-from sqlalchemy import String, Boolean, DateTime, ForeignKey, Enum as SAEnum, Numeric
+from typing import Optional
+from sqlalchemy import String, Boolean, DateTime, ForeignKey, Enum as SAEnum, Numeric, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 
@@ -27,11 +28,16 @@ class Usuario(Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     rol: Mapped[RolUsuario] = mapped_column(SAEnum(RolUsuario), nullable=False)
     activo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    avatar: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
     sesiones_caja: Mapped[list["SesionCaja"]] = relationship("SesionCaja", back_populates="usuario", cascade="all, delete-orphan")
     eventos_auditoria: Mapped[list["AuditoriaEvento"]] = relationship("AuditoriaEvento", foreign_keys="[AuditoriaEvento.usuario_id]", back_populates="usuario")
     eventos_autorizados: Mapped[list["AuditoriaEvento"]] = relationship("AuditoriaEvento", foreign_keys="[AuditoriaEvento.usuario_autorizador_id]", back_populates="usuario_autorizador")
+
+    @property
+    def nombre_completo(self) -> str:
+        return self.nombre
 
 class SesionCaja(Base):
     __tablename__ = 'sesion_caja'

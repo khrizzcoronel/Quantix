@@ -13,6 +13,6 @@ El sistema utilizará una cuenta conectada por SMTP utilizando una App Password 
 Para cumplir con los avisos inmediatos en la caja o la bodega (ej. Alerta de Stock Bajo, Autorización concedida), se utilizará un gestor de conexiones WebSockets (`FastAPI WebSockets`).
 
 ## 4. Tareas a Ejecutar
-- [ ] **TASK-012-01:** Implementar clase `EmailSender` (basada en `smtplib` / `email.message`) configurada con puerto 587/465, leyendo host, correo y la app password (`SMTP_PASSWORD`) desde `.env`.
+- [x] **TASK-012-01:** Implementar clase `EmailSender` (basada en `smtplib` / `email.message`) configurada con puerto 587/465, leyendo host, correo y la app password (`SMTP_PASSWORD`) desde `.env`.
 - [ ] **TASK-012-02:** Implementar worker asíncrono en FastAPI (`BackgroundTasks`) para enviar el ticket digital al cliente tras una compra sin detener la respuesta HTTP.
-- [ ] **TASK-012-03:** Implementar Gestor de WebSockets en `GET /api/v1/ws/notificaciones/{usuario_id}` para empujar eventos en tiempo real al Frontend de manera segura.
+- [x] **TASK-012-03:** Implementar gestor de WebSockets en `WS /ws/notificaciones/stream?token=<JWT>`. El usuario se deriva del token firmado y debe permanecer activo.

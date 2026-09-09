@@ -37,5 +37,6 @@ Si un cajero está logueado pero necesita autorización para una acción crític
 ```bash
 curl -X POST "http://localhost:8000/api/v1/auth/supervisor-override" \
      -H "Content-Type: application/json" \
+     -H "Authorization: Bearer <TOKEN_DEL_SOLICITANTE>" \
      -d '{"email": "supervisor@quantix.local", "password": "superpassword"}'
 ```

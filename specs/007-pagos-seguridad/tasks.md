@@ -6,6 +6,9 @@
 ---
 
 ## Bloque 1: Persistencia y Middleware (Pre-requisito para todo el módulo)
+- [x] **TASK-007-SIM-01:** Integrar una pasarela simulada en el checkout con escenarios aprobado, rechazado y timeout, referencia determinista y rollback transaccional.
+- [x] **TASK-007-SIM-02:** Hacer idempotente el checkout mediante `Venta.idempotency_key`, restricción única y migración Alembic.
+- [x] **TASK-007-SIM-03:** Persistir intentos aprobados, rechazados e inciertos; bloquear reintentos ambiguos y permitir conciliación auditada por Supervisor/Director.
 - [ ] **TASK-007-01:** Implementar endpoint `POST /api/v1/pagos/iniciar` — valida el `Idempotency-Key` del header, verifica duplicados en ventana de 60 segundos, llama a la pasarela y persiste el resultado en `pagos_venta`; devuelve URL de pago o token según el método.
 - [ ] **TASK-007-02:** Implementar endpoint `POST /api/v1/pagos/webhook` — recibe confirmación asíncrona de la pasarela, valida firma HMAC del payload y actualiza `pagos_venta.estado_pago` a `CONFIRMADO` o `RECHAZADO`.
 - [ ] **TASK-007-03:** Implementar `IdempotenciaMiddleware` — intercepta todas las solicitudes a `/api/v1/pagos/iniciar`; si el `Idempotency-Key` ya existe en base de datos, devuelve la respuesta cacheada sin re-llamar a la pasarela.

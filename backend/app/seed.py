@@ -1,7 +1,6 @@
 import asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from app.core.config import settings
-from app.models.base import Base
 from app.models.usuarios import Usuario, RolUsuario, SesionCaja, AuditoriaEvento, ArqueoCaja
 from app.models.inventario import (
     Categoria, Producto, LoteInventario, Proveedor, OrdenCompra, 
@@ -17,11 +16,6 @@ engine = create_async_engine(settings.async_database_uri, echo=True)
 AsyncSessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False)
 
 async def seed_data():
-    # 0. Asegurar que las tablas existen en PostgreSQL
-    async with engine.begin() as conn:
-        print("--- Creando tablas en PostgreSQL si no existen... ---")
-        await conn.run_sync(Base.metadata.create_all)
-
     async with AsyncSessionLocal() as db:
         print("--- Iniciando inyección de datos semilla (Seed) ---")
         

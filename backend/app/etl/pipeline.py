@@ -1,3 +1,4 @@
+import os
 import duckdb
 import logging
 from app.core.config import settings
@@ -15,19 +16,61 @@ class MedallionETL:
         # Convertir URI asíncrona a síncrona para la conexión nativa de DuckDB
         self.pg_uri = settings.sync_database_uri
 
-    def run_pipeline(self):
-        """Ejecuta el ciclo completo de Bronze -> Silver -> Gold"""
-        logger.info(f"[{datetime.now()}] Iniciando Pipeline ETL Medallion...")
+    def run_pipeline(self) -> dict:
+        """Ejecuta el ciclo completo de Bronze -> Silver -> Gold y retorna métricas de ejecución."""
+        t_inicio = datetime.utcnow()
+        logger.info(f"[{t_inicio}] Iniciando Pipeline ETL Medallion...")
         
+        resultado = {
+            "status": "EXITOSO",
+            "timestamp": t_inicio.isoformat(),
+            "duracion_ms": 0.0,
+            "origen_datos": "PostgreSQL (quantix_db)",
+            "destino_archivo": f"DuckDB ({self.db_path})",
+            "capas_detalle": {
+                "bronze": ["bronze.venta", "bronze.detalle_venta", "bronze.producto"],
+                "silver": ["silver.venta_limpia", "silver.producto_activo"],
+                "gold": ["gold.fact_ventas", "gold.dim_producto", "gold.dim_tiempo"]
+            },
+            "filas": {
+                "bronze_ventas": 0,
+                "silver_ventas": 0,
+                "gold_ventas": 0,
+                "gold_productos": 0
+            },
+            "tamano_kb": 0.0,
+            "error": None
+        }
+
         try:
             with duckdb.connect(self.db_path) as con:
                 self._setup_connections(con)
                 self._build_bronze(con)
                 self._build_silver(con)
                 self._build_gold(con)
-                logger.info("Pipeline ETL finalizado con éxito.")
+                
+                try:
+                    resultado["filas"]["bronze_ventas"] = con.execute("SELECT COUNT(*) FROM bronze.venta").fetchone()[0]
+                    resultado["filas"]["silver_ventas"] = con.execute("SELECT COUNT(*) FROM silver.venta_limpia").fetchone()[0]
+                    resultado["filas"]["gold_ventas"] = con.execute("SELECT COUNT(*) FROM gold.fact_ventas").fetchone()[0]
+                    resultado["filas"]["gold_productos"] = con.execute("SELECT COUNT(*) FROM gold.dim_producto").fetchone()[0]
+                except Exception as ex_counts:
+                    logger.warning(f"Error al obtener métricas de conteo: {ex_counts}")
+
+                if os.path.exists(self.db_path):
+                    resultado["tamano_kb"] = round(os.path.getsize(self.db_path) / 1024, 2)
+
+                t_fin = datetime.utcnow()
+                resultado["duracion_ms"] = round((t_fin - t_inicio).total_seconds() * 1000, 2)
+                logger.info(f"Pipeline ETL finalizado con éxito en {resultado['duracion_ms']} ms.")
+                return resultado
         except Exception as e:
+            t_fin = datetime.utcnow()
+            resultado["status"] = "ERROR"
+            resultado["error"] = str(e)
+            resultado["duracion_ms"] = round((t_fin - t_inicio).total_seconds() * 1000, 2)
             logger.error(f"Fallo crítico en el Pipeline ETL: {str(e)}")
+            return resultado
 
     def _setup_connections(self, con: duckdb.DuckDBPyConnection):
         """Prepara las extensiones y adjunta la base de datos PostgreSQL"""

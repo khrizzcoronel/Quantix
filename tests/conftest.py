@@ -9,6 +9,14 @@ from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy import select
 
+# Configurar el entorno aislado antes de importar la aplicación y sus Settings.
+os.environ.setdefault("POSTGRES_SERVER", "127.0.0.1")
+os.environ.setdefault("POSTGRES_PORT", "5433")
+os.environ.setdefault("POSTGRES_USER", "quantix_user")
+os.environ.setdefault("POSTGRES_PASSWORD", "quantix_password")
+os.environ.setdefault("POSTGRES_DB", "quantix_test")
+os.environ.setdefault("SECRET_KEY", "test-only-secret-key-with-at-least-32-bytes")
+
 # Asegurar que backend esté en el sys.path
 backend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "backend"))
 if backend_path not in sys.path:
@@ -22,6 +30,7 @@ from app.models.inventario import (
 )
 from app.models.ventas import Cliente, Cupon, Venta, DetalleVenta, PagoVenta
 from app.models.configuracion import Configuracion
+from app.models.promociones import ReglaPromocion, TipoReglaPromocion, DescuentoReglaTipo
 from app.core.security import get_password_hash, create_access_token
 from app.main import app
 from app.db.oltp import get_db
@@ -49,7 +58,9 @@ def event_loop():
 async def setup_test_database():
     """Inicializa el esquema completo en la base de datos de test y crea usuarios base"""
     async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+        from sqlalchemy import text
+        await conn.execute(text("DROP SCHEMA public CASCADE;"))
+        await conn.execute(text("CREATE SCHEMA public;"))
         await conn.run_sync(Base.metadata.create_all)
 
     async with TestSessionLocal() as db:

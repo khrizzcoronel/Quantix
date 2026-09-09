@@ -39,7 +39,7 @@ async def test_login__cajero_credentials__returns_cajero_role(async_client: Asyn
     assert response.json()["user"]["rol"] == "CAJERO"
 
 @pytest.mark.asyncio
-async def test_supervisor_override__valid_credentials__returns_authorized(async_client: AsyncClient):
+async def test_supervisor_override__valid_credentials__returns_authorized(async_client: AsyncClient, cajero_headers: dict):
     """Prueba de pase de supervisor (override en caliente)"""
     response = await async_client.post(
         "/api/v1/auth/supervisor-override",
@@ -47,7 +47,8 @@ async def test_supervisor_override__valid_credentials__returns_authorized(async_
             "email": "supervisor@quantix.local",
             "password": "Super123!",
             "motivo": "Autorización test de anulación"
-        }
+        },
+        headers=cajero_headers,
     )
     assert response.status_code == 200
     assert response.json()["autorizado"] is True

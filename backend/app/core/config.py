@@ -17,15 +17,15 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = "quantix_db"
 
     # Auth
-    SECRET_KEY: str = "super_secret_key_change_in_production"
+    SECRET_KEY: str = "change-me-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 720 # 12 horas
 
     # SMTP Notifications
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587
-    SMTP_USER: str = "tu_correo@gmail.com"
-    SMTP_PASSWORD: str = "qpcp vwew idgk hizb" # Inyectado por entorno según Spec 012
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""  # Siempre debe inyectarse mediante el entorno.
 
     @property
     def sync_database_uri(self) -> str:

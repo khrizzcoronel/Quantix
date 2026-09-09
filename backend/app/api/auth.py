@@ -5,7 +5,8 @@ from sqlalchemy import select
 
 from app.db.oltp import get_db
 from app.core.security import verify_password, create_access_token
-from app.models.usuarios import Usuario
+from app.models.usuarios import Usuario, AuditoriaEvento
+from app.api.deps import get_current_user
 from app.schemas.auth import Token, SupervisorOverrideRequest
 
 router = APIRouter()
@@ -40,7 +41,8 @@ async def login_access_token(
             "id": user.id,
             "email": user.email,
             "nombre": user.nombre,
-            "rol": user.rol.name
+            "rol": user.rol.name,
+            "avatar": user.avatar
         }
     }
 
@@ -48,7 +50,8 @@ async def login_access_token(
 @router.post("/supervisor-override")
 async def supervisor_override(
     req: SupervisorOverrideRequest,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
 ):
     """
     Endpoint (RF-SEG-03) utilizado en caliente durante una sesión de caja
@@ -63,20 +66,28 @@ async def supervisor_override(
             detail="Credenciales de supervisor incorrectas"
         )
         
+    if not supervisor.activo:
+        raise HTTPException(status_code=403, detail="El supervisor está inactivo")
+
     if supervisor.rol.name not in ["SUPERVISOR", "DIRECTOR"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="El usuario provisto no tiene privilegios de autorización"
         )
         
-    # Notificación WebSocket asíncrona si la caja estuviera conectada al canal
-    from app.api.ws import notif_manager
-    import asyncio
-    
-    # En un caso real, la terminal del cajero se suscribiría con su propio ID
-    # Simulación: Mandamos el push al ID del cajero que lo solicitó (req.cajero_id en un esquema avanzado)
-    # Por simplicidad aquí lo mandamos como log conceptual:
-    # await notif_manager.send_personal_message({"tipo": "AUTORIZACION", "estado": "APROBADA"}, "CAJERO_ID")
+    db.add(AuditoriaEvento(
+        usuario_id=current_user.id,
+        usuario_autorizador_id=supervisor.id,
+        tipo_evento="SUPERVISOR_OVERRIDE",
+        descripcion=f"Autorización supervisada concedida a {current_user.email}",
+        gravedad="INFO",
+        detalle_json={
+            "solicitante_id": str(current_user.id),
+            "solicitante_rol": current_user.rol.name,
+            "supervisor_id": str(supervisor.id),
+        },
+    ))
+    await db.commit()
 
     return {
         "autorizado": True,

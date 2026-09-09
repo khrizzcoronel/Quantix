@@ -36,10 +36,10 @@ tests/
 
 ```bash
 # Requisito: tener la BD de prueba levantada
-docker compose up -d postgres_test
+docker compose up -d db
 
 # Ejecutar todos los tests con cobertura
-pytest tests/ --cov=app --cov-report=term-missing -v
+.\backend\venv\Scripts\python.exe -m pytest tests backend\tests --cov=backend/app --cov-report=term-missing -v
 
 # Solo unitarios (sin BD, rapidísimos)
 pytest tests/unit/ -v

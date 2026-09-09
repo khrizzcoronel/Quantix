@@ -34,14 +34,20 @@ paths:
             schema:
               $ref: '#/components/schemas/CheckoutRequest'
       responses:
-        '201':
+        '200':
           description: Venta completada exitosamente
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/VentaResponse'
+        '400':
+          description: Sesión, cupón o pago inválido
+        '402':
+          description: Pago electrónico rechazado por el simulador
         '409':
           description: Conflicto de stock insuficiente
+        '504':
+          description: Tiempo de espera agotado en el simulador de pagos
 
   /api/v1/inventario/lotes:
     post:
@@ -95,8 +101,12 @@ components:
     CheckoutRequest:
       type: object
       required:
+        - sesion_caja_id
         - items
       properties:
+        sesion_caja_id:
+          type: string
+          format: uuid
         cliente_id:
           type: string
           format: uuid
@@ -105,26 +115,56 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CheckoutItem'
+        pagos:
+          type: array
+          items:
+            $ref: '#/components/schemas/PagoCheckout'
+        metodo_pago:
+          type: string
+          description: Compatibilidad para un pago simple cuando no se envía `pagos`.
+        codigo_cupon:
+          type: string
+          nullable: true
+        idempotency_key:
+          type: string
+          minLength: 8
+          maxLength: 64
+
+    PagoCheckout:
+      type: object
+      required: [metodo_pago, monto]
+      properties:
+        metodo_pago:
+          type: string
+          enum: [EFECTIVO, TARJETA, TRANSFERENCIA, QR, CUPON]
+        monto:
+          type: number
+          exclusiveMinimum: 0
+        referencia_pasarela:
+          type: string
+          nullable: true
+          description: Token de escenario del simulador para pagos electrónicos.
 
     VentaResponse:
       type: object
       properties:
-        id:
+        venta_id:
           type: string
           format: uuid
         folio_ticket:
           type: string
-        fecha_hora:
-          type: string
-          format: date-time
         subtotal:
+          type: number
+        total_descuento:
+          type: number
+        total_impuestos:
           type: number
         total_pagar:
           type: number
-        costo_total_venta:
-          type: number
-        margen_total_ganancia:
-          type: number
+        estado:
+          type: string
+        mensaje:
+          type: string
 
     LoteCreateRequest:
       type: object

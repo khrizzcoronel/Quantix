@@ -6,7 +6,7 @@ Bienvenido a **Quantix**, un sistema transaccional de Punto de Venta (POS) y Bus
 - **OLTP (Transaccional):** PostgreSQL + SQLAlchemy 2.0 (Motor asíncrono para concurrencia extrema).
 - **OLAP (Analítico):** DuckDB (Motor Columnar) sincronizado mediante `postgres_scanner`.
 - **Backend:** FastAPI (Python) + WebSockets + SMTP.
-- **Frontend:** React 18 + Vite + TypeScript + Tailwind CSS + Zustand.
+- **Frontend:** React 19 + Vite + TypeScript + Tailwind CSS + Zustand.
 
 ---
 
@@ -43,8 +43,7 @@ python -m venv venv
 # Instalar dependencias
 pip install -r requirements.txt
 
-# Construir Base de Datos
-alembic revision --autogenerate -m "Inicial"
+# Aplicar el esquema versionado
 alembic upgrade head
 
 # Inyectar datos semilla (Usuarios, Lotes FEFO y Productos)
@@ -80,15 +79,38 @@ Al ejecutar `app.seed`, el sistema se pobló con los siguientes usuarios de prue
 
 ---
 
-## 📦 Módulos Principales Implementados
+## 📦 Estado real de los módulos
 
-*   **Módulo 001 (POS y Logística FEFO):** Descarga de inventario bloqueando lotes pesimísticamente y ordenándolos por fecha de caducidad.
-*   **Módulo 002 (CRM):** Base de datos de clientes y validación de vigencia de Cupones de descuento.
-*   **Módulo 006 (Arqueos):** Cierre ciego de cajas, cálculo teórico vs físico y tolerancia a descuadres ($5.00).
-*   **Módulo 009 (ETL Medallion):** DuckDB absorbiendo datos de PostgreSQL cada 5 minutos usando `APScheduler`. (Capas Bronze, Silver y Gold).
-*   **Módulo 010 (Seguridad):** Autenticación JWT, Hashing de contraseñas y Override (Pase de Supervisor).
-*   **Módulo 011 (BI Estratégico Z/T):** Proyección inferencial de demanda. El sistema detecta la muestra ($n$) y usa la **Distribución Normal Z** ($n \ge 30$) o la **Distribución de Student T** ($n < 30$) para dar un rango seguro de inventario (95% de confianza).
-*   **Módulo 012 (Notificaciones):** WebSockets para alertas en tiempo real y protocolo SMTP para envío de correos.
+| Área | Estado actual |
+| :--- | :--- |
+| POS, sesiones y logística FEFO | Implementado. Checkout transaccional, bloqueo pesimista, rechazo de lotes vencidos, IVA e idempotencia. |
+| CRM, cupones y promociones | Implementado parcialmente. CRUD, validación y canje disponibles; RFM/LTV completo sigue pendiente. |
+| Caja, arqueo y auditoría | Implementado. Los fallos ya no generan sesiones o arqueos simulados. |
+| Pagos | Pasarela simulada con intentos persistentes, idempotencia y conciliación auditada de timeouts. Integración bancaria real fuera de alcance actual. |
+| ETL Medallion | Implementación base Bronze/Silver/Gold con APScheduler; el modelo dimensional extendido sigue pendiente. |
+| BI | Endpoint estratégico y frontend conectados a datos reales. No se muestran datos ficticios cuando Gold está vacío. |
+| Notificaciones | WebSocket autenticado por JWT y servicio SMTP. Envío automático del ticket por correo sigue pendiente. |
+| Offline-first | Pendiente. Un error de red conserva el carrito y no se presenta como venta exitosa. |
+| Multi-sucursal | Especificado, todavía no implementado. |
+
+El detalle requisito por requisito se mantiene en `docs/requisitos/analisis_cobertura_requerimientos.md`.
+
+## ✅ Verificación
+
+```powershell
+# Con PostgreSQL levantado en Docker
+docker compose up -d db
+
+# Backend: unitarias e integración
+.\backend\venv\Scripts\python.exe -m pytest tests backend\tests -q
+
+# Frontend
+cd frontend
+npm run lint
+npm run build
+```
+
+Las pruebas usan exclusivamente la base `quantix_test`. El frontend no incorpora datos de demostración como fallback: una API vacía produce un estado vacío y una API no disponible produce un error visible.
 
 ---
 *Hecho con ⚡ por Google Antigravity.*

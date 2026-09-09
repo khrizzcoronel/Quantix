@@ -6,6 +6,7 @@ python-multipart>=0.0.9
 # Database ORM (OLTP)
 sqlalchemy[asyncio]>=2.0.28
 asyncpg>=0.30.0
+psycopg2-binary>=2.9.9
 alembic>=1.13.1
 
 # Database (OLAP)
@@ -35,4 +36,3 @@ httpx>=0.27.0
 pytest>=8.0.0
 pytest-asyncio>=0.23.0
 pytest-cov>=5.0.0
-
