@@ -40,6 +40,11 @@ class Usuario(Base):
     sesiones_caja: Mapped[list["SesionCaja"]] = relationship("SesionCaja", back_populates="usuario", cascade="all, delete-orphan")
     eventos_auditoria: Mapped[list["AuditoriaEvento"]] = relationship("AuditoriaEvento", foreign_keys="[AuditoriaEvento.usuario_id]", back_populates="usuario")
     eventos_autorizados: Mapped[list["AuditoriaEvento"]] = relationship("AuditoriaEvento", foreign_keys="[AuditoriaEvento.usuario_autorizador_id]", back_populates="usuario_autorizador")
+    sucursal: Mapped[Optional["Sucursal"]] = relationship("Sucursal", foreign_keys=[sucursal_id])
+
+    @property
+    def sucursal_nombre(self) -> Optional[str]:
+        return self.sucursal.nombre if self.sucursal else None
 
     @property
     def nombre_completo(self) -> str:

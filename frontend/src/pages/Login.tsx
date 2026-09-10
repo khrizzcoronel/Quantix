@@ -9,6 +9,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string | null; password?: string | null }>({});
   
   const login = useAuthStore((state) => state.login);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -22,8 +23,6 @@ export default function Login() {
     if (user.rol === 'BODEGUERO') return <Navigate to="/inventario" replace />;
     return <Navigate to="/pos" replace />;
   }
-
-  const [fieldErrors, setFieldErrors] = useState<{ email?: string | null; password?: string | null }>({});
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

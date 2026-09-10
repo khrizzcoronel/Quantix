@@ -79,10 +79,70 @@ export default function CorteXModal({ isOpen, onClose, sesionId }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 bg-inverse-surface/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-xl w-full p-6 border border-outline-variant/30 flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 bg-inverse-surface/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200 corte-x-modal-overlay">
+      {/* Estilos para impresión @media print aislada y limpia de Corte X */}
+      <style>{`
+        @media print {
+          @page {
+            size: auto;
+            margin: 4mm;
+          }
+          body * {
+            visibility: hidden !important;
+          }
+          .corte-x-modal-overlay,
+          .corte-x-modal-container {
+            position: static !important;
+            background: transparent !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+            overflow: visible !important;
+            max-height: none !important;
+            width: 100% !important;
+            display: block !important;
+          }
+          #imprimible-corte-x,
+          #imprimible-corte-x * {
+            visibility: visible !important;
+          }
+          #imprimible-corte-x {
+            position: absolute !important;
+            left: 0 !important;
+            right: 0 !important;
+            top: 0 !important;
+            margin: 0 auto !important;
+            width: 80mm !important;
+            max-width: 80mm !important;
+            padding: 6mm 4mm !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            border: 1px dashed #333333 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            font-family: 'Courier New', Courier, monospace !important;
+            font-size: 11px !important;
+            line-height: 1.35 !important;
+            z-index: 999999 !important;
+          }
+          #imprimible-corte-x * {
+            color: #000000 !important;
+            background: transparent !important;
+            border-color: #333333 !important;
+            box-shadow: none !important;
+            text-shadow: none !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+        }
+      `}</style>
+      <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-xl w-full p-6 border border-outline-variant/30 flex flex-col max-h-[92vh] corte-x-modal-container">
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-outline-variant/20 shrink-0">
+        <div className="flex items-center justify-between pb-4 border-b border-outline-variant/20 shrink-0 no-print">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-secondary-container text-on-secondary-container flex items-center justify-center shadow-xs">
               <Receipt className="w-6 h-6" />
@@ -266,7 +326,7 @@ export default function CorteXModal({ isOpen, onClose, sesionId }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-4 border-t border-outline-variant/20 shrink-0">
+        <div className="flex items-center justify-between pt-4 border-t border-outline-variant/20 shrink-0 no-print">
           <button
             type="button"
             onClick={handlePrint}

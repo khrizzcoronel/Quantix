@@ -1,71 +1,54 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   ResponsiveContainer, Area, Line,
   ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ReferenceLine, Cell, Bar
 } from 'recharts';
 import { 
   TrendingUp, Calendar, Building2, Lock, 
-  RefreshCw, SlidersHorizontal, Layers, Printer, 
-  Download, ChevronDown, ChevronUp,
-  Search, Bookmark, Sparkles, ArrowUp, ArrowDown, Info,
-  Users, DollarSign, ShoppingBag, Receipt,
-  Grid, ArrowUpDown, X
+  RefreshCw, Layers, ChevronDown,
+  Sparkles, Info, Users, DollarSign, ShoppingBag, Receipt, X, Grid
 } from 'lucide-react';
 
 import { useAuthStore } from '../store/authStore';
 import { useSucursalStore, type Sucursal } from '../store/sucursalStore';
 import api from '../services/api';
-import { exportToCSV, formatCurrency, formatNumber, formatDate, type ExportColumn } from '../utils/exportUtils';
+import { formatCurrency } from '../utils/exportUtils';
+import ReportePersonalizadoBuilder, {
+  COLUMNAS_PREDETERMINADAS,
+  PLANTILLAS_SISTEMA,
+  LOCAL_STORAGE_KEY_TEMPLATES
+} from '../components/ReportePersonalizadoBuilder';
+import {
+  type RangoFechaId,
+  type GranularidadGrafico,
+  type TipoAgrupacion,
+  type ColumnaReporteDef,
+  type FilaReporteVenta,
+  type PlantillaReporte,
+  type PlantillaReporteV2,
+  type TipoGrafico,
+  type LayoutReporte,
+  type PaletaColor
+} from '../types/reportes';
+
+// Re-exportar tipos y constantes requeridos por la suite de pruebas y módulos externos
+export type {
+  RangoFechaId,
+  GranularidadGrafico,
+  TipoAgrupacion,
+  ColumnaReporteDef,
+  FilaReporteVenta,
+  PlantillaReporte,
+  PlantillaReporteV2,
+  TipoGrafico,
+  LayoutReporte,
+  PaletaColor
+};
+export { COLUMNAS_PREDETERMINADAS, PLANTILLAS_SISTEMA, LOCAL_STORAGE_KEY_TEMPLATES };
 
 // ==========================================
-// TIPOS Y MODELOS DE DATOS
+// TIPOS Y MODELOS ANALÍTICOS ESPECÍFICOS TAB 1
 // ==========================================
-
-export type RangoFechaId = '7d' | '30d' | '90d' | 'ytd' | 'custom';
-
-export type GranularidadGrafico = 'DIA' | 'SEMANA' | 'MES';
-
-export type TipoAgrupacion = 'LINEA' | 'DIA' | 'PRODUCTO' | 'CATEGORIA' | 'CAJERO' | 'METODO_PAGO';
-
-export interface ColumnaReporteDef {
-  id: string;
-  header: string;
-  visible: boolean;
-  align?: 'left' | 'center' | 'right';
-  formatter?: (val: any, row: any) => string;
-}
-
-export interface FilaReporteVenta {
-  id: string;
-  fecha: string;
-  folio_ticket: string;
-  sucursal_id: string;
-  sucursal_nombre: string;
-  cajero_nombre: string;
-  cliente_nombre: string;
-  categoria_nombre: string;
-  producto_nombre: string;
-  cantidad: number;
-  precio_unitario: number;
-  subtotal: number;
-  descuento: number;
-  impuestos: number;
-  total: number;
-  margen_ganancia: number;
-  metodo_pago: 'EFECTIVO' | 'TARJETA' | 'QR_DEUNA';
-}
-
-export interface PlantillaReporte {
-  id: string;
-  nombre: string;
-  descripcion: string;
-  es_sistema?: boolean;
-  agrupacion: TipoAgrupacion;
-  columnas_activas: string[];
-  categoria_filtro?: string;
-  metodo_pago_filtro?: string;
-  cajero_filtro?: string;
-}
 
 export interface ProductoPareto {
   id: string;
@@ -108,63 +91,6 @@ export interface ProyeccionDemandaInferencial {
   estado_stock: 'OPTIMO' | 'ALERTA_REPOSICION' | 'RIESGO_QUIEBRE';
 }
 
-// 15 Columnas Estándar del Constructor de Reportes
-export const COLUMNAS_PREDETERMINADAS: ColumnaReporteDef[] = [
-  { id: 'fecha', header: 'Fecha', visible: true, align: 'left', formatter: (val) => formatDate(val) },
-  { id: 'folio_ticket', header: 'Folio Ticket', visible: true, align: 'left' },
-  { id: 'sucursal_nombre', header: 'Sucursal', visible: true, align: 'left' },
-  { id: 'cajero_nombre', header: 'Cajero', visible: true, align: 'left' },
-  { id: 'cliente_nombre', header: 'Cliente', visible: true, align: 'left' },
-  { id: 'categoria_nombre', header: 'Categoría', visible: true, align: 'left' },
-  { id: 'producto_nombre', header: 'Producto', visible: true, align: 'left' },
-  { id: 'cantidad', header: 'Cantidad', visible: true, align: 'right', formatter: (val) => formatNumber(val, 0) },
-  { id: 'precio_unitario', header: 'P. Unitario', visible: true, align: 'right', formatter: (val) => formatCurrency(val) },
-  { id: 'subtotal', header: 'Subtotal', visible: true, align: 'right', formatter: (val) => formatCurrency(val) },
-  { id: 'descuento', header: 'Descuento', visible: true, align: 'right', formatter: (val) => formatCurrency(val) },
-  { id: 'impuestos', header: 'IVA 16%', visible: true, align: 'right', formatter: (val) => formatCurrency(val) },
-  { id: 'total', header: 'Total', visible: true, align: 'right', formatter: (val) => formatCurrency(val) },
-  { id: 'margen_ganancia', header: 'Margen Ganancia', visible: true, align: 'right', formatter: (val) => formatCurrency(val) },
-  { id: 'metodo_pago', header: 'Método de Pago', visible: true, align: 'center' },
-];
-
-// Plantillas del Sistema
-export const PLANTILLAS_SISTEMA: PlantillaReporte[] = [
-  {
-    id: 'tpl-categoria',
-    nombre: 'Ventas por Categoría',
-    descripcion: 'Consolidado de ingresos, cantidades y margen bruto agrupado por categoría comercial.',
-    es_sistema: true,
-    agrupacion: 'CATEGORIA',
-    columnas_activas: ['categoria_nombre', 'cantidad', 'subtotal', 'descuento', 'impuestos', 'total', 'margen_ganancia'],
-  },
-  {
-    id: 'tpl-cajero',
-    nombre: 'Rendimiento por Cajero',
-    descripcion: 'Productividad, tickets emitidos y recaudo total por cada colaborador en turno.',
-    es_sistema: true,
-    agrupacion: 'CAJERO',
-    columnas_activas: ['cajero_nombre', 'sucursal_nombre', 'cantidad', 'subtotal', 'total', 'margen_ganancia'],
-  },
-  {
-    id: 'tpl-auditoria',
-    nombre: 'Auditoría de Descuentos e IVA',
-    descripcion: 'Detalle por ticket individual para conciliación fiscal de IVA 16% y descuentos otorgados.',
-    es_sistema: true,
-    agrupacion: 'LINEA',
-    columnas_activas: ['fecha', 'folio_ticket', 'sucursal_nombre', 'cajero_nombre', 'cliente_nombre', 'subtotal', 'descuento', 'impuestos', 'total'],
-  },
-  {
-    id: 'tpl-cierre-pago',
-    nombre: 'Cierre Diario por Método de Pago',
-    descripcion: 'Liquidación de transacciones clasificadas por Efectivo, Tarjeta y QR DeUna.',
-    es_sistema: true,
-    agrupacion: 'METODO_PAGO',
-    columnas_activas: ['metodo_pago', 'cantidad', 'subtotal', 'total'],
-  },
-];
-
-const LOCAL_STORAGE_KEY_TEMPLATES = 'quantix_custom_report_templates';
-
 // ==========================================
 // GENERADOR DE DATOS DETERMINISTA COHERENTE
 // ==========================================
@@ -199,8 +125,8 @@ export function generarDatasetVentas(sucursalId: string, sucursales: Sucursal[],
   // Selección de sucursales a simular
   const sucursalesObjetivo = sucursalId === 'ALL' 
     ? (sucursales.length > 0 ? sucursales : [{ id: '0001', nombre: 'Matriz Principal' } as Sucursal])
-    : (sucursales.filter((s) => s.id === sucursalId).length > 0 
-        ? sucursales.filter((s) => s.id === sucursalId) 
+    : (sucursales.filter((s) => String(s.id).toLowerCase() === String(sucursalId).toLowerCase()).length > 0 
+        ? sucursales.filter((s) => String(s.id).toLowerCase() === String(sucursalId).toLowerCase()) 
         : [{ id: sucursalId, nombre: 'Sucursal Activa' } as Sucursal]);
 
   let ticketCounter = 1000;
@@ -212,7 +138,8 @@ export function generarDatasetVentas(sucursalId: string, sucursales: Sucursal[],
 
     // Transacciones diarias por sucursal
     for (const suc of sucursalesObjetivo) {
-      const ticketsHoy = 8 + ((d * 3 + suc.nombre.length) % 9);
+      const sucSeed = Math.abs(suc.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) + suc.nombre.length);
+      const ticketsHoy = 6 + ((d * 3 + sucSeed) % 10);
 
       for (let t = 0; t < ticketsHoy; t++) {
         ticketCounter++;
@@ -284,9 +211,8 @@ export default function Analisis({ initialUser, initialSucursales, initialSucurs
   const storeUser = useAuthStore((state) => state.user);
   const user = initialUser !== undefined ? initialUser : storeUser;
   const isDirector = user?.rol === 'DIRECTOR';
-  const rol = user?.rol || 'SUPERVISOR';
 
-  const { sucursales: storeSucursales, sucursalActual: storeSucursalActual, cargarSucursales } = useSucursalStore();
+  const { sucursales: storeSucursales, sucursalActual: storeSucursalActual, cargarSucursales, seleccionarPorId } = useSucursalStore();
   const sucursales = initialSucursales !== undefined ? initialSucursales : storeSucursales;
   const sucursalActual = initialSucursalActual !== undefined ? initialSucursalActual : storeSucursalActual;
 
@@ -302,7 +228,7 @@ export default function Analisis({ initialUser, initialSucursales, initialSucurs
   });
 
   // Sucursal seleccionada (DIRECTOR puede ALL o una sucursal; SUPERVISOR solo su sucursal fija)
-  const [sucursalSeleccionadaId, setSucursalSeleccionadaId] = useState<string>('ALL');
+  const [sucursalSeleccionadaId, setSucursalSeleccionadaId] = useState<string>(() => sucursalActual?.id || 'ALL');
 
   useEffect(() => {
     void cargarSucursales();
@@ -315,6 +241,13 @@ export default function Analisis({ initialUser, initialSucursales, initialSucurs
     }
   }, [sucursalActual?.id]);
 
+  const handleCambiarSucursal = (nuevaId: string) => {
+    setSucursalSeleccionadaId(nuevaId);
+    if (nuevaId !== 'ALL' && seleccionarPorId) {
+      seleccionarPorId(nuevaId);
+    }
+  };
+
   // Tab Activo: Tab 1 (Estadístico) vs Tab 2 (Constructor)
   const [activeTab, setActiveTab] = useState<'ESTADISTICO' | 'CONSTRUCTOR'>('ESTADISTICO');
 
@@ -325,61 +258,11 @@ export default function Analisis({ initialUser, initialSucursales, initialSucurs
   // Datos de Ventas generados de forma coherente
   const [datosVentas, setDatosVentas] = useState<FilaReporteVenta[]>([]);
 
-  // Modal para guardar plantilla personalizada
-  const [modalGuardarPlantillaOpen, setModalGuardarPlantillaOpen] = useState(false);
-  const [nombreNuevaPlantilla, setNombreNuevaPlantilla] = useState('');
-  const [descNuevaPlantilla, setDescNuevaPlantilla] = useState('');
-
-  // Plantillas cargadas en localStorage
-  const [plantillasGuardadas, setPlantillasGuardadas] = useState<PlantillaReporte[]>([]);
-
-  // Configuración activa del Constructor de Reportes
-  const [columnasConfig, setColumnasConfig] = useState<ColumnaReporteDef[]>(COLUMNAS_PREDETERMINADAS);
-  const [tipoAgrupacion, setTipoAgrupacion] = useState<TipoAgrupacion>('LINEA');
-  const [plantillaActivaId, setPlantillaActivaId] = useState<string>('personalizada');
-
-  // Filtros específicos del Reporte
-  const [filtroCategoria, setFiltroCategoria] = useState<string>('TODAS');
-  const [filtroMetodoPago, setFiltroMetodoPago] = useState<string>('TODOS');
-  const [filtroCajero, setFiltroCajero] = useState<string>('TODOS');
-  const [filtroTextoBusqueda, setFiltroTextoBusqueda] = useState<string>('');
-
-  // Paginación y ordenamiento de la tabla dinámica
-  const [paginaActual, setPaginaActual] = useState(1);
-  const [elementosPorPagina, setElementosPorPagina] = useState<number>(25);
-  const [ordenColumna, setOrdenColumna] = useState<string>('fecha');
-  const [ordenDireccion, setOrdenDireccion] = useState<'asc' | 'desc'>('desc');
-
   // Granularidad del gráfico de tendencias del Tab 1
   const [granularidadTendencias, setGranularidadTendencias] = useState<GranularidadGrafico>('DIA');
 
   // Modal informativo sobre la metodología estadística inferencial
   const [modalInferenciaInfoOpen, setModalInferenciaInfoOpen] = useState(false);
-
-  // Cargar plantillas desde localStorage
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(LOCAL_STORAGE_KEY_TEMPLATES);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          setPlantillasGuardadas(parsed);
-        }
-      }
-    } catch {
-      // Ignore parse errors
-    }
-  }, []);
-
-  // Guardar plantillas en localStorage
-  const guardarPlantillasStorage = (nuevas: PlantillaReporte[]) => {
-    setPlantillasGuardadas(nuevas);
-    try {
-      localStorage.setItem(LOCAL_STORAGE_KEY_TEMPLATES, JSON.stringify(nuevas));
-    } catch {
-      // Ignore
-    }
-  };
 
   // Cálculo de días según rango seleccionado
   const diasRangoCalculado = useMemo(() => {
@@ -403,14 +286,65 @@ export default function Analisis({ initialUser, initialSucursales, initialSucurs
     }
   }, [rangoFecha, fechaInicioCustom, fechaFinCustom]);
 
-  // Recarga / sincronización de datos analíticos
+  // Recarga / sincronización de datos analíticos (Backend DuckDB Gold OLAP con fallback determinista)
   const refrescarDatos = useCallback(async () => {
     setCargando(true);
     try {
+      const sucursalParam = isDirector
+        ? (sucursalSeleccionadaId === 'ALL' ? undefined : sucursalSeleccionadaId)
+        : (sucursalActual?.id || user?.sucursal_id || undefined);
+
+      let fechaDesde: string | undefined = undefined;
+      let fechaHasta: string | undefined = undefined;
+
+      if (rangoFecha === 'custom') {
+        fechaDesde = fechaInicioCustom;
+        fechaHasta = fechaFinCustom;
+      } else {
+        const hoy = new Date();
+        const inicio = new Date(hoy);
+        inicio.setDate(hoy.getDate() - diasRangoCalculado);
+        fechaDesde = inicio.toISOString().split('T')[0];
+        fechaHasta = hoy.toISOString().split('T')[0];
+      }
+
       try {
-        await api.get('/dashboard/estrategico');
+        const res = await api.post('/reportes/generar', {
+          sucursal_id: sucursalParam,
+          fecha_desde: fechaDesde,
+          fecha_hasta: fechaHasta,
+          page_size: 500,
+        });
+
+        if (res.data?.filas && Array.isArray(res.data.filas) && res.data.filas.length > 0) {
+          const filasTransformadas: FilaReporteVenta[] = res.data.filas.map((f: any) => ({
+            id: String(f.id || f.detalle_id || Math.random().toString()),
+            fecha: String(f.fecha || new Date().toISOString()),
+            folio_ticket: String(f.folio_ticket || 'TKT-S/N'),
+            sucursal_id: String(f.sucursal_id || sucursalParam || ''),
+            sucursal_nombre: String(f.sucursal_nombre || 'Sucursal'),
+            cajero_nombre: String(f.cajero_nombre || 'Cajero'),
+            cliente_nombre: typeof f.cliente_nombre === 'string' && f.cliente_nombre.trim() !== '' ? f.cliente_nombre : 'Consumidor Final',
+            categoria_nombre: String(f.categoria_nombre || 'General'),
+            producto_nombre: String(f.producto_nombre || 'Producto'),
+            cantidad: Number(f.cantidad) || 1,
+            precio_unitario: Number(f.precio_unitario) || 0,
+            subtotal: Number(f.subtotal) || 0,
+            descuento: Number(f.descuento) || 0,
+            impuestos: Number(f.impuestos) || 0,
+            total: Number(f.total) || Number(f.subtotal) || 0,
+            margen_ganancia: Number(f.margen_ganancia) || 0,
+            metodo_pago: (f.metodo_pago === 'TARJETA' || f.metodo_pago === 'QR_DEUNA' || f.metodo_pago === 'EFECTIVO')
+              ? f.metodo_pago
+              : (String(f.metodo_pago).includes('TARJETA') ? 'TARJETA' : String(f.metodo_pago).includes('QR') ? 'QR_DEUNA' : 'EFECTIVO'),
+          }));
+
+          setDatosVentas(filasTransformadas);
+          setUltimaActualizacion(new Date());
+          return;
+        }
       } catch {
-        // Fallback en cliente
+        // Fallback a simulación determinista si el endpoint no responde o en pruebas
       }
 
       const generated = generarDatasetVentas(
@@ -423,7 +357,7 @@ export default function Analisis({ initialUser, initialSucursales, initialSucurs
     } finally {
       setCargando(false);
     }
-  }, [isDirector, sucursalSeleccionadaId, sucursalActual, sucursales, diasRangoCalculado]);
+  }, [isDirector, sucursalSeleccionadaId, sucursalActual, sucursales, diasRangoCalculado, rangoFecha, fechaInicioCustom, fechaFinCustom, user?.sucursal_id]);
 
   useEffect(() => {
     refrescarDatos();
@@ -842,278 +776,14 @@ export default function Analisis({ initialUser, initialSucursales, initialSucurs
     });
   }, [datosVentas]);
 
-  // =========================================================
-  // TAB 2: CONSTRUCTOR DE REPORTES & PLANTILLAS
-  // =========================================================
-
-  const categoriasDisponibles = useMemo(() => {
-    const cats = new Set(datosVentas.map((v) => v.categoria_nombre));
-    return ['TODAS', ...Array.from(cats).sort()];
-  }, [datosVentas]);
-
-  const cajerosDisponibles = useMemo(() => {
-    const cajeros = new Set(datosVentas.map((v) => v.cajero_nombre));
-    return ['TODOS', ...Array.from(cajeros).sort()];
-  }, [datosVentas]);
-
-  const ventasFiltradas = useMemo(() => {
-    return datosVentas.filter((row) => {
-      if (filtroCategoria !== 'TODAS' && row.categoria_nombre !== filtroCategoria) return false;
-      if (filtroMetodoPago !== 'TODOS' && row.metodo_pago !== filtroMetodoPago) return false;
-      if (filtroCajero !== 'TODOS' && row.cajero_nombre !== filtroCajero) return false;
-
-      if (filtroTextoBusqueda.trim() !== '') {
-        const query = filtroTextoBusqueda.toLowerCase();
-        const coincide = 
-          row.folio_ticket.toLowerCase().includes(query) ||
-          row.producto_nombre.toLowerCase().includes(query) ||
-          row.cliente_nombre.toLowerCase().includes(query) ||
-          row.sucursal_nombre.toLowerCase().includes(query);
-        if (!coincide) return false;
-      }
-
-      return true;
-    });
-  }, [datosVentas, filtroCategoria, filtroMetodoPago, filtroCajero, filtroTextoBusqueda]);
-
-  const filasReporteAgrupadas = useMemo(() => {
-    if (tipoAgrupacion === 'LINEA') {
-      return ventasFiltradas;
-    }
-
-    const mapaAgrupado: Record<string, any> = {};
-
-    ventasFiltradas.forEach((row) => {
-      let clave = '';
-      switch (tipoAgrupacion) {
-        case 'DIA':
-          clave = row.fecha.split('T')[0];
-          break;
-        case 'PRODUCTO':
-          clave = row.producto_nombre;
-          break;
-        case 'CATEGORIA':
-          clave = row.categoria_nombre;
-          break;
-        case 'CAJERO':
-          clave = `${row.cajero_nombre}__${row.sucursal_nombre}`;
-          break;
-        case 'METODO_PAGO':
-          clave = row.metodo_pago;
-          break;
-        default:
-          clave = row.id;
-      }
-
-      if (!mapaAgrupado[clave]) {
-        mapaAgrupado[clave] = {
-          id: `grp-${clave}`,
-          fecha: tipoAgrupacion === 'DIA' ? clave : 'Varios',
-          folio_ticket: `Agrupado (${clave})`,
-          sucursal_id: row.sucursal_id,
-          sucursal_nombre: tipoAgrupacion === 'CAJERO' ? row.sucursal_nombre : 'Consolidado',
-          cajero_nombre: tipoAgrupacion === 'CAJERO' ? row.cajero_nombre : 'Varios',
-          cliente_nombre: 'Múltiples clientes',
-          categoria_nombre: tipoAgrupacion === 'CATEGORIA' ? clave : row.categoria_nombre,
-          producto_nombre: tipoAgrupacion === 'PRODUCTO' ? clave : `Varios productos`,
-          cantidad: 0,
-          precio_unitario: row.precio_unitario,
-          subtotal: 0,
-          descuento: 0,
-          impuestos: 0,
-          total: 0,
-          margen_ganancia: 0,
-          metodo_pago: tipoAgrupacion === 'METODO_PAGO' ? clave : 'VARIOS',
-          _conteo_transacciones: new Set(),
-        };
-      }
-
-      mapaAgrupado[clave].cantidad += row.cantidad;
-      mapaAgrupado[clave].subtotal += row.subtotal;
-      mapaAgrupado[clave].descuento += row.descuento;
-      mapaAgrupado[clave].impuestos += row.impuestos;
-      mapaAgrupado[clave].total += row.total;
-      mapaAgrupado[clave].margen_ganancia += row.margen_ganancia;
-      mapaAgrupado[clave]._conteo_transacciones.add(row.folio_ticket);
-    });
-
-    return Object.values(mapaAgrupado).map((grp) => ({
-      ...grp,
-      subtotal: Number(grp.subtotal.toFixed(2)),
-      descuento: Number(grp.descuento.toFixed(2)),
-      impuestos: Number(grp.impuestos.toFixed(2)),
-      total: Number(grp.total.toFixed(2)),
-      margen_ganancia: Number(grp.margen_ganancia.toFixed(2)),
-      precio_unitario: grp.cantidad > 0 ? Number((grp.subtotal / grp.cantidad).toFixed(2)) : 0,
-      folio_ticket: `${grp._conteo_transacciones.size} tickets`,
-    }));
-  }, [ventasFiltradas, tipoAgrupacion]);
-
-  const filasOrdenadas = useMemo(() => {
-    return [...filasReporteAgrupadas].sort((a: any, b: any) => {
-      let valA = a[ordenColumna];
-      let valB = b[ordenColumna];
-
-      if (valA === undefined || valA === null) valA = '';
-      if (valB === undefined || valB === null) valB = '';
-
-      if (typeof valA === 'number' && typeof valB === 'number') {
-        return ordenDireccion === 'asc' ? valA - valB : valB - valA;
-      }
-      const strA = String(valA).toLowerCase();
-      const strB = String(valB).toLowerCase();
-      return ordenDireccion === 'asc' ? strA.localeCompare(strB) : strB.localeCompare(strA);
-    });
-  }, [filasReporteAgrupadas, ordenColumna, ordenDireccion]);
-
-  const totalesConsolidados = useMemo(() => {
-    return filasReporteAgrupadas.reduce(
-      (acc, r) => ({
-        cantidad: acc.cantidad + (r.cantidad || 0),
-        subtotal: acc.subtotal + (r.subtotal || 0),
-        descuento: acc.descuento + (r.descuento || 0),
-        impuestos: acc.impuestos + (r.impuestos || 0),
-        total: acc.total + (r.total || 0),
-        margen_ganancia: acc.margen_ganancia + (r.margen_ganancia || 0),
-      }),
-      { cantidad: 0, subtotal: 0, descuento: 0, impuestos: 0, total: 0, margen_ganancia: 0 }
-    );
-  }, [filasReporteAgrupadas]);
-
-  const totalPaginas = Math.ceil(filasOrdenadas.length / elementosPorPagina) || 1;
-  const filasPaginadas = useMemo(() => {
-    const inicio = (paginaActual - 1) * elementosPorPagina;
-    return filasOrdenadas.slice(inicio, inicio + elementosPorPagina);
-  }, [filasOrdenadas, paginaActual, elementosPorPagina]);
-
-  const handleOrdenar = (colId: string) => {
-    if (ordenColumna === colId) {
-      setOrdenDireccion((prev) => (prev === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setOrdenColumna(colId);
-      setOrdenDireccion('desc');
-    }
-  };
-
-  const toggleColumna = (colId: string) => {
-    setColumnasConfig((prev) =>
-      prev.map((c) => (c.id === colId ? { ...c, visible: !c.visible } : c))
-    );
-  };
-
-  const moverColumna = (index: number, direccion: 'arriba' | 'abajo') => {
-    const nuevoOrden = [...columnasConfig];
-    const targetIdx = direccion === 'arriba' ? index - 1 : index + 1;
-    if (targetIdx < 0 || targetIdx >= nuevoOrden.length) return;
-    const temp = nuevoOrden[index];
-    nuevoOrden[index] = nuevoOrden[targetIdx];
-    nuevoOrden[targetIdx] = temp;
-    setColumnasConfig(nuevoOrden);
-  };
-
-  const seleccionarTodasColumnas = (activar: boolean) => {
-    setColumnasConfig((prev) => prev.map((c) => ({ ...c, visible: activar })));
-  };
-
-  const restablecerColumnas = () => {
-    setColumnasConfig(COLUMNAS_PREDETERMINADAS);
-  };
-
-  const aplicarPlantilla = (plantillaId: string) => {
-    setPlantillaActivaId(plantillaId);
-    if (plantillaId === 'personalizada') return;
-
-    const todas = [...PLANTILLAS_SISTEMA, ...plantillasGuardadas];
-    const encontrada = todas.find((p) => p.id === plantillaId);
-    if (!encontrada) return;
-
-    setTipoAgrupacion(encontrada.agrupacion);
-
-    setColumnasConfig((prev) =>
-      prev.map((col) => ({
-        ...col,
-        visible: encontrada.columnas_activas.includes(col.id),
-      }))
-    );
-
-    if (encontrada.categoria_filtro) setFiltroCategoria(encontrada.categoria_filtro);
-    if (encontrada.metodo_pago_filtro) setFiltroMetodoPago(encontrada.metodo_pago_filtro);
-    if (encontrada.cajero_filtro) setFiltroCajero(encontrada.cajero_filtro);
-
-    setPaginaActual(1);
-  };
-
-  const handleGuardarPlantilla = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nombreNuevaPlantilla.trim()) return;
-
-    const columnasActivas = columnasConfig.filter((c) => c.visible).map((c) => c.id);
-    const nueva: PlantillaReporte = {
-      id: `usr-tpl-${Date.now()}`,
-      nombre: nombreNuevaPlantilla.trim(),
-      descripcion: descNuevaPlantilla.trim() || 'Plantilla personalizada guardada por el usuario.',
-      es_sistema: false,
-      agrupacion: tipoAgrupacion,
-      columnas_activas: columnasActivas,
-      categoria_filtro: filtroCategoria !== 'TODAS' ? filtroCategoria : undefined,
-      metodo_pago_filtro: filtroMetodoPago !== 'TODOS' ? filtroMetodoPago : undefined,
-      cajero_filtro: filtroCajero !== 'TODOS' ? filtroCajero : undefined,
-    };
-
-    const actualizadas = [nueva, ...plantillasGuardadas];
-    guardarPlantillasStorage(actualizadas);
-    setPlantillaActivaId(nueva.id);
-    setModalGuardarPlantillaOpen(false);
-    setNombreNuevaPlantilla('');
-    setDescNuevaPlantilla('');
-  };
-
-  const handleEliminarPlantilla = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const filtradas = plantillasGuardadas.filter((p) => p.id !== id);
-    guardarPlantillasStorage(filtradas);
-    if (plantillaActivaId === id) {
-      setPlantillaActivaId('personalizada');
-    }
-  };
-
-  const exportarCSVReporte = () => {
-    const columnasVisibles = columnasConfig.filter((c) => c.visible);
-    if (columnasVisibles.length === 0) {
-      alert('Debe tener al menos una columna activa para exportar.');
-      return;
-    }
-
-    const exportCols: ExportColumn<any>[] = columnasVisibles.map((col) => ({
-      key: col.id,
-      header: col.header,
-      formatter: col.formatter,
-    }));
-
-    const fechaHoyStr = new Date().toISOString().split('T')[0];
-    const nombreArchivo = `Quantix_Reporte_${tipoAgrupacion}_${fechaHoyStr}`;
-
-    exportToCSV({
-      filename: nombreArchivo,
-      data: filasOrdenadas,
-      columns: exportCols,
-    });
-  };
-
-  const handleImprimirReporte = () => {
-    window.print();
-  };
-
   const nombreSucursalActiva = useMemo(() => {
-    if (sucursalSeleccionadaId === 'ALL') return 'Todas las Sucursales';
-    const suc = sucursales.find((s) => s.id === sucursalSeleccionadaId);
+    if (sucursalSeleccionadaId === 'ALL') return 'Todas las Sucursales (Consolidado)';
+    const suc = sucursales.find((s) => String(s.id).toLowerCase() === String(sucursalSeleccionadaId).toLowerCase());
     return suc ? suc.nombre : (sucursalActual?.nombre || 'Sucursal Principal');
   }, [sucursalSeleccionadaId, sucursales, sucursalActual]);
 
-  const columnasVisibles = useMemo(() => columnasConfig.filter((c) => c.visible), [columnasConfig]);
-
   return (
-    <div className="p-4 md:p-8 h-full overflow-y-auto bg-background text-on-surface select-none print:p-0 print:bg-white print:overflow-visible">
+    <div className="p-4 md:p-8 h-full overflow-y-auto bg-background text-on-surface select-none print:p-0 print:m-0 print:bg-white print:overflow-visible print:h-auto">
       
       {/* ========================================================= */}
       {/* CABECERA NEO-RETAIL & BARRA DE FILTRO GLOBAL              */}
@@ -1221,7 +891,7 @@ export default function Analisis({ initialUser, initialSucursales, initialSucurs
               <div className="relative">
                 <select
                   value={sucursalSeleccionadaId}
-                  onChange={(e) => setSucursalSeleccionadaId(e.target.value)}
+                  onChange={(e) => handleCambiarSucursal(e.target.value)}
                   className="pl-3 pr-8 py-2 rounded-2xl bg-surface-container-low text-on-surface font-title-md text-xs font-semibold border border-surface-container-high/60 appearance-none cursor-pointer focus:outline-primary"
                 >
                   <option value="ALL">Todas las Sucursales (Consolidado)</option>
@@ -1291,103 +961,7 @@ export default function Analisis({ initialUser, initialSucursales, initialSucurs
         </div>
       </div>
 
-      {/* ========================================================= */}
-      {/* SECCIÓN OCULTA PARA IMPRESIÓN / PDF (@media print)        */}
-      {/* ========================================================= */}
-      <div id="quantix-print-section" className="hidden print:block text-black bg-white p-6">
-        <div className="border-b-2 border-emerald-700 pb-4 mb-4 flex justify-between items-start">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-emerald-900">QUANTIX RETAIL OS</h1>
-            <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold">
-              Sistema Operativo de Retail • Módulo de Reportes Ejecutivos
-            </p>
-          </div>
-          <div className="text-right text-xs text-gray-600">
-            <p><strong>Fecha de Emisión:</strong> {formatDate(new Date())}</p>
-            <p><strong>Sucursal:</strong> {nombreSucursalActiva}</p>
-            <p><strong>Operador:</strong> {user?.nombre || 'Usuario'} ({rol})</p>
-          </div>
-        </div>
 
-        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 mb-6 text-xs flex justify-between">
-          <div>
-            <span className="font-bold text-gray-700">Agrupación:</span> {tipoAgrupacion}
-          </div>
-          <div>
-            <span className="font-bold text-gray-700">Registros Totales:</span> {filasOrdenadas.length}
-          </div>
-          <div>
-            <span className="font-bold text-gray-700">Filtro Categoría:</span> {filtroCategoria}
-          </div>
-          <div>
-            <span className="font-bold text-gray-700">Filtro Pago:</span> {filtroMetodoPago}
-          </div>
-        </div>
-
-        <table className="w-full text-xs border-collapse mb-6">
-          <thead>
-            <tr className="bg-gray-100 border-b-2 border-gray-300">
-              {columnasVisibles.map((col) => (
-                <th key={col.id} className={`py-2 px-2 font-bold text-gray-800 text-${col.align || 'left'}`}>
-                  {col.header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filasOrdenadas.slice(0, 100).map((row: any, idx) => (
-              <tr key={idx} className="border-b border-gray-200">
-                {columnasVisibles.map((col) => {
-                  const val = row[col.id];
-                  const formatted = col.formatter ? col.formatter(val, row) : (val ?? '—');
-                  return (
-                    <td key={col.id} className={`py-1.5 px-2 text-${col.align || 'left'}`}>
-                      {formatted}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr className="bg-gray-100 font-bold border-t-2 border-gray-400">
-              {columnasVisibles.map((col, idx) => {
-                if (idx === 0) {
-                  return (
-                    <td key={col.id} className="py-2 px-2 text-left">
-                      TOTAL CONSOLIDADO ({filasOrdenadas.length} reg.)
-                    </td>
-                  );
-                }
-                if (col.id === 'cantidad') {
-                  return <td key={col.id} className="py-2 px-2 text-right">{formatNumber(totalesConsolidados.cantidad, 0)}</td>;
-                }
-                if (col.id === 'subtotal') {
-                  return <td key={col.id} className="py-2 px-2 text-right">{formatCurrency(totalesConsolidados.subtotal)}</td>;
-                }
-                if (col.id === 'descuento') {
-                  return <td key={col.id} className="py-2 px-2 text-right">{formatCurrency(totalesConsolidados.descuento)}</td>;
-                }
-                if (col.id === 'impuestos') {
-                  return <td key={col.id} className="py-2 px-2 text-right">{formatCurrency(totalesConsolidados.impuestos)}</td>;
-                }
-                if (col.id === 'total') {
-                  return <td key={col.id} className="py-2 px-2 text-right text-emerald-800">{formatCurrency(totalesConsolidados.total)}</td>;
-                }
-                if (col.id === 'margen_ganancia') {
-                  return <td key={col.id} className="py-2 px-2 text-right">{formatCurrency(totalesConsolidados.margen_ganancia)}</td>;
-                }
-                return <td key={col.id} className="py-2 px-2"></td>;
-              })}
-            </tr>
-          </tfoot>
-        </table>
-
-        <div className="pt-4 border-t border-gray-300 text-[10px] text-gray-500 flex justify-between items-center">
-          <p>Documento oficial emitido por Quantix Retail OS • DuckDB Gold OLAP Engine</p>
-          <p>Página 1 de 1</p>
-        </div>
-      </div>
 
       {/* ========================================================= */}
       {/* CONTENIDO TAB 1: ANÁLISIS ESTADÍSTICO AVANZADO            */}
@@ -1986,563 +1560,25 @@ export default function Analisis({ initialUser, initialSucursales, initialSucurs
       {/* CONTENIDO TAB 2: CONSTRUCTOR DE REPORTES & PLANTILLAS     */}
       {/* ========================================================= */}
       {activeTab === 'CONSTRUCTOR' && (
-        <div className="space-y-6 print:hidden animate-in fade-in duration-200">
-          
-          {/* Barra Superior del Constructor: Plantillas y Guardar Plantilla */}
-          <div className="p-5 rounded-3xl bg-surface-container-lowest border border-surface-container-high/60 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="font-label-caps text-xs font-bold uppercase text-outline flex items-center gap-1.5">
-                <Bookmark className="w-4 h-4 text-primary" />
-                Cargar Plantilla:
-              </span>
-
-              <div className="relative min-w-[260px]">
-                <select
-                  value={plantillaActivaId}
-                  onChange={(e) => aplicarPlantilla(e.target.value)}
-                  className="w-full pl-3 pr-8 py-2 rounded-2xl bg-surface-container-low text-on-surface font-title-md text-xs font-semibold border border-surface-container-high/60 appearance-none cursor-pointer focus:outline-primary"
-                >
-                  <option value="personalizada">Configuración Personalizada</option>
-                  
-                  <optgroup label="Plantillas Predefinidas de Sistema">
-                    {PLANTILLAS_SISTEMA.map((tpl) => (
-                      <option key={tpl.id} value={tpl.id}>
-                        {tpl.nombre}
-                      </option>
-                    ))}
-                  </optgroup>
-
-                  {plantillasGuardadas.length > 0 && (
-                    <optgroup label="Mis Plantillas Guardadas">
-                      {plantillasGuardadas.map((tpl) => (
-                        <option key={tpl.id} value={tpl.id}>
-                          {tpl.nombre}
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                </select>
-                <ChevronDown className="w-4 h-4 text-outline absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              </div>
-
-              {plantillasGuardadas.some((p) => p.id === plantillaActivaId) && (
-                <button
-                  type="button"
-                  onClick={(e) => handleEliminarPlantilla(plantillaActivaId, e)}
-                  className="p-2 rounded-xl text-error hover:bg-error-container/40 transition-colors cursor-pointer"
-                  title="Eliminar esta plantilla personalizada"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setModalGuardarPlantillaOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface font-title-md text-xs font-semibold border border-surface-container-high/60 transition-all cursor-pointer"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-tertiary" />
-              <span>Guardar Configuración Actual como Plantilla</span>
-            </button>
-          </div>
-
-          {/* Selector de Agrupación y Filtros Específicos del Reporte */}
-          <div className="p-5 rounded-3xl bg-surface-container-lowest border border-surface-container-high/60 shadow-xs space-y-4">
-            
-            {/* Fila de Nivel de Agrupación */}
-            <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-surface-container-high/40">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-label-caps text-xs font-bold uppercase text-outline flex items-center gap-1.5 mr-1">
-                  <Layers className="w-3.5 h-3.5" />
-                  Nivel de Agrupación:
-                </span>
-                
-                <div className="flex flex-wrap items-center gap-1 bg-surface-container-low p-1 rounded-2xl border border-surface-container-high/40">
-                  {[
-                    { id: 'LINEA', label: 'Detallado por línea' },
-                    { id: 'DIA', label: 'Agrupado por Día' },
-                    { id: 'PRODUCTO', label: 'Por Producto' },
-                    { id: 'CATEGORIA', label: 'Por Categoría' },
-                    { id: 'CAJERO', label: 'Por Cajero' },
-                    { id: 'METODO_PAGO', label: 'Por Método de Pago' },
-                  ].map((ag) => (
-                    <button
-                      key={ag.id}
-                      type="button"
-                      onClick={() => {
-                        setTipoAgrupacion(ag.id as TipoAgrupacion);
-                        setPaginaActual(1);
-                      }}
-                      className={`px-3 py-1.5 rounded-xl font-title-md text-xs font-semibold transition-all cursor-pointer ${
-                        tipoAgrupacion === ag.id
-                          ? 'bg-primary text-on-primary shadow-xs font-bold'
-                          : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container'
-                      }`}
-                    >
-                      {ag.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Búsqueda Rápida */}
-              <div className="relative min-w-[240px]">
-                <Search className="w-4 h-4 text-outline absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Buscar folio, cliente o producto…"
-                  value={filtroTextoBusqueda}
-                  onChange={(e) => {
-                    setFiltroTextoBusqueda(e.target.value);
-                    setPaginaActual(1);
-                  }}
-                  className="w-full pl-9 pr-3 py-1.5 rounded-2xl bg-surface-container-low text-on-surface text-xs font-title-md border border-surface-container-high/60 outline-none focus:border-primary"
-                />
-              </div>
-            </div>
-
-            {/* Fila de Filtros Específicos: Categoría, Método de Pago, Cajero */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {/* Categoría */}
-              <div>
-                <label className="block font-label-caps text-[10px] uppercase font-bold text-outline mb-1">
-                  Categoría
-                </label>
-                <select
-                  value={filtroCategoria}
-                  onChange={(e) => {
-                    setFiltroCategoria(e.target.value);
-                    setPaginaActual(1);
-                  }}
-                  className="w-full py-1.5 px-3 rounded-xl bg-surface-container-low text-xs font-title-md font-semibold text-on-surface border border-surface-container-high/60 cursor-pointer"
-                >
-                  {categoriasDisponibles.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat === 'TODAS' ? 'Todas las Categorías' : cat}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Método de Pago */}
-              <div>
-                <label className="block font-label-caps text-[10px] uppercase font-bold text-outline mb-1">
-                  Método de Pago
-                </label>
-                <select
-                  value={filtroMetodoPago}
-                  onChange={(e) => {
-                    setFiltroMetodoPago(e.target.value);
-                    setPaginaActual(1);
-                  }}
-                  className="w-full py-1.5 px-3 rounded-xl bg-surface-container-low text-xs font-title-md font-semibold text-on-surface border border-surface-container-high/60 cursor-pointer"
-                >
-                  <option value="TODOS">Todos los Métodos</option>
-                  <option value="EFECTIVO">Efectivo</option>
-                  <option value="TARJETA">Tarjeta Bancaria</option>
-                  <option value="QR_DEUNA">QR DeUna</option>
-                </select>
-              </div>
-
-              {/* Cajero */}
-              <div>
-                <label className="block font-label-caps text-[10px] uppercase font-bold text-outline mb-1">
-                  Cajero
-                </label>
-                <select
-                  value={filtroCajero}
-                  onChange={(e) => {
-                    setFiltroCajero(e.target.value);
-                    setPaginaActual(1);
-                  }}
-                  className="w-full py-1.5 px-3 rounded-xl bg-surface-container-low text-xs font-title-md font-semibold text-on-surface border border-surface-container-high/60 cursor-pointer"
-                >
-                  {cajerosDisponibles.map((caj) => (
-                    <option key={caj} value={caj}>
-                      {caj === 'TODOS' ? 'Todos los Cajeros' : caj}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Selector Interactivo de Columnas (15 columnas con Chips y Reordenamiento) */}
-          <div className="p-5 rounded-3xl bg-surface-container-lowest border border-surface-container-high/60 shadow-xs">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-              <div className="flex items-center gap-2">
-                <SlidersHorizontal className="w-4 h-4 text-primary" />
-                <h4 className="font-title-md font-bold text-sm text-on-surface">
-                  Selector de Columnas Activas ({columnasVisibles.length} de {columnasConfig.length} visibles)
-                </h4>
-              </div>
-
-              <div className="flex items-center gap-2 text-xs">
-                <button
-                  type="button"
-                  onClick={() => seleccionarTodasColumnas(true)}
-                  className="text-primary hover:underline font-bold cursor-pointer"
-                >
-                  Seleccionar Todas
-                </button>
-                <span className="text-outline">•</span>
-                <button
-                  type="button"
-                  onClick={() => seleccionarTodasColumnas(false)}
-                  className="text-outline hover:underline font-bold cursor-pointer"
-                >
-                  Deseleccionar
-                </button>
-                <span className="text-outline">•</span>
-                <button
-                  type="button"
-                  onClick={restablecerColumnas}
-                  className="text-outline hover:underline font-bold cursor-pointer"
-                >
-                  Restablecer
-                </button>
-              </div>
-            </div>
-
-            {/* Chips de Columnas con Botones Arriba/Abajo */}
-            <div className="flex flex-wrap gap-2">
-              {columnasConfig.map((col, idx) => (
-                <div
-                  key={col.id}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-2xl border text-xs transition-all ${
-                    col.visible
-                      ? 'bg-primary-container/20 border-primary/40 text-on-surface font-semibold shadow-xs'
-                      : 'bg-surface-container-low border-surface-container-high/60 text-outline opacity-60'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={col.visible}
-                    onChange={() => toggleColumna(col.id)}
-                    className="cursor-pointer accent-primary rounded"
-                  />
-                  <span className="select-none">{col.header}</span>
-
-                  <div className="flex items-center ml-1 border-l border-surface-container-high/80 pl-1">
-                    <button
-                      type="button"
-                      onClick={() => moverColumna(idx, 'arriba')}
-                      disabled={idx === 0}
-                      className="p-0.5 hover:text-primary disabled:opacity-20 cursor-pointer"
-                      title="Mover a la izquierda / antes"
-                    >
-                      <ArrowUp className="w-3 h-3 -rotate-90" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => moverColumna(idx, 'abajo')}
-                      disabled={idx === columnasConfig.length - 1}
-                      className="p-0.5 hover:text-primary disabled:opacity-20 cursor-pointer"
-                      title="Mover a la derecha / después"
-                    >
-                      <ArrowDown className="w-3 h-3 -rotate-90" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Barra de Acciones y Exportación */}
-          <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-3xl bg-surface-container-lowest border border-surface-container-high/60 shadow-xs">
-            <div className="flex items-center gap-2">
-              <span className="font-label-caps text-xs uppercase font-bold text-outline">
-                Registros Filtrados:
-              </span>
-              <span className="px-3 py-1 rounded-full bg-surface-container-low font-label-numeric-md text-xs font-bold text-on-surface border border-surface-container-high/60">
-                {filasOrdenadas.length.toLocaleString()} filas
-              </span>
-            </div>
-
-            <div className="flex items-center gap-3">
-              {/* Botón Exportar a CSV (BOM UTF-8) */}
-              <button
-                type="button"
-                onClick={exportarCSVReporte}
-                disabled={filasOrdenadas.length === 0}
-                className="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white font-title-md text-xs font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-50"
-                title="Exportar archivo CSV con codificación UTF-8 compatible con Microsoft Excel"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Exportar CSV (Excel)</span>
-              </button>
-
-              {/* Botón Imprimir / PDF */}
-              <button
-                type="button"
-                onClick={handleImprimirReporte}
-                disabled={filasOrdenadas.length === 0}
-                className="flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface font-title-md text-xs font-semibold border border-surface-container-high/60 shadow-xs transition-all cursor-pointer disabled:opacity-50"
-                title="Imprimir reporte o guardar como PDF formateado con membrete oficial"
-              >
-                <Printer className="w-3.5 h-3.5 text-secondary" />
-                <span>Imprimir / PDF</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Tabla Dinámica de Resultados */}
-          <div className="p-5 rounded-3xl bg-surface-container-lowest border border-surface-container-high/60 shadow-xs space-y-4">
-            <div className="overflow-x-auto rounded-2xl border border-surface-container-high/60">
-              <table className="w-full text-left text-body-sm">
-                <thead className="bg-surface-container-low text-outline font-label-caps text-[11px] uppercase tracking-wider border-b border-surface-container-high/60">
-                  <tr>
-                    {columnasVisibles.map((col) => {
-                      const esOrdenActivo = ordenColumna === col.id;
-                      return (
-                        <th
-                          key={col.id}
-                          onClick={() => handleOrdenar(col.id)}
-                          className={`py-3 px-3 font-bold cursor-pointer select-none transition-colors hover:bg-surface-container text-${col.align || 'left'}`}
-                        >
-                          <div className={`flex items-center gap-1.5 ${col.align === 'right' ? 'justify-end' : col.align === 'center' ? 'justify-center' : 'justify-start'}`}>
-                            <span>{col.header}</span>
-                            {esOrdenActivo ? (
-                              ordenDireccion === 'asc' ? (
-                                <ChevronUp className="w-3.5 h-3.5 text-primary" />
-                              ) : (
-                                <ChevronDown className="w-3.5 h-3.5 text-primary" />
-                              )
-                            ) : (
-                              <ArrowUpDown className="w-3 h-3 text-outline/40" />
-                            )}
-                          </div>
-                        </th>
-                      );
-                    })}
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-surface-container-high/40 bg-surface-container-lowest">
-                  {filasPaginadas.length === 0 ? (
-                    <tr>
-                      <td colSpan={columnasVisibles.length} className="py-12 text-center text-on-surface-variant font-title-md">
-                        No se encontraron registros con los filtros seleccionados.
-                      </td>
-                    </tr>
-                  ) : (
-                    filasPaginadas.map((row: any, idx) => (
-                      <tr key={row.id || idx} className="hover:bg-surface-container-low/40 transition-colors">
-                        {columnasVisibles.map((col) => {
-                          const val = row[col.id];
-                          const formatted = col.formatter ? col.formatter(val, row) : (val ?? '—');
-                          return (
-                            <td
-                              key={col.id}
-                              className={`py-2.5 px-3 text-${col.align || 'left'} ${
-                                col.id === 'total' ? 'font-bold text-on-surface' :
-                                col.id === 'margen_ganancia' ? 'text-primary font-semibold' :
-                                'text-on-surface-variant'
-                              }`}
-                            >
-                              {col.id === 'metodo_pago' ? (
-                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase font-label-caps ${
-                                  val === 'EFECTIVO' ? 'bg-emerald-100 text-emerald-800' :
-                                  val === 'TARJETA' ? 'bg-blue-100 text-blue-800' :
-                                  'bg-purple-100 text-purple-800'
-                                }`}>
-                                  {val}
-                                </span>
-                              ) : (
-                                formatted
-                              )}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-
-                {filasOrdenadas.length > 0 && (
-                  <tfoot className="bg-surface-container-low font-bold border-t-2 border-surface-container-high/80 text-on-surface">
-                    <tr>
-                      {columnasVisibles.map((col, idx) => {
-                        if (idx === 0) {
-                          return (
-                            <td key={col.id} className="py-3 px-3 text-left font-label-caps text-xs uppercase tracking-wider">
-                              TOTAL CONSOLIDADO ({filasOrdenadas.length} reg.)
-                            </td>
-                          );
-                        }
-                        if (col.id === 'cantidad') {
-                          return (
-                            <td key={col.id} className="py-3 px-3 text-right font-label-numeric-md">
-                              {formatNumber(totalesConsolidados.cantidad, 0)}
-                            </td>
-                          );
-                        }
-                        if (col.id === 'subtotal') {
-                          return (
-                            <td key={col.id} className="py-3 px-3 text-right font-label-numeric-md">
-                              {formatCurrency(totalesConsolidados.subtotal)}
-                            </td>
-                          );
-                        }
-                        if (col.id === 'descuento') {
-                          return (
-                            <td key={col.id} className="py-3 px-3 text-right font-label-numeric-md">
-                              {formatCurrency(totalesConsolidados.descuento)}
-                            </td>
-                          );
-                        }
-                        if (col.id === 'impuestos') {
-                          return (
-                            <td key={col.id} className="py-3 px-3 text-right font-label-numeric-md">
-                              {formatCurrency(totalesConsolidados.impuestos)}
-                            </td>
-                          );
-                        }
-                        if (col.id === 'total') {
-                          return (
-                            <td key={col.id} className="py-3 px-3 text-right font-label-numeric-md font-bold text-primary">
-                              {formatCurrency(totalesConsolidados.total)}
-                            </td>
-                          );
-                        }
-                        if (col.id === 'margen_ganancia') {
-                          return (
-                            <td key={col.id} className="py-3 px-3 text-right font-label-numeric-md font-bold text-emerald-700 dark:text-emerald-300">
-                              {formatCurrency(totalesConsolidados.margen_ganancia)}
-                            </td>
-                          );
-                        }
-                        return <td key={col.id} className="py-3 px-3"></td>;
-                      })}
-                    </tr>
-                  </tfoot>
-                )}
-              </table>
-            </div>
-
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
-              <div className="flex items-center gap-2 text-xs text-outline">
-                <span>Mostrando página</span>
-                <span className="font-bold text-on-surface">{paginaActual}</span>
-                <span>de</span>
-                <span className="font-bold text-on-surface">{totalPaginas}</span>
-                <span>({filasOrdenadas.length} resultados)</span>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 text-xs text-outline">
-                  <span>Filas por página:</span>
-                  <select
-                    value={elementosPorPagina}
-                    onChange={(e) => {
-                      setElementosPorPagina(Number(e.target.value));
-                      setPaginaActual(1);
-                    }}
-                    className="py-1 px-2 rounded-xl bg-surface-container-low text-xs font-semibold text-on-surface border border-surface-container-high/60 cursor-pointer"
-                  >
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
-                    <option value={100}>100</option>
-                  </select>
-                </div>
-
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setPaginaActual((p) => Math.max(1, p - 1))}
-                    disabled={paginaActual === 1}
-                    className="px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high text-xs font-title-md font-semibold text-on-surface disabled:opacity-40 cursor-pointer"
-                  >
-                    Anterior
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaginaActual((p) => Math.min(totalPaginas, p + 1))}
-                    disabled={paginaActual === totalPaginas}
-                    className="px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high text-xs font-title-md font-semibold text-on-surface disabled:opacity-40 cursor-pointer"
-                  >
-                    Siguiente
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================= */}
-      {/* MODAL: GUARDAR CONFIGURACIÓN ACTUAL COMO PLANTILLA        */}
-      {/* ========================================================= */}
-      {modalGuardarPlantillaOpen && (
-        <div className="fixed inset-0 bg-inverse-surface/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-md w-full p-6 border border-surface-container-high/60 flex flex-col">
-            <div className="flex items-center justify-between pb-3 border-b border-surface-container-high/60">
-              <div className="flex items-center gap-2">
-                <Bookmark className="w-5 h-5 text-primary" />
-                <h3 className="font-headline-md text-lg font-bold text-on-surface">
-                  Guardar Plantilla de Reporte
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setModalGuardarPlantillaOpen(false)}
-                className="p-1 rounded-full text-outline hover:text-on-surface hover:bg-surface-container"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleGuardarPlantilla} className="mt-4 space-y-4">
-              <div>
-                <label className="block font-label-caps text-xs uppercase font-bold text-outline mb-1">
-                  Nombre de la Plantilla *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ej. Cierre Fiscal Mensual Auditado"
-                  value={nombreNuevaPlantilla}
-                  onChange={(e) => setNombreNuevaPlantilla(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-2xl bg-surface-container-low text-body-sm font-title-md text-on-surface border border-surface-container-high/60 outline-none focus:border-primary"
-                />
-              </div>
-
-              <div>
-                <label className="block font-label-caps text-xs uppercase font-bold text-outline mb-1">
-                  Descripción
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="Describe el objetivo y uso de esta configuración…"
-                  value={descNuevaPlantilla}
-                  onChange={(e) => setDescNuevaPlantilla(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-2xl bg-surface-container-low text-body-sm font-title-md text-on-surface border border-surface-container-high/60 outline-none focus:border-primary resize-none"
-                />
-              </div>
-
-              <div className="p-3 rounded-2xl bg-surface-container-low border border-surface-container-high/40 text-xs space-y-1 text-on-surface-variant">
-                <div><strong>Agrupación:</strong> {tipoAgrupacion}</div>
-                <div><strong>Columnas activas:</strong> {columnasVisibles.length} seleccionadas</div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setModalGuardarPlantillaOpen(false)}
-                  className="px-4 py-2 rounded-full bg-surface-container text-xs font-semibold text-on-surface cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-full bg-primary text-on-primary text-xs font-bold shadow-xs cursor-pointer hover:opacity-95"
-                >
-                  Guardar Plantilla
-                </button>
-              </div>
-            </form>
-          </div>
+        <div className="space-y-6 animate-in fade-in duration-200 print:space-y-0 print:p-0 print:m-0">
+          <ReportePersonalizadoBuilder
+            datosVentas={datosVentas}
+            sucursales={sucursales}
+            sucursalSeleccionadaId={sucursalSeleccionadaId}
+            nombreSucursalActiva={nombreSucursalActiva}
+            nombreOperador={user?.nombre || 'Director General'}
+            rangoFechaLabel={
+              rangoFecha === '7d'
+                ? 'Últimos 7 días'
+                : rangoFecha === '30d'
+                ? 'Últimos 30 días'
+                : rangoFecha === '90d'
+                ? 'Últimos 90 días'
+                : rangoFecha === 'ytd'
+                ? 'Año actual acumulado'
+                : `${fechaInicioCustom} al ${fechaFinCustom}`
+            }
+          />
         </div>
       )}
 
@@ -2550,7 +1586,7 @@ export default function Analisis({ initialUser, initialSucursales, initialSucurs
       {/* MODAL: METODOLOGÍA ESTADÍSTICA INFERENCIAL                */}
       {/* ========================================================= */}
       {modalInferenciaInfoOpen && (
-        <div className="fixed inset-0 bg-inverse-surface/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 bg-inverse-surface/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200 print:hidden">
           <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-xl w-full p-6 border border-surface-container-high/60 flex flex-col max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-surface-container-high/60">
               <div className="flex items-center gap-2">

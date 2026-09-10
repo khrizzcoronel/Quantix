@@ -92,20 +92,25 @@ export const useConnectivityStore = create<ConnectivityStore>((set, get) => ({
     let isHealthy = false;
     let lat: number | null = null;
 
-    try {
-      const rawUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
-      const healthUrl = rawUrl.replace(/\/api\/v1\/?$/, '') + '/health';
-      const res = await fetch(healthUrl, {
-        method: 'GET',
-        signal: AbortSignal.timeout(3000)
-      });
-
-      if (res.ok) {
-        lat = Math.round(performance.now() - t0);
-        isHealthy = true;
-      }
-    } catch {
+    // Si el navegador/SO reporta que la interfaz de red está desconectada (Wi-Fi apagado o cable desconectado)
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
       isHealthy = false;
+    } else {
+      try {
+        const rawUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+        const healthUrl = rawUrl.replace(/\/api\/v1\/?$/, '') + '/health';
+        const res = await fetch(healthUrl, {
+          method: 'GET',
+          signal: AbortSignal.timeout(3000)
+        });
+
+        if (res.ok) {
+          lat = Math.round(performance.now() - t0);
+          isHealthy = true;
+        }
+      } catch {
+        isHealthy = false;
+      }
     }
 
     const {
@@ -222,10 +227,12 @@ export const useConnectivityStore = create<ConnectivityStore>((set, get) => ({
     // Registrar listeners globales de red y eventos de sincronización una sola vez
     if (!listenersRegistered && typeof window !== 'undefined') {
       window.addEventListener('online', () => {
+        set({ consecutiveSuccesses: 1 });
         void get().checkHealth();
       });
 
       window.addEventListener('offline', () => {
+        set({ consecutiveFailures: 1 });
         void get().checkHealth();
       });
 

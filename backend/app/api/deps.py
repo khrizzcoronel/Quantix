@@ -1,9 +1,13 @@
+from typing import Optional
+from uuid import UUID
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
 from app.db.oltp import get_db
@@ -33,7 +37,9 @@ async def get_current_user(
             detail="No se pudieron validar las credenciales",
         )
         
-    result = await db.execute(select(Usuario).where(Usuario.id == token_data.sub))
+    result = await db.execute(
+        select(Usuario).options(selectinload(Usuario.sucursal)).where(Usuario.id == token_data.sub)
+    )
     user = result.scalar_one_or_none()
     
     if not user:
@@ -57,3 +63,26 @@ class RoleChecker:
                 detail="Permisos insuficientes para realizar esta acción"
             )
         return user
+
+
+def enforce_sucursal_scope(user: Usuario, requested_sucursal_id: Optional[UUID] = None) -> Optional[UUID]:
+    """
+    Seguridad y Aislamiento por Sede:
+    - DIRECTOR: Acceso global. Si pasa requested_sucursal_id filtra por esa sede; si pasa None, acceso global sin filtrar.
+    - OTROS ROLES (SUPERVISOR, CAJERO, BODEGUERO): Limitados estrictamente a su sucursal_id asignada.
+      Si intentan solicitar datos de otra sucursal diferente a la suya, se deniega con 403 Forbidden.
+      Si no pasan requested_sucursal_id, se fuerza automáticamente a su sucursal_id asignada.
+    """
+    rol_str = user.rol.value if hasattr(user.rol, 'value') else str(user.rol)
+    if rol_str != "DIRECTOR":
+        user_suc = getattr(user, "sucursal_id", None)
+        if user_suc is None:
+            return requested_sucursal_id
+        if requested_sucursal_id is not None and requested_sucursal_id != user_suc:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Acceso denegado: Tu perfil está restringido exclusivamente a las operaciones de tu sucursal asignada"
+            )
+        return user_suc
+    return requested_sucursal_id
+

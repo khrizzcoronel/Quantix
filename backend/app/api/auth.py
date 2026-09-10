@@ -9,6 +9,8 @@ from app.models.usuarios import Usuario, AuditoriaEvento
 from app.api.deps import get_current_user
 from app.schemas.auth import Token, SupervisorOverrideRequest
 
+from sqlalchemy.orm import selectinload
+
 router = APIRouter()
 
 @router.post("/login", response_model=Token)
@@ -19,7 +21,11 @@ async def login_access_token(
     """
     OAuth2 compatible token login, requiere username (email) y password.
     """
-    result = await db.execute(select(Usuario).where(Usuario.email == form_data.username))
+    result = await db.execute(
+        select(Usuario)
+        .options(selectinload(Usuario.sucursal))
+        .where(Usuario.email == form_data.username)
+    )
     user = result.scalar_one_or_none()
     
     if not user or not verify_password(form_data.password, user.password_hash):
@@ -43,7 +49,9 @@ async def login_access_token(
             "nombre": user.nombre,
             "rol": user.rol.name,
             "avatar": user.avatar,
-            "telefono": user.telefono
+            "telefono": user.telefono,
+            "sucursal_id": user.sucursal_id,
+            "sucursal_nombre": user.sucursal.nombre if user.sucursal else None
         }
     }
 

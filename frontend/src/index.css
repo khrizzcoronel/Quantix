@@ -36,3 +36,49 @@
     display: none;
   }
 }
+
+@media print {
+  /* Ocultar elementos estructurales, barras de navegación y utilitarios globales */
+  aside,
+  header,
+  nav,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Desbloquear altura y flujo de documento para impresión limpia */
+  html, body, #root {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  main {
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Impresión fiel de colores, barras, badges y gradientes */
+  *, *:before, *:after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Evitar saltos de página incómodos en medio de tarjetas o gráficos */
+  .recharts-responsive-container,
+  [id^="sec-"] {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  @page {
+    margin: 10mm;
+    size: auto;
+  }
+}

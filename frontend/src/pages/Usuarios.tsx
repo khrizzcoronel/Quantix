@@ -2,10 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Users, PlusCircle, Search, 
   Edit, Trash2, RotateCcw, Shield, X, Eye, 
-  CheckCircle2, AlertCircle, Key, RefreshCw, Download
+  Key, RefreshCw, Download, Building2, Lock
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
+import { useSucursalStore } from '../store/sucursalStore';
 import { exportToCSV, formatBoolean, formatDate } from '../utils/exportUtils';
 import { mostrarToast } from '../hooks/useWebSocket';
 import { 
@@ -21,20 +22,24 @@ interface UsuarioItem {
   email: string;
   rol: 'DIRECTOR' | 'SUPERVISOR' | 'CAJERO' | 'BODEGUERO';
   activo: boolean;
+  telefono?: string | null;
+  sucursal_id?: string | null;
+  sucursal_nombre?: string | null;
   creado_en?: string;
 }
 
 export default function Usuarios() {
   const { user: currentUser } = useAuthStore();
   const isDirector = currentUser?.rol === 'DIRECTOR';
+  const { sucursales, cargarSucursales } = useSucursalStore();
 
   const [usuarios, setUsuarios] = useState<UsuarioItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [feedback, setFeedback] = useState<{ tipo: 'success' | 'error'; mensaje: string } | null>(null);
 
   // Filtros
   const [searchQuery, setSearchQuery] = useState('');
   const [rolFiltro, setRolFiltro] = useState('');
+  const [sucursalFiltro, setSucursalFiltro] = useState('');
   const [mostrarInactivos, setMostrarInactivos] = useState(false);
 
   // Modales
@@ -46,7 +51,8 @@ export default function Usuarios() {
     nombre: '',
     email: '',
     password: '',
-    rol: 'CAJERO' as 'DIRECTOR' | 'SUPERVISOR' | 'CAJERO' | 'BODEGUERO'
+    rol: 'CAJERO' as 'DIRECTOR' | 'SUPERVISOR' | 'CAJERO' | 'BODEGUERO',
+    sucursal_id: ''
   });
 
   const [errorsUser, setErrorsUser] = useState<{
@@ -54,42 +60,48 @@ export default function Usuarios() {
     email?: string | null;
     password?: string | null;
     rol?: string | null;
+    sucursal_id?: string | null;
   }>({});
 
   const showToast = useCallback((tipo: 'success' | 'error', mensaje: string) => {
-    setFeedback({ tipo, mensaje });
     mostrarToast({
       titulo: tipo === 'success' ? 'Operación de Usuarios' : 'Error en Usuarios',
       mensaje,
       severidad: tipo === 'success' ? 'SUCCESS' : 'CRITICO',
     });
-    setTimeout(() => setFeedback(null), 4000);
   }, []);
 
   const cargarUsuarios = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get('/usuarios', {
-        params: { activo_only: !mostrarInactivos }
-      });
+      const params: any = { activo_only: !mostrarInactivos };
+      if (isDirector && sucursalFiltro && sucursalFiltro !== 'GLOBAL') {
+        params.sucursal_id = sucursalFiltro;
+      }
+      const res = await api.get('/usuarios', { params });
       setUsuarios(res.data);
     } catch (err: any) {
       showToast('error', err.response?.data?.detail || 'Error al cargar el directorio de usuarios');
     } finally {
       setLoading(false);
     }
-  }, [mostrarInactivos, showToast]);
+  }, [mostrarInactivos, isDirector, sucursalFiltro, showToast]);
 
   useEffect(() => {
-    queueMicrotask(() => void cargarUsuarios());
-  }, [cargarUsuarios]);
+    queueMicrotask(() => {
+      void cargarUsuarios();
+      void cargarSucursales();
+    });
+  }, [cargarUsuarios, cargarSucursales]);
 
   const handleAbrirCrear = () => {
+    const matriz = sucursales.find(s => s.es_matriz) || sucursales[0];
     setFormUser({
       nombre: '',
       email: '',
       password: '',
-      rol: 'CAJERO'
+      rol: 'CAJERO',
+      sucursal_id: matriz ? matriz.id : ''
     });
     setErrorsUser({});
     setModalUsuario({ open: true, editando: null });
@@ -100,7 +112,8 @@ export default function Usuarios() {
       nombre: u.nombre,
       email: u.email,
       password: '',
-      rol: u.rol
+      rol: u.rol,
+      sucursal_id: u.sucursal_id || ''
     });
     setErrorsUser({});
     setModalUsuario({ open: true, editando: u });
@@ -127,6 +140,8 @@ export default function Usuarios() {
 
     if (!formUser.rol) {
       errs.rol = 'El rol operacional es obligatorio';
+    } else if (formUser.rol !== 'DIRECTOR' && !formUser.sucursal_id) {
+      errs.sucursal_id = 'Debe asignar una sucursal para este operador';
     }
 
     setErrorsUser(errs);
@@ -146,7 +161,8 @@ export default function Usuarios() {
       if (isEditing) {
         const payload: any = {
           nombre: formUser.nombre.trim(),
-          rol: formUser.rol
+          rol: formUser.rol,
+          sucursal_id: formUser.rol === 'DIRECTOR' ? null : (formUser.sucursal_id || null)
         };
         if (formUser.password.trim()) {
           payload.password = formUser.password;
@@ -158,7 +174,8 @@ export default function Usuarios() {
           nombre: formUser.nombre.trim(),
           email: formUser.email.trim(),
           password: formUser.password,
-          rol: formUser.rol
+          rol: formUser.rol,
+          sucursal_id: formUser.rol === 'DIRECTOR' ? null : (formUser.sucursal_id || null)
         });
         showToast('success', `Usuario ${formUser.nombre} registrado exitosamente`);
       }
@@ -209,7 +226,10 @@ export default function Usuarios() {
       u.nombre.toLowerCase().includes(searchQuery.toLowerCase()) || 
       u.email.toLowerCase().includes(searchQuery.toLowerCase());
     const matchRol = !rolFiltro || u.rol === rolFiltro;
-    return matchSearch && matchRol;
+    const matchSucursal = !isDirector || !sucursalFiltro || (
+      sucursalFiltro === 'GLOBAL' ? !u.sucursal_id : u.sucursal_id === sucursalFiltro
+    );
+    return matchSearch && matchRol && matchSucursal;
   });
 
   const getRoleBadge = (r: string) => {
@@ -237,18 +257,6 @@ export default function Usuarios() {
     <div className="h-full overflow-y-auto bg-background text-on-surface p-6 md:p-8 select-none">
       <div className="w-full space-y-6 animate-in fade-in duration-300">
       
-      {/* Toast Feedback */}
-      {feedback && (
-        <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl border text-body-sm font-bold ${
-          feedback.tipo === 'success' 
-            ? 'bg-primary-fixed/30 text-on-primary-fixed-variant border-primary-fixed' 
-            : 'bg-error-container text-on-error-container border-error'
-        }`}>
-          {feedback.tipo === 'success' ? <CheckCircle2 className="w-5 h-5 text-primary" /> : <AlertCircle className="w-5 h-5 text-error" />}
-          <span>{feedback.mensaje}</span>
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-surface-container-high/60 pb-5">
         <div>
@@ -291,6 +299,7 @@ export default function Usuarios() {
                   { key: 'nombre', header: 'Nombre del Operador' },
                   { key: 'email', header: 'Correo Electrónico' },
                   { key: 'rol', header: 'Rol Asignado' },
+                  { key: 'sucursal_nombre', header: 'Sucursal Asignada', formatter: (v) => v || 'Global (Todas)' },
                   { key: 'activo', header: 'Activo', formatter: (v) => formatBoolean(v) },
                   { key: 'creado_en', header: 'Fecha Alta', formatter: (v) => formatDate(v) }
                 ]
@@ -348,10 +357,52 @@ export default function Usuarios() {
         </div>
       </div>
 
+      {/* Leyenda Informativa de Políticas de Sucursal */}
+      <div className="bg-surface-container-lowest p-4 rounded-3xl border border-surface-container-high/60 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 text-body-sm text-on-surface-variant">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+            <Building2 className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="font-title-md text-xs font-bold text-on-surface uppercase tracking-wider block">
+              {isDirector ? 'Leyenda de Asignación por Sucursal' : `Directorio Local: ${currentUser?.sucursal_nombre || 'Sede Asignada'}`}
+            </span>
+            <p className="text-[12px] text-on-surface-variant">
+              {isDirector 
+                ? 'Políticas de asignación territorial y acceso a sedes operacionales'
+                : 'Vista táctica restringida: Estás auditando exclusivamente a los operadores adscritos a tu sede.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5">
+          {isDirector ? (
+            <>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-surface-container-low border border-surface-container-high/40 text-xs">
+                <span className="w-2 h-2 rounded-full bg-tertiary"></span>
+                <strong className="text-on-surface">Director / Admin:</strong>
+                <span className="text-on-surface-variant">Acceso Global (cambia libremente entre sedes)</span>
+              </div>
+
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-surface-container-low border border-surface-container-high/40 text-xs">
+                <Lock className="w-3 h-3 text-amber-500" />
+                <strong className="text-on-surface">Cajero / Supervisor / Bodeguero:</strong>
+                <span className="text-on-surface-variant">Sede Fija Asignada (bloqueado a su sucursal)</span>
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-900 dark:text-amber-300">
+              <Lock className="w-3.5 h-3.5 text-amber-500" />
+              <span>Aislamiento de Sede Activo • Solo Dirección General tiene visibilidad consolidada</span>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Barra de Filtros */}
       <div className="bg-surface-container-lowest p-4 rounded-3xl border border-surface-container-high/60 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3 w-full md:w-auto flex-1">
-          <div className="relative flex-1 max-w-md">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto flex-1">
+          <div className="relative flex-1 min-w-[200px] max-w-md">
             <Search className="w-4 h-4 text-outline absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
@@ -373,6 +424,30 @@ export default function Usuarios() {
             <option value="CAJERO">Cajero (Operativo)</option>
             <option value="BODEGUERO">Bodeguero (Almacén)</option>
           </select>
+
+          {isDirector ? (
+            <select
+              value={sucursalFiltro}
+              onChange={(e) => setSucursalFiltro(e.target.value)}
+              className="px-4 py-2.5 bg-surface-container-low rounded-full font-title-md text-body-sm font-semibold text-on-surface border-none focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+            >
+              <option value="">Todas las Sucursales</option>
+              <option value="GLOBAL">Acceso Global (Directores)</option>
+              {sucursales.map((suc) => (
+                <option key={suc.id} value={suc.id}>
+                  {suc.nombre} {suc.es_matriz ? '(Matriz)' : ''}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div 
+              className="flex items-center gap-2 px-4 py-2.5 bg-surface-container-low border border-surface-container-high/60 rounded-full font-title-md text-body-sm font-semibold text-on-surface"
+              title="Tu vista está restringida exclusivamente a los operadores de tu sede asignada"
+            >
+              <Lock className="w-3.5 h-3.5 text-amber-500" />
+              <span>Sede: {currentUser?.sucursal_nombre || 'Sucursal Asignada'}</span>
+            </div>
+          )}
         </div>
 
         <label className="flex items-center gap-2 font-title-md text-body-sm text-on-surface-variant cursor-pointer select-none">
@@ -395,6 +470,7 @@ export default function Usuarios() {
                 <th className="py-3.5 px-5 rounded-l-2xl">Colaborador</th>
                 <th className="py-3.5 px-4">Correo Institucional</th>
                 <th className="py-3.5 px-4 text-center">Rol & Nivel</th>
+                <th className="py-3.5 px-4 text-center">Sucursal Asignada</th>
                 <th className="py-3.5 px-4 text-center">Fecha Alta</th>
                 <th className="py-3.5 px-4 text-center">Estatus</th>
                 <th className="py-3.5 px-5 rounded-r-2xl text-right">Acciones</th>
@@ -403,7 +479,7 @@ export default function Usuarios() {
             <tbody className="divide-y divide-surface-container-low">
               {usuariosFiltrados.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-on-surface-variant font-body-md">
+                  <td colSpan={7} className="py-12 text-center text-on-surface-variant font-body-md">
                     No se encontraron colaboradores registrados con los criterios seleccionados.
                   </td>
                 </tr>
@@ -433,6 +509,18 @@ export default function Usuarios() {
                       <span className={`inline-block px-3 py-0.5 rounded-full font-label-caps text-[10px] font-bold uppercase tracking-wider border ${getRoleBadge(u.rol)}`}>
                         {u.rol}
                       </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      {u.sucursal_nombre ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-label-caps text-[10px] font-bold bg-surface-container-high text-on-surface border border-surface-container-high">
+                          <Building2 className="w-3 h-3 text-primary shrink-0" />
+                          <span className="truncate max-w-[120px]">{u.sucursal_nombre}</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-label-caps text-[10px] font-bold bg-tertiary-fixed/30 text-on-tertiary-fixed-variant border border-tertiary-fixed/40">
+                          Global (Todas)
+                        </span>
+                      )}
                     </td>
                     <td className="py-3.5 px-4 text-center font-mono text-body-sm text-outline">
                       {u.creado_en ? new Date(u.creado_en).toLocaleDateString('es-MX') : 'N/A'}
@@ -522,6 +610,13 @@ export default function Usuarios() {
                     detalleUsuario.activo ? 'bg-primary-fixed/30 text-on-primary-fixed-variant' : 'bg-surface-container-highest text-on-surface-variant'
                   }`}>
                     {detalleUsuario.activo ? 'Activo en Turno' : 'Baja Lógica'}
+                  </span>
+                </div>
+                <div className="col-span-2">
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Sucursal Asignada</span>
+                  <span className="font-title-md text-on-surface flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-primary shrink-0" />
+                    <span>{detalleUsuario.sucursal_nombre || 'Acceso Global (Todas las Sucursales)'}</span>
                   </span>
                 </div>
                 <div className="col-span-2">
@@ -678,6 +773,47 @@ export default function Usuarios() {
                   </div>
                 )}
               </div>
+
+              {formUser.rol !== 'DIRECTOR' ? (
+                <div>
+                  <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                    Sucursal Asignada *
+                  </label>
+                  <select
+                    value={formUser.sucursal_id}
+                    onChange={(e) => {
+                      setFormUser({ ...formUser, sucursal_id: e.target.value });
+                      if (errorsUser.sucursal_id) setErrorsUser((prev) => ({ ...prev, sucursal_id: null }));
+                    }}
+                    className={`w-full px-4 py-2.5 rounded-2xl font-title-md text-body-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 cursor-pointer ${
+                      errorsUser.sucursal_id
+                        ? 'bg-error-container/10 border-2 border-error'
+                        : 'bg-surface-container-low border border-surface-container-high/40'
+                    }`}
+                  >
+                    <option value="" disabled>Seleccione una sucursal...</option>
+                    {sucursales.map((suc) => (
+                      <option key={suc.id} value={suc.id}>
+                        {suc.nombre} {suc.es_matriz ? '(Matriz)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {errorsUser.sucursal_id && (
+                    <div className="flex items-center gap-1.5 text-error text-xs font-medium mt-1 animate-in fade-in">
+                      <span className="material-symbols-outlined text-[15px]">error</span>
+                      <span>{errorsUser.sucursal_id}</span>
+                    </div>
+                  )}
+                  <p className="font-body-sm text-[11px] text-on-surface-variant/80 mt-1">
+                    Este usuario solo podrá operar en esta sucursal fija y no podrá alternar de sede.
+                  </p>
+                </div>
+              ) : (
+                <div className="p-3 bg-surface-container-low rounded-2xl border border-surface-container-high/40 text-on-surface-variant text-body-sm flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-primary shrink-0" />
+                  <span className="text-xs">Los usuarios con rol <strong>DIRECTOR</strong> tienen acceso global a todas las sucursales.</span>
+                </div>
+              )}
 
               <div>
                 <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">

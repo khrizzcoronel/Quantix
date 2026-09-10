@@ -9,6 +9,7 @@ class UsuarioCreate(BaseModel):
     password: str = Field(..., min_length=6, description="Contrasena en texto plano a ser hasheada")
     rol: str = Field("CAJERO", description="CAJERO, BODEGUERO, SUPERVISOR, DIRECTOR")
     telefono: Optional[str] = Field(None, max_length=30)
+    sucursal_id: Optional[UUID] = Field(None, description="Sucursal asignada al usuario (requerido para no-directores)")
 
 class UsuarioUpdate(BaseModel):
     nombre: Optional[str] = Field(None, min_length=2, max_length=255)
@@ -17,6 +18,7 @@ class UsuarioUpdate(BaseModel):
     rol: Optional[str] = Field(None, description="CAJERO, BODEGUERO, SUPERVISOR, DIRECTOR")
     activo: Optional[bool] = None
     telefono: Optional[str] = Field(None, max_length=30)
+    sucursal_id: Optional[UUID] = Field(None, description="Sucursal asignada al usuario")
 
 class PerfilUpdate(BaseModel):
     nombre: Optional[str] = Field(None, min_length=2, max_length=255)
@@ -37,5 +39,7 @@ class UsuarioResponse(BaseModel):
     activo: bool
     avatar: Optional[str] = None
     telefono: Optional[str] = None
+    sucursal_id: Optional[UUID] = None
+    sucursal_nombre: Optional[str] = None
     creado_en: datetime
     model_config = ConfigDict(from_attributes=True)

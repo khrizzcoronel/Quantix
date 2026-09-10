@@ -81,8 +81,26 @@ async def listar_transferencias(
 ):
     """
     Lista las transferencias de inventario entre sucursales con eager loading.
+    Supervisores y bodegueros solo tienen acceso a transferencias donde su sede sea origen o destino.
     """
+    rol_str = current_user.rol.value if hasattr(current_user.rol, 'value') else str(current_user.rol)
     query = _query_transferencia_completa().order_by(TransferenciaInventario.fecha_solicitud.desc())
+
+    if rol_str != "DIRECTOR" and current_user.sucursal_id:
+        if (origen_id and origen_id != current_user.sucursal_id and not destino_id) or \
+           (destino_id and destino_id != current_user.sucursal_id and not origen_id) or \
+           (origen_id and origen_id != current_user.sucursal_id and destino_id and destino_id != current_user.sucursal_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Acceso denegado: Solo puedes consultar transferencias donde tu sucursal sea origen o destino"
+            )
+        query = query.where(
+            or_(
+                TransferenciaInventario.sucursal_origen_id == current_user.sucursal_id,
+                TransferenciaInventario.sucursal_destino_id == current_user.sucursal_id
+            )
+        )
+
     if origen_id:
         query = query.where(TransferenciaInventario.sucursal_origen_id == origen_id)
     if destino_id:
@@ -103,6 +121,16 @@ async def obtener_transferencia(
     transferencia = await _obtener_t_completa(id, db)
     if not transferencia:
         raise HTTPException(status_code=404, detail="Transferencia no encontrada")
+
+    rol_str = current_user.rol.value if hasattr(current_user.rol, 'value') else str(current_user.rol)
+    if rol_str != "DIRECTOR" and current_user.sucursal_id:
+        if (transferencia.sucursal_origen_id != current_user.sucursal_id and 
+            transferencia.sucursal_destino_id != current_user.sucursal_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Acceso denegado: No tienes autorización para consultar transferencias de otras sucursales"
+            )
+
     return _map_transferencia_response(transferencia)
 
 @router.post("", response_model=TransferenciaResponse, status_code=status.HTTP_201_CREATED)
@@ -116,6 +144,15 @@ async def solicitar_transferencia(
     """
     if req.sucursal_origen_id == req.sucursal_destino_id:
         raise HTTPException(status_code=400, detail="La sucursal de origen y destino deben ser distintas")
+
+    rol_str = current_user.rol.value if hasattr(current_user.rol, 'value') else str(current_user.rol)
+    if rol_str != "DIRECTOR" and current_user.sucursal_id:
+        if (req.sucursal_origen_id != current_user.sucursal_id and 
+            req.sucursal_destino_id != current_user.sucursal_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Acceso denegado: Solo puedes solicitar transferencias donde tu sucursal sea origen o destino"
+            )
 
     suc_origen = await db.get(Sucursal, req.sucursal_origen_id)
     suc_destino = await db.get(Sucursal, req.sucursal_destino_id)
@@ -199,6 +236,15 @@ async def despachar_transferencia(
     transferencia = await _obtener_t_completa(id, db)
     if not transferencia:
         raise HTTPException(status_code=404, detail="Transferencia no encontrada")
+
+    rol_str = current_user.rol.value if hasattr(current_user.rol, 'value') else str(current_user.rol)
+    if rol_str != "DIRECTOR" and current_user.sucursal_id:
+        if transferencia.sucursal_origen_id != current_user.sucursal_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Acceso denegado: Solo el personal de la sucursal origen puede despachar esta transferencia"
+            )
+
     if transferencia.estado != EstadoTransferencia.SOLICITADA:
         raise HTTPException(status_code=400, detail=f"No se puede despachar una transferencia en estado {transferencia.estado.value}")
 
@@ -233,6 +279,15 @@ async def recibir_transferencia(
     transferencia = await _obtener_t_completa(id, db)
     if not transferencia:
         raise HTTPException(status_code=404, detail="Transferencia no encontrada")
+
+    rol_str = current_user.rol.value if hasattr(current_user.rol, 'value') else str(current_user.rol)
+    if rol_str != "DIRECTOR" and current_user.sucursal_id:
+        if transferencia.sucursal_destino_id != current_user.sucursal_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Acceso denegado: Solo el personal de la sucursal destino puede recibir esta transferencia"
+            )
+
     if transferencia.estado not in [EstadoTransferencia.EN_TRANSITO, EstadoTransferencia.SOLICITADA]:
         raise HTTPException(status_code=400, detail=f"No se puede recibir una transferencia en estado {transferencia.estado.value}")
 

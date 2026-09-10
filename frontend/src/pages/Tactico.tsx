@@ -1550,9 +1550,70 @@ export default function Tactico() {
 
       {/* 7. Modal Acta Fiscal de Corte Z */}
       {corteZModal && (
-        <div className="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-surface-container-high/40 animate-in zoom-in-95 max-h-[90vh] flex flex-col">
-            <div className="p-6 border-b border-surface-container-low flex justify-between items-start bg-surface-container-low/50 shrink-0">
+        <div className="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in corte-z-modal-overlay">
+          {/* Estilos dedicados para aislar exclusivamente el comprobante fiscal al imprimir */}
+          <style>{`
+            @media print {
+              @page {
+                size: auto;
+                margin: 4mm;
+              }
+              body * {
+                visibility: hidden !important;
+              }
+              .corte-z-modal-overlay,
+              .corte-z-modal-container,
+              .corte-z-modal-body {
+                position: static !important;
+                background: transparent !important;
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+                overflow: visible !important;
+                max-height: none !important;
+                width: 100% !important;
+                display: block !important;
+              }
+              #comprobante-fiscal-corte-z,
+              #comprobante-fiscal-corte-z * {
+                visibility: visible !important;
+              }
+              #comprobante-fiscal-corte-z {
+                position: absolute !important;
+                left: 0 !important;
+                right: 0 !important;
+                top: 0 !important;
+                margin: 0 auto !important;
+                width: 80mm !important;
+                max-width: 80mm !important;
+                padding: 6mm 4mm !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+                border: 1px dashed #333333 !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+                font-family: 'Courier New', Courier, monospace !important;
+                font-size: 11px !important;
+                line-height: 1.35 !important;
+                z-index: 999999 !important;
+              }
+              #comprobante-fiscal-corte-z * {
+                color: #000000 !important;
+                background: transparent !important;
+                border-color: #333333 !important;
+                box-shadow: none !important;
+                text-shadow: none !important;
+              }
+              .no-print {
+                display: none !important;
+              }
+            }
+          `}</style>
+          <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-surface-container-high/40 animate-in zoom-in-95 max-h-[90vh] flex flex-col corte-z-modal-container">
+            <div className="p-6 border-b border-surface-container-low flex justify-between items-start bg-surface-container-low/50 shrink-0 no-print">
               <div>
                 <span className="px-2.5 py-0.5 bg-primary text-on-primary rounded-full font-label-caps text-[10px] font-bold uppercase tracking-wider">
                   Corte Z
@@ -1569,65 +1630,172 @@ export default function Tactico() {
               </button>
             </div>
 
-            <div className="p-6 space-y-3.5 text-xs overflow-y-auto flex-1 font-mono">
-              <div className="bg-inverse-surface text-primary-fixed p-4 rounded-2xl space-y-1.5 shadow-inner leading-relaxed border border-surface-container-high/40">
-                <div className="text-center pb-2 border-b border-white/10 text-white font-bold">
-                  *** COMPROBANTE FISCAL DE CORTE Z ***
+            <div className="p-6 space-y-3.5 text-xs overflow-y-auto flex-1 font-mono corte-z-modal-body">
+              <div 
+                id="comprobante-fiscal-corte-z" 
+                className="bg-inverse-surface text-primary-fixed p-5 rounded-2xl space-y-2 shadow-inner leading-relaxed border border-surface-container-high/40"
+              >
+                {/* Encabezado Fiscal */}
+                <div className="text-center pb-2.5 border-b border-white/10 space-y-0.5">
+                  <div className="font-bold text-sm text-white tracking-wider">
+                    QUANTIX ENTERPRISE RETAIL
+                  </div>
+                  {sucursalActual?.nombre && (
+                    <div className="text-[10px] text-white/70 uppercase tracking-wider font-semibold">
+                      Sucursal: {sucursalActual.nombre}
+                    </div>
+                  )}
+                  <div className="text-[10px] text-white/60 uppercase tracking-widest font-semibold">
+                    ACTA FISCAL DE CIERRE DE TURNO
+                  </div>
+                  <div className="text-xs text-white font-bold tracking-widest pt-1">
+                    *** COMPROBANTE FISCAL DE CORTE Z ***
+                  </div>
+                  <div className="text-xs font-bold text-primary-fixed pt-0.5 font-mono">
+                    FOLIO: {corteZModal.folio_corte}
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-white/60">Terminal / Caja:</span>
-                  <span className="text-white font-bold">{corteZModal.terminal_id}</span>
+
+                {/* Datos de Sesión y Turno */}
+                <div className="space-y-1 py-1 border-b border-white/10 text-[11px]">
+                  <div className="flex justify-between">
+                    <span className="text-white/60">Terminal / Caja:</span>
+                    <span className="text-white font-bold">{corteZModal.terminal_id}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-white/60">Operador:</span>
+                    <span className="text-white font-bold">{corteZModal.cajero_nombre}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-white/60">Apertura:</span>
+                    <span>{new Date(corteZModal.fecha_apertura).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-white/60">Cierre:</span>
+                    <span>{corteZModal.fecha_cierre ? new Date(corteZModal.fecha_cierre).toLocaleString() : 'En curso'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-white/60">Estado Turno:</span>
+                    <span className="font-bold">{corteZModal.estado || 'CERRADO'}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-white/60">Operador:</span>
-                  <span className="text-white font-bold">{corteZModal.cajero_nombre}</span>
+
+                {/* Resumen Contable */}
+                <div className="space-y-1 py-1 border-b border-white/10 text-[11px]">
+                  <div className="flex justify-between">
+                    <span className="text-white/60">Fondo Inicial:</span>
+                    <span className="text-white">${corteZModal.fondo_inicial.toFixed(2)}</span>
+                  </div>
+                  {corteZModal.total_bruto !== undefined && corteZModal.total_bruto > 0 && (
+                    <div className="flex justify-between text-white/70">
+                      <span>Ventas Brutas:</span>
+                      <span>${Number(corteZModal.total_bruto).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {corteZModal.total_descuento !== undefined && corteZModal.total_descuento > 0 && (
+                    <div className="flex justify-between text-white/70">
+                      <span>Descuentos (-):</span>
+                      <span>-${Number(corteZModal.total_descuento).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {corteZModal.total_impuestos !== undefined && corteZModal.total_impuestos > 0 && (
+                    <div className="flex justify-between text-white/70">
+                      <span>Impuestos (IVA):</span>
+                      <span>${Number(corteZModal.total_impuestos).toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-bold text-white text-sm pt-0.5">
+                    <span>TOTAL COBRADO EN VENTAS:</span>
+                    <span>${corteZModal.total_ventas.toFixed(2)}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-white/60">Apertura:</span>
-                  <span>{new Date(corteZModal.fecha_apertura).toLocaleString()}</span>
+
+                {/* Desglose por Método de Pago */}
+                <div className="space-y-1 py-1 border-b border-white/10 text-[11px]">
+                  <div className="text-[10px] text-white/70 uppercase font-bold tracking-wider">
+                    Desglose por Método de Pago:
+                  </div>
+                  <div className="flex justify-between text-white/80">
+                    <span>- Efectivo:</span>
+                    <span>${corteZModal.ventas_efectivo.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-white/80">
+                    <span>- Tarjetas Débito/Crédito:</span>
+                    <span>${corteZModal.ventas_tarjeta.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-white/80">
+                    <span>- Transferencias / QR:</span>
+                    <span>${corteZModal.ventas_transferencia.toFixed(2)}</span>
+                  </div>
+                  {corteZModal.ventas_otros !== undefined && corteZModal.ventas_otros > 0 && (
+                    <div className="flex justify-between text-white/80">
+                      <span>- Otros Medios / Cupones:</span>
+                      <span>${Number(corteZModal.ventas_otros).toFixed(2)}</span>
+                    </div>
+                  )}
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-white/60">Cierre:</span>
-                  <span>{corteZModal.fecha_cierre ? new Date(corteZModal.fecha_cierre).toLocaleString() : 'En curso'}</span>
+
+                {/* Auditoría de Gaveta y Arqueo Ciego */}
+                <div className="space-y-1 py-1 border-b border-white/10 text-[11px]">
+                  <div className="text-[10px] text-white/70 uppercase font-bold tracking-wider">
+                    Auditoría de Gaveta y Arqueo:
+                  </div>
+                  {corteZModal.total_teorico !== undefined && (
+                    <div className="flex justify-between text-white/80">
+                      <span>Saldo Teórico Esperado:</span>
+                      <span>${Number(corteZModal.total_teorico).toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-white/80">
+                    <span>Total Físico Declarado:</span>
+                    <span className="text-white font-bold">${(corteZModal.total_fisico_declarado || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between font-bold pt-0.5">
+                    <span className="text-white/80">Diferencia / Descuadre:</span>
+                    <span className={corteZModal.diferencia === 0 ? 'text-primary-fixed' : corteZModal.diferencia > 0 ? 'text-amber-300' : 'text-error-container'}>
+                      ${(corteZModal.diferencia || 0).toFixed(2)} ({corteZModal.estado_cuadre || 'OK'})
+                    </span>
+                  </div>
                 </div>
-                <div className="pt-2 border-t border-white/10 flex justify-between">
-                  <span className="text-white/60">Fondo Inicial:</span>
-                  <span className="text-white">${corteZModal.fondo_inicial.toFixed(2)}</span>
+
+                {/* Comprobantes Emitidos */}
+                <div className="space-y-1 py-1 text-[11px]">
+                  <div className="flex justify-between text-white/70">
+                    <span>Tickets Emitidos:</span>
+                    <span>{corteZModal.total_tickets_emitidos} ({corteZModal.primer_folio || 'TKT-1'} a {corteZModal.ultimo_folio || 'TKT-N'})</span>
+                  </div>
+                  {corteZModal.tickets_anulados !== undefined && (
+                    <div className="flex justify-between text-white/70">
+                      <span>Tickets Anulados:</span>
+                      <span>{corteZModal.tickets_anulados}</span>
+                    </div>
+                  )}
                 </div>
-                <div className="flex justify-between font-bold text-white text-sm">
-                  <span>TOTAL COBRADO EN VENTAS:</span>
-                  <span>${corteZModal.total_ventas.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-[11px] text-white/60">
-                  <span>- Efectivo:</span>
-                  <span>${corteZModal.ventas_efectivo.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-[11px] text-white/60">
-                  <span>- Tarjetas Débito/Crédito:</span>
-                  <span>${corteZModal.ventas_tarjeta.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-[11px] text-white/60">
-                  <span>- Transferencias / QR:</span>
-                  <span>${corteZModal.ventas_transferencia.toFixed(2)}</span>
-                </div>
-                <div className="pt-2 border-t border-white/10 flex justify-between">
-                  <span className="text-white/60">Total Físico Declarado:</span>
-                  <span className="text-white font-bold">${(corteZModal.total_fisico_declarado || 0).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between font-bold">
-                  <span className="text-white/60">Diferencia / Descuadre:</span>
-                  <span className={corteZModal.diferencia === 0 ? 'text-primary-fixed' : corteZModal.diferencia > 0 ? 'text-amber-300' : 'text-error-container'}>
-                    ${(corteZModal.diferencia || 0).toFixed(2)} ({corteZModal.estado_cuadre || 'OK'})
-                  </span>
-                </div>
-                <div className="flex justify-between text-[11px] text-white/60 pt-1">
-                  <span>Tickets Emitidos:</span>
-                  <span>{corteZModal.total_tickets_emitidos} ({corteZModal.primer_folio || 'TKT-1'} a {corteZModal.ultimo_folio || 'TKT-N'})</span>
+
+                {/* Firmas de Responsabilidad */}
+                <div className="pt-6 pb-2 border-t border-white/10 space-y-4">
+                  <div className="grid grid-cols-2 gap-4 text-center text-[10px]">
+                    <div>
+                      <div className="border-b border-white/40 mb-1"></div>
+                      <p className="font-bold text-white">Firma Cajero</p>
+                      <p className="text-white/60 truncate">{corteZModal.cajero_nombre}</p>
+                    </div>
+                    <div>
+                      <div className="border-b border-white/40 mb-1"></div>
+                      <p className="font-bold text-white">Firma Supervisor</p>
+                      <p className="text-white/60">Auditoría / Control</p>
+                    </div>
+                  </div>
+                  <div className="text-center text-[9px] text-white/50 pt-1">
+                    *** FIN COMPROBANTE FISCAL ***
+                    <br />
+                    Impreso: {new Date().toLocaleString()} • Quantix POS
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="p-4 bg-surface-container-low/50 border-t border-surface-container-low flex gap-2 justify-end shrink-0">
+            <div className="p-4 bg-surface-container-low/50 border-t border-surface-container-low flex gap-2 justify-end shrink-0 no-print">
               <button
                 onClick={() => window.print()}
                 className="px-5 py-2 font-title-md text-body-sm font-bold text-on-surface bg-surface-container-lowest hover:bg-surface-container border border-surface-container-high/60 rounded-full cursor-pointer transition-colors shadow-xs flex items-center gap-1.5"

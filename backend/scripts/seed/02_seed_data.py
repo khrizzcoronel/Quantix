@@ -107,6 +107,7 @@ def run_seed():
             password_hash=hash_admin,
             rol=RolUsuario.DIRECTOR,
             telefono="+51 998-111-001",
+            sucursal_id=None,
             activo=True
         )
         u_super = Usuario(
@@ -115,6 +116,7 @@ def run_seed():
             password_hash=hash_super,
             rol=RolUsuario.SUPERVISOR,
             telefono="+51 998-111-002",
+            sucursal_id=matriz_id,
             activo=True
         )
         u_bodega = Usuario(
@@ -123,6 +125,7 @@ def run_seed():
             password_hash=hash_bodega,
             rol=RolUsuario.BODEGUERO,
             telefono="+51 998-111-003",
+            sucursal_id=matriz_id,
             activo=True
         )
         u_cajero = Usuario(
@@ -131,33 +134,34 @@ def run_seed():
             password_hash=hash_cajero,
             rol=RolUsuario.CAJERO,
             telefono="+51 998-111-004",
+            sucursal_id=matriz_id,
             activo=True
         )
 
         usuarios_simulados = [
             u_admin, u_super, u_bodega, u_cajero,
-            # Directores adicionales
-            Usuario(nombre="Carlos Mendoza Alarcón", email="carlos.mendoza@quantix.com", password_hash=hash_admin, rol=RolUsuario.DIRECTOR, telefono="+51 991-222-005"),
-            Usuario(nombre="Patricia Morales Vega", email="patricia.morales@quantix.com", password_hash=hash_admin, rol=RolUsuario.DIRECTOR, telefono="+51 991-222-006"),
-            # Supervisores adicionales
-            Usuario(nombre="Sofía Ramírez Gómez", email="sofia.ramirez@quantix.com", password_hash=hash_super, rol=RolUsuario.SUPERVISOR, telefono="+51 992-333-007"),
-            Usuario(nombre="Miguel Ángel Herrera", email="miguel.herrera@quantix.com", password_hash=hash_super, rol=RolUsuario.SUPERVISOR, telefono="+51 992-333-008"),
-            Usuario(nombre="Roberto Guzmán Paz", email="roberto.guzman@quantix.com", password_hash=hash_super, rol=RolUsuario.SUPERVISOR, telefono="+51 992-333-009"),
-            Usuario(nombre="Claudia Navarro Ruiz", email="claudia.navarro@quantix.com", password_hash=hash_super, rol=RolUsuario.SUPERVISOR, telefono="+51 992-333-010"),
-            # Bodegueros adicionales
-            Usuario(nombre="Fernando Ríos Soto", email="fernando.rios@quantix.com", password_hash=hash_bodega, rol=RolUsuario.BODEGUERO, telefono="+51 993-444-011"),
-            Usuario(nombre="Javier Paredes Cano", email="javier.paredes@quantix.com", password_hash=hash_bodega, rol=RolUsuario.BODEGUERO, telefono="+51 993-444-012"),
-            Usuario(nombre="David Salazar Peña", email="david.salazar@quantix.com", password_hash=hash_bodega, rol=RolUsuario.BODEGUERO, telefono="+51 993-444-013"),
-            # Cajeros adicionales
-            Usuario(nombre="Ana Torres Valdivia", email="ana.torres@quantix.com", password_hash=hash_cajero, rol=RolUsuario.CAJERO, telefono="+51 994-555-014"),
-            Usuario(nombre="Luis Morales Castro", email="luis.morales@quantix.com", password_hash=hash_cajero, rol=RolUsuario.CAJERO, telefono="+51 994-555-015"),
-            Usuario(nombre="Valentina Cruz Pinto", email="valentina.cruz@quantix.com", password_hash=hash_cajero, rol=RolUsuario.CAJERO, telefono="+51 994-555-016"),
-            Usuario(nombre="Gabriel Ortiz León", email="gabriel.ortiz@quantix.com", password_hash=hash_cajero, rol=RolUsuario.CAJERO, telefono="+51 994-555-017"),
-            Usuario(nombre="Mariana Silva Ramos", email="mariana.silva@quantix.com", password_hash=hash_cajero, rol=RolUsuario.CAJERO, telefono="+51 994-555-018"),
-            Usuario(nombre="Diego Chávez Prado", email="diego.chavez@quantix.com", password_hash=hash_cajero, rol=RolUsuario.CAJERO, telefono="+51 994-555-019"),
-            Usuario(nombre="Lucía Vargas Beltrán", email="lucia.vargas@quantix.com", password_hash=hash_cajero, rol=RolUsuario.CAJERO, telefono="+51 994-555-020"),
-            Usuario(nombre="Mateo Peña Villavicencio", email="mateo.pena@quantix.com", password_hash=hash_cajero, rol=RolUsuario.CAJERO, telefono="+51 994-555-021"),
-            Usuario(nombre="Camila Reyes Flores", email="camila.reyes@quantix.com", password_hash=hash_cajero, rol=RolUsuario.CAJERO, telefono="+51 994-555-022"),
+            # Directores adicionales (Global - sin sucursal fija)
+            Usuario(nombre="Carlos Mendoza Alarcón", email="carlos.mendoza@quantix.com", password_hash=hash_admin, rol=RolUsuario.DIRECTOR, telefono="+51 991-222-005", sucursal_id=None),
+            Usuario(nombre="Patricia Morales Vega", email="patricia.morales@quantix.com", password_hash=hash_admin, rol=RolUsuario.DIRECTOR, telefono="+51 991-222-006", sucursal_id=None),
+            # Supervisores adicionales (con sucursal asignada)
+            Usuario(nombre="Sofía Ramírez Gómez", email="sofia.ramirez@quantix.com", password_hash=hash_super, rol=RolUsuario.SUPERVISOR, telefono="+51 992-333-007", sucursal_id=norte_id),
+            Usuario(nombre="Miguel Ángel Herrera", email="miguel.herrera@quantix.com", password_hash=hash_super, rol=RolUsuario.SUPERVISOR, telefono="+51 992-333-008", sucursal_id=sur_id),
+            Usuario(nombre="Roberto Guzmán Paz", email="roberto.guzman@quantix.com", password_hash=hash_super, rol=RolUsuario.SUPERVISOR, telefono="+51 992-333-009", sucursal_id=norte_id),
+            Usuario(nombre="Claudia Navarro Ruiz", email="claudia.navarro@quantix.com", password_hash=hash_super, rol=RolUsuario.SUPERVISOR, telefono="+51 992-333-010", sucursal_id=sur_id),
+            # Bodegueros adicionales (con sucursal asignada)
+            Usuario(nombre="Fernando Ríos Soto", email="fernando.rios@quantix.com", password_hash=hash_bodega, rol=RolUsuario.BODEGUERO, telefono="+51 993-444-011", sucursal_id=matriz_id),
+            Usuario(nombre="Javier Paredes Cano", email="javier.paredes@quantix.com", password_hash=hash_bodega, rol=RolUsuario.BODEGUERO, telefono="+51 993-444-012", sucursal_id=norte_id),
+            Usuario(nombre="David Salazar Peña", email="david.salazar@quantix.com", password_hash=hash_bodega, rol=RolUsuario.BODEGUERO, telefono="+51 993-444-013", sucursal_id=sur_id),
+            # Cajeros adicionales (con sucursal asignada)
+            Usuario(nombre="Ana Torres Valdivia", email="ana.torres@quantix.com", password_hash=hash_cajero, rol=RolUsuario.CAJERO, telefono="+51 994-555-014", sucursal_id=matriz_id),
+            Usuario(nombre="Luis Morales Castro", email="luis.morales@quantix.com", password_hash=hash_cajero, rol=RolUsuario.CAJERO, telefono="+51 994-555-015", sucursal_id=matriz_id),
+            Usuario(nombre="Camila Reyes Flores", email="camila.reyes@quantix.com", password_hash=hash_cajero, rol=RolUsuario.CAJERO, telefono="+51 994-555-022", sucursal_id=matriz_id),
+            Usuario(nombre="Valentina Cruz Pinto", email="valentina.cruz@quantix.com", password_hash=hash_cajero, rol=RolUsuario.CAJERO, telefono="+51 994-555-016", sucursal_id=norte_id),
+            Usuario(nombre="Gabriel Ortiz León", email="gabriel.ortiz@quantix.com", password_hash=hash_cajero, rol=RolUsuario.CAJERO, telefono="+51 994-555-017", sucursal_id=norte_id),
+            Usuario(nombre="Mariana Silva Ramos", email="mariana.silva@quantix.com", password_hash=hash_cajero, rol=RolUsuario.CAJERO, telefono="+51 994-555-018", sucursal_id=norte_id),
+            Usuario(nombre="Diego Chávez Prado", email="diego.chavez@quantix.com", password_hash=hash_cajero, rol=RolUsuario.CAJERO, telefono="+51 994-555-019", sucursal_id=sur_id),
+            Usuario(nombre="Lucía Vargas Beltrán", email="lucia.vargas@quantix.com", password_hash=hash_cajero, rol=RolUsuario.CAJERO, telefono="+51 994-555-020", sucursal_id=sur_id),
+            Usuario(nombre="Mateo Peña Villavicencio", email="mateo.pena@quantix.com", password_hash=hash_cajero, rol=RolUsuario.CAJERO, telefono="+51 994-555-021", sucursal_id=sur_id),
         ]
         session.add_all(usuarios_simulados)
         session.flush()
@@ -327,9 +331,9 @@ def run_seed():
             lote = LoteInventario(
                 producto_id=prod.id,
                 orden_compra_id=ordenes[idx % len(ordenes)].id,
-                codigo_lote=f"LOT-{prod.sku}-2601",
-                cantidad_inicial=Decimal("80.00"),
-                cantidad_disponible=Decimal("65.00"),
+                codigo_lote=f"LOT-{prod.sku}-MAT-2601",
+                cantidad_inicial=Decimal("150.00"),
+                cantidad_disponible=Decimal("120.00"),
                 costo_unitario=prod.costo_base,
                 fecha_ingreso=ahora - timedelta(days=20),
                 fecha_vencimiento=hoy_fecha + timedelta(days=dias_vence),
@@ -373,18 +377,17 @@ def run_seed():
             )
             lotes.append(lote_cad)
 
-        # Sucursal Norte: 18 lotes activos + 3 críticos + 1 caducado
-        for idx in range(18):
-            prod = productos[idx]
+        # Sucursal Norte: 25 lotes activos (1 por cada producto) + 3 críticos + 1 caducado
+        for idx, prod in enumerate(productos):
             dias_v = 40 + (idx * 4)
             lote_norte = LoteInventario(
                 producto_id=prod.id,
                 orden_compra_id=ordenes[idx % len(ordenes)].id,
                 codigo_lote=f"LOT-{prod.sku}-NORTE",
-                cantidad_inicial=Decimal("50.00"),
-                cantidad_disponible=Decimal("42.00"),
+                cantidad_inicial=Decimal("120.00"),
+                cantidad_disponible=Decimal("95.00"),
                 costo_unitario=prod.costo_base,
-                fecha_ingreso=ahora - timedelta(days=12),
+                fecha_ingreso=ahora - timedelta(days=15),
                 fecha_vencimiento=hoy_fecha + timedelta(days=dias_v),
                 estado=EstadoLote.ACTIVO,
                 sucursal_id=norte_id
@@ -417,18 +420,17 @@ def run_seed():
             sucursal_id=norte_id
         ))
 
-        # Sucursal Sur: 16 lotes activos + 2 críticos + 1 caducado
-        for idx in range(5, 21):
-            prod = productos[idx]
+        # Sucursal Sur: 25 lotes activos (1 por cada producto) + 2 críticos + 1 caducado
+        for idx, prod in enumerate(productos):
             dias_v = 35 + (idx * 3)
             lote_sur = LoteInventario(
                 producto_id=prod.id,
                 orden_compra_id=ordenes[idx % len(ordenes)].id,
                 codigo_lote=f"LOT-{prod.sku}-SUR",
-                cantidad_inicial=Decimal("40.00"),
-                cantidad_disponible=Decimal("34.00"),
+                cantidad_inicial=Decimal("100.00"),
+                cantidad_disponible=Decimal("80.00"),
                 costo_unitario=prod.costo_base,
-                fecha_ingreso=ahora - timedelta(days=15),
+                fecha_ingreso=ahora - timedelta(days=18),
                 fecha_vencimiento=hoy_fecha + timedelta(days=dias_v),
                 estado=EstadoLote.ACTIVO,
                 sucursal_id=sur_id
@@ -466,7 +468,7 @@ def run_seed():
         logger.info(f"   ✓ {len(lotes)} lotes FEFO creados en Matriz, Norte y Sur.")
 
         # =========================================================================
-        # 8. CLIENTES CRM (25)
+        # 8. CLIENTES CRM (40)
         # =========================================================================
         logger.info("8. Creando Clientes CRM...")
         clientes_raw = [
@@ -495,11 +497,26 @@ def run_seed():
             ("57913579", "991234523", "Diana Carolina León Beltrán", "diana.leon@gmail.com", 880),
             ("68024680", "991234524", "Javier Ignacio Tapia Núñez", "javier.tapia@outlook.com", 490),
             ("79135791", "991234525", "Andrea Marcela Cárdenas Gil", "andrea.cardenas@gmail.com", 1020),
+            ("81246902", "991234526", "Sebastián Alejandro Villegas Wong", "sebastian.villegas@gmail.com", 640),
+            ("92357013", "991234527", "Daniela Beatriz Alarcón Pacheco", "daniela.alarcon@gmail.com", 890),
+            ("03468124", "991234528", "Rodrigo Enrique Cabrera Fuentes", "rodrigo.cabrera@hotmail.com", 320),
+            ("14579235", "991234529", "Paola Vanessa Montenegro Saenz", "paola.montenegro@yahoo.com", 1100),
+            ("25680346", "991234530", "Felipe Eduardo Cáceres Barreda", "felipe.caceres@outlook.com", 560),
+            ("36791457", "991234531", "Camila Alejandra Zegarra Córdova", "camila.zegarra@gmail.com", 780),
+            ("47802568", "991234532", "Gonzalo Martín Espinoza Quiroz", "gonzalo.espinoza@gmail.com", 410),
+            ("58913679", "991234533", "Milagros Janet Coronado Tello", "milagros.coronado@hotmail.com", 950),
+            ("69024780", "991234534", "Renato Arturo Barrenechea Díaz", "renato.barrenechea@gmail.com", 230),
+            ("70135891", "991234535", "Adriana Lucía Salcedo Palacios", "adriana.salcedo@gmail.com", 1250),
+            ("81246903", "991234536", "Ignacio José Valenzuela Bravo", "ignacio.valenzuela@outlook.com", 670),
+            ("92357014", "991234537", "Jimena Rocío Arismendi Vera", "jimena.arismendi@gmail.com", 820),
+            ("03468125", "991234538", "Álvaro Daniel Portocarrero Gil", "alvaro.portocarrero@yahoo.com", 390),
+            ("14579236", "991234539", "Fiorella Ivette Bustamante Lora", "fiorella.bustamante@gmail.com", 1400),
+            ("25680347", "991234540", "Mauricio Andrés Benavides Polo", "mauricio.benavides@gmail.com", 510),
         ]
 
         clientes = []
         for i, (ced, tel, nom, em, pts) in enumerate(clientes_raw):
-            f_reg = ahora - timedelta(days=200 - (i * 7))
+            f_reg = ahora - timedelta(days=220 - (i * 5))
             cli = Cliente(
                 cedula=ced,
                 telefono=tel,
@@ -519,11 +536,14 @@ def run_seed():
         # =========================================================================
         logger.info("9. Creando Sesiones de Caja...")
         sesiones_caja = []
+        cajeros_matriz = [u for u in cajeros_list if u.sucursal_id == matriz_id]
+        cajeros_norte = [u for u in cajeros_list if u.sucursal_id == norte_id]
+        cajeros_sur = [u for u in cajeros_list if u.sucursal_id == sur_id]
 
-        # Matriz: 10 sesiones cerradas + 1 abierta de hoy
-        for i in range(10):
-            cajero_sel = cajeros_list[i % len(cajeros_list)]
-            dias_atras = 22 - (i * 2)
+        # Matriz: 18 sesiones cerradas (en los últimos 45 días) + 1 abierta de hoy
+        for i in range(18):
+            cajero_sel = cajeros_matriz[i % len(cajeros_matriz)]
+            dias_atras = 44 - int(i * 2.4)
             f_aper = ahora - timedelta(days=dias_atras, hours=8)
             f_cier = f_aper + timedelta(hours=8)
             ses = SesionCaja(
@@ -549,10 +569,10 @@ def run_seed():
         )
         sesiones_caja.append(sesion_activa)
 
-        # Sucursal Norte: 6 sesiones cerradas
-        for i in range(6):
-            cajero_sel = cajeros_list[(i + 2) % len(cajeros_list)]
-            dias_atras = 18 - (i * 3)
+        # Sucursal Norte: 10 sesiones cerradas (en los últimos 45 días)
+        for i in range(10):
+            cajero_sel = cajeros_norte[i % len(cajeros_norte)]
+            dias_atras = 42 - (i * 4)
             f_aper = ahora - timedelta(days=dias_atras, hours=8)
             f_cier = f_aper + timedelta(hours=8)
             ses = SesionCaja(
@@ -566,10 +586,10 @@ def run_seed():
             )
             sesiones_caja.append(ses)
 
-        # Sucursal Sur: 4 sesiones cerradas
-        for i in range(4):
-            cajero_sel = cajeros_list[(i + 4) % len(cajeros_list)]
-            dias_atras = 16 - (i * 4)
+        # Sucursal Sur: 8 sesiones cerradas (en los últimos 45 días)
+        for i in range(8):
+            cajero_sel = cajeros_sur[i % len(cajeros_sur)]
+            dias_atras = 40 - (i * 5)
             f_aper = ahora - timedelta(days=dias_atras, hours=8)
             f_cier = f_aper + timedelta(hours=8)
             ses = SesionCaja(
@@ -585,7 +605,7 @@ def run_seed():
 
         session.add_all(sesiones_caja)
         session.flush()
-        logger.info(f"   ✓ {len(sesiones_caja)} sesiones de caja (Matriz: 11, Norte: 6, Sur: 4).")
+        logger.info(f"   ✓ {len(sesiones_caja)} sesiones de caja (Matriz: 19, Norte: 10, Sur: 8).")
 
         # =========================================================================
         # 10. ARQUEOS DE CAJA (Para sesiones cerradas de todas las sucursales)
@@ -670,7 +690,7 @@ def run_seed():
         logger.info(f"   ✓ {len(movimientos)} movimientos de caja registrados.")
 
         # =========================================================================
-        # 12. VENTAS HISTÓRICAS (55 ventas distribuidas en Matriz, Norte y Sur)
+        # 12. VENTAS HISTÓRICAS (110 ventas distribuidas en Matriz, Norte y Sur)
         # =========================================================================
         logger.info("12. Creando Ventas Históricas con FEFO y Pagos en todas las sucursales...")
         ventas = []
@@ -681,27 +701,38 @@ def run_seed():
             {
                 "sucursal_id": matriz_id,
                 "codigo_pref": "MAT",
-                "cantidad": 25,
-                "sesiones": [s for s in sesiones_caja if s.sucursal_id == matriz_id],
+                "cantidad": 50,
+                "sesiones": [s for s in sesiones_caja if s.sucursal_id == matriz_id and s.estado == EstadoSesionCaja.CERRADA],
                 "lotes": [l for l in lotes if l.estado == EstadoLote.ACTIVO and l.sucursal_id == matriz_id]
             },
             {
                 "sucursal_id": norte_id,
                 "codigo_pref": "NOR",
-                "cantidad": 18,
-                "sesiones": [s for s in sesiones_caja if s.sucursal_id == norte_id],
+                "cantidad": 35,
+                "sesiones": [s for s in sesiones_caja if s.sucursal_id == norte_id and s.estado == EstadoSesionCaja.CERRADA],
                 "lotes": [l for l in lotes if l.estado == EstadoLote.ACTIVO and l.sucursal_id == norte_id]
             },
             {
                 "sucursal_id": sur_id,
                 "codigo_pref": "SUR",
-                "cantidad": 12,
-                "sesiones": [s for s in sesiones_caja if s.sucursal_id == sur_id],
+                "cantidad": 25,
+                "sesiones": [s for s in sesiones_caja if s.sucursal_id == sur_id and s.estado == EstadoSesionCaja.CERRADA],
                 "lotes": [l for l in lotes if l.estado == EstadoLote.ACTIVO and l.sucursal_id == sur_id]
             }
         ]
 
         ticket_correlativo = 1001
+        metodos_disponibles = [
+            MetodoPago.EFECTIVO,
+            MetodoPago.TARJETA,
+            MetodoPago.QR,
+            MetodoPago.EFECTIVO,
+            MetodoPago.TARJETA,
+            MetodoPago.TRANSFERENCIA,
+            MetodoPago.QR,
+            MetodoPago.EFECTIVO,
+        ]
+
         for cfg in config_ventas_sucursales:
             suc_id = cfg["sucursal_id"]
             suc_ses = cfg["sesiones"]
@@ -711,20 +742,24 @@ def run_seed():
 
             for i in range(cant_v):
                 ses = suc_ses[i % len(suc_ses)]
-                fecha_v = ses.fecha_apertura + timedelta(minutes=25 + (i * 14))
+                minutos_offset = 20 + ((i // len(suc_ses)) * 40) + ((i % 5) * 8)
+                fecha_v = ses.fecha_apertura + timedelta(minutes=minutos_offset)
                 folio = f"TKT-{suc_pref}-202602-{ticket_correlativo}"
                 ticket_correlativo += 1
 
-                cli = clientes[(i + (0 if suc_pref == "MAT" else (5 if suc_pref == "NOR" else 10))) % len(clientes)] if i % 4 != 3 else None
+                # ~65% con cliente registrado, rotando sobre los 40 clientes
+                cli = clientes[(i * 3 + (0 if suc_pref == "MAT" else (13 if suc_pref == "NOR" else 26))) % len(clientes)] if (i % 3 != 0) else None
 
-                n_items = 2 + (i % 3)
+                n_items = 1 + (i % 4)  # 1 a 4 artículos por venta
                 items_seleccionados = []
                 subtotal_venta = Decimal("0.00")
 
                 for j in range(n_items):
-                    lote_item = suc_lot[(i + j * 2) % len(suc_lot)]
+                    lote_item = suc_lot[(i * 2 + j * 3) % len(suc_lot)]
                     prod_item = next(p for p in productos if p.id == lote_item.producto_id)
                     cant_item = Decimal("2.00") if not prod_item.requiere_pesaje else Decimal("1.450")
+                    if i % 5 == 0 and not prod_item.requiere_pesaje:
+                        cant_item = Decimal("3.00")
                     subtot_item = (cant_item * prod_item.precio_venta).quantize(Decimal("0.01"))
                     costo_total_item = (cant_item * lote_item.costo_unitario).quantize(Decimal("0.01"))
                     margen_item = (subtot_item - costo_total_item).quantize(Decimal("0.01"))
@@ -740,7 +775,9 @@ def run_seed():
                     })
                     subtotal_venta += subtot_item
 
-                descuento = Decimal("2.50") if (i % 4 == 0 and cli is not None) else Decimal("0.00")
+                descuento = Decimal("3.00") if (i % 4 == 0 and cli is not None) else (Decimal("1.50") if i % 7 == 0 else Decimal("0.00"))
+                if descuento > subtotal_venta:
+                    descuento = Decimal("0.00")
                 impuestos = (subtotal_venta * Decimal("0.18")).quantize(Decimal("0.01"))
                 total_pagar = (subtotal_venta - descuento).quantize(Decimal("0.01"))
 
@@ -772,13 +809,20 @@ def run_seed():
                     )
                     detalles_venta.append(dv)
 
-                metodos = [MetodoPago.EFECTIVO, MetodoPago.TARJETA, MetodoPago.QR, MetodoPago.EFECTIVO]
-                met_sel = metodos[i % len(metodos)]
+                met_sel = metodos_disponibles[i % len(metodos_disponibles)]
+                ref_pago = None
+                if met_sel == MetodoPago.TARJETA:
+                    ref_pago = f"TXN-{suc_pref}-{88000+i}"
+                elif met_sel == MetodoPago.QR:
+                    ref_pago = f"YAPE-{suc_pref}-{44000+i}"
+                elif met_sel == MetodoPago.TRANSFERENCIA:
+                    ref_pago = f"TRF-{suc_pref}-{22000+i}"
+
                 pago = PagoVenta(
                     venta=v,
                     metodo_pago=met_sel,
                     monto=total_pagar,
-                    referencia_pasarela=f"TXN-{suc_pref}-{88000+i}" if met_sel == MetodoPago.TARJETA else (f"YAPE-{suc_pref}-{44000+i}" if met_sel == MetodoPago.QR else None)
+                    referencia_pasarela=ref_pago
                 )
                 pagos_venta.append(pago)
 
@@ -787,7 +831,7 @@ def run_seed():
         session.add_all(detalles_venta)
         session.add_all(pagos_venta)
         session.flush()
-        logger.info(f"   ✓ {len(ventas)} ventas, {len(detalles_venta)} detalles y {len(pagos_venta)} pagos registrados (Matriz: 25, Norte: 18, Sur: 12).")
+        logger.info(f"   ✓ {len(ventas)} ventas, {len(detalles_venta)} detalles y {len(pagos_venta)} pagos registrados (Matriz: 50, Norte: 35, Sur: 25).")
 
         # =========================================================================
         # 13. CUPONES (22)

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Sliders, Mail, Save, 
-  Send, CheckCircle2, AlertCircle, Eye, EyeOff, Loader2,
+  Send, Eye, EyeOff, Loader2,
   Calendar, DollarSign
 } from 'lucide-react';
 import api from '../services/api';
@@ -15,8 +15,6 @@ import {
 export default function Configuracion() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string | null>>({});
 
   // SMTP
@@ -56,7 +54,11 @@ export default function Configuracion() {
       setFefoDias2(String(data.politicas?.fefo_alerta_dias_2 || 30));
       setRfmMultiplicador(String(data.politicas?.rfm_multiplo_reactivacion || '1.5'));
     } catch {
-      setErrorMsg('No se pudieron cargar los parámetros del servidor.');
+      mostrarToast({
+        titulo: 'Error de Configuración',
+        mensaje: 'No se pudieron cargar los parámetros del servidor.',
+        severidad: 'CRITICO',
+      });
     } finally {
       setLoading(false);
     }
@@ -100,11 +102,13 @@ export default function Configuracion() {
 
   const handleGuardarCambios = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaveSuccess(null);
-    setErrorMsg(null);
 
     if (!validarConfiguracion()) {
-      setErrorMsg('Por favor corrige los campos con error antes de guardar.');
+      mostrarToast({
+        titulo: 'Validación Incompleta',
+        mensaje: 'Por favor corrige los campos con error antes de guardar.',
+        severidad: 'WARNING',
+      });
       return;
     }
 
@@ -125,17 +129,13 @@ export default function Configuracion() {
 
     try {
       await api.put('/configuracion', payload);
-      const exitoMsg = 'Parámetros globales guardados exitosamente.';
-      setSaveSuccess(exitoMsg);
       mostrarToast({
         titulo: 'Configuración Guardada',
-        mensaje: exitoMsg,
+        mensaje: 'Parámetros globales guardados exitosamente.',
         severidad: 'SUCCESS',
       });
-      setTimeout(() => setSaveSuccess(null), 4000);
     } catch (err: any) {
       const errorText = err.response?.data?.detail || 'Error al guardar los parámetros.';
-      setErrorMsg(errorText);
       mostrarToast({
         titulo: 'Error de Configuración',
         mensaje: errorText,
@@ -200,22 +200,6 @@ export default function Configuracion() {
   return (
     <div className="h-full overflow-y-auto bg-background text-on-surface p-6 md:p-8 select-none">
       <div className="w-full space-y-6 animate-in fade-in duration-300">
-      
-      {/* Toast Feedback */}
-      {saveSuccess && (
-        <div className="fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 bg-primary-fixed/30 text-on-primary-fixed-variant border border-primary-fixed rounded-2xl shadow-xl text-body-sm font-bold">
-          <CheckCircle2 className="w-5 h-5 text-primary" />
-          <span>{saveSuccess}</span>
-        </div>
-      )}
-
-      {errorMsg && (
-        <div className="fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 bg-error-container text-on-error-container border border-error rounded-2xl shadow-xl text-body-sm font-bold">
-          <AlertCircle className="w-5 h-5 text-error" />
-          <span>{errorMsg}</span>
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-surface-container-high/60 pb-5">
         <div>

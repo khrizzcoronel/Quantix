@@ -5,7 +5,7 @@ import {
   ShieldCheck, Package, Settings, Users,
   Cpu, UserCheck, Sun, Moon, Camera,
   Loader2, Clock, AlertTriangle, AlertCircle, RefreshCw,
-  Phone, Building2, ChevronDown
+  Phone, Building2, ChevronDown, Lock
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
@@ -36,9 +36,11 @@ export default function Layout() {
   const { sucursales, sucursalActual, cargarSucursales, seleccionarSucursal } = useSucursalStore();
   const [menuSucursalOpen, setMenuSucursalOpen] = useState(false);
 
+  const isDirector = user?.rol === 'DIRECTOR';
+
   useEffect(() => {
     void cargarSucursales();
-  }, [cargarSucursales]);
+  }, [cargarSucursales, user?.id, user?.sucursal_id]);
 
   // Estado de conexión WebSocket y sincronización offline gestionados globalmente
   const { estadoConexion } = useWebSocket();
@@ -174,9 +176,9 @@ export default function Layout() {
     .filter((sec) => sec.items.length > 0);
 
   return (
-    <div className="flex h-screen bg-background text-on-surface antialiased">
+    <div className="flex h-screen bg-background text-on-surface antialiased print:h-auto print:block print:bg-white print:overflow-visible">
       {/* Sidebar Menú con RBAC Estricto — Neo-Retail */}
-      <aside className="w-72 bg-surface-container-lowest border-r border-surface-container-high/60 flex flex-col justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-30 transition-all">
+      <aside className="w-72 bg-surface-container-lowest border-r border-surface-container-high/60 flex flex-col justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-30 transition-all print:hidden">
         
         {/* Encabezado Logo y Marca */}
         <div className="p-5 border-b border-surface-container-low flex flex-col items-center select-none">
@@ -187,27 +189,6 @@ export default function Layout() {
               className="h-12 w-auto object-contain max-w-[225px] transition-transform duration-200 group-hover:scale-[1.03] dark:brightness-125" 
             />
           </Link>
-
-          {/* Rol Activo Pill Card */}
-          <div className="w-full mt-4 bg-surface-container-low p-2.5 rounded-2xl flex items-center justify-between border border-surface-container-high/40">
-            <div className="flex flex-col min-w-0">
-              <span className="font-label-caps text-[10px] uppercase text-on-surface-variant font-bold">
-                Rol Activo
-              </span>
-              <span className="font-title-md text-body-sm text-on-surface font-semibold truncate">
-                {user?.nombre || 'Operador'}
-              </span>
-            </div>
-            <span className={`px-2.5 py-0.5 rounded-full font-label-caps text-[10px] uppercase tracking-wider font-bold ${
-              rol === 'DIRECTOR'
-                ? 'bg-tertiary-fixed text-on-tertiary-fixed'
-                : rol === 'SUPERVISOR'
-                ? 'bg-secondary-fixed text-on-secondary-fixed-variant'
-                : 'bg-primary-fixed text-on-primary-fixed-variant'
-            }`}>
-              {rol}
-            </span>
-          </div>
         </div>
         
         {/* Lista de Secciones y Módulos Autorizados */}
@@ -298,18 +279,31 @@ export default function Layout() {
             </div>
 
             <div className="flex items-center justify-between pt-1 border-t border-surface-container-high/50">
-              <button
-                type="button"
-                onClick={() => setModalPerfilOpen(true)}
-                className="flex items-center justify-center p-1.5 rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container-high/60 transition-colors cursor-pointer group"
-                title="Configuración de Perfil"
-                aria-label="Configuración de perfil"
-              >
-                <span className="material-symbols-outlined text-[18px] transition-transform duration-300 group-hover:rotate-45 leading-none">settings</span>
-              </button>
+              <div className="flex items-center gap-2 min-w-0">
+                <button
+                  type="button"
+                  onClick={() => setModalPerfilOpen(true)}
+                  className="flex items-center justify-center p-1.5 rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container-high/60 transition-colors cursor-pointer group shrink-0"
+                  title="Configuración de Perfil"
+                  aria-label="Configuración de perfil"
+                >
+                  <span className="material-symbols-outlined text-[18px] transition-transform duration-300 group-hover:rotate-45 leading-none">settings</span>
+                </button>
+                <span className={`px-2.5 py-0.5 rounded-full font-label-caps text-[10px] uppercase tracking-wider font-bold select-none truncate ${
+                  rol === 'DIRECTOR'
+                    ? 'bg-tertiary-fixed text-on-tertiary-fixed border border-tertiary-container/60 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800'
+                    : rol === 'SUPERVISOR'
+                    ? 'bg-secondary-fixed text-on-secondary-fixed-variant border border-secondary-container/60 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800'
+                    : rol === 'BODEGUERO'
+                    ? 'bg-blue-100 text-blue-900 border border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800'
+                    : 'bg-primary-fixed text-on-primary-fixed-variant border border-primary-container/60 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
+                }`}>
+                  {rol}
+                </span>
+              </div>
               <button 
                 onClick={handleLogout}
-                className="flex items-center gap-1 text-error hover:bg-error-container/30 px-2 py-1 rounded-full font-label-caps text-[10px] font-bold uppercase transition-colors cursor-pointer"
+                className="flex items-center gap-1 text-error hover:bg-error-container/30 px-2.5 py-1 rounded-full font-label-caps text-[10px] font-bold uppercase transition-colors cursor-pointer shrink-0"
                 title="Cerrar Sesión"
               >
                 <LogOut className="w-3 h-3" />
@@ -321,20 +315,89 @@ export default function Layout() {
       </aside>
 
       {/* Contenedor Principal con Barra Superior y Outlet */}
-      <div className="flex-1 flex flex-col h-screen min-w-0 overflow-hidden bg-background">
+      <div className="flex-1 flex flex-col h-screen min-w-0 overflow-hidden bg-background print:h-auto print:block print:overflow-visible print:bg-white print:w-full">
         
         {/* Barra Superior Global — Neo-Retail */}
-        <header className="h-16 bg-surface-container-lowest/90 backdrop-blur-xl border-b border-surface-container-high/60 px-6 md:px-8 flex items-center justify-between z-20 shrink-0 shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
+        <header className="h-16 bg-surface-container-lowest/90 backdrop-blur-xl border-b border-surface-container-high/60 px-6 md:px-8 flex items-center justify-between z-20 shrink-0 shadow-[0_1px_8px_rgba(0,0,0,0.04)] print:hidden">
           {/* Lado Izquierdo: Selector de Sucursal Activa */}
           <div className="flex items-center gap-3 min-w-0">
-            {/* Selector de Sucursal Activa */}
+            {/* Selector de Sucursal Activa con Leyenda */}
             {sucursalActual && (
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setMenuSucursalOpen(!menuSucursalOpen)}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-low hover:bg-surface-container border border-surface-container-high/60 font-title-md text-body-sm transition-all cursor-pointer shadow-xs"
-                  title="Cambiar sucursal activa de trabajo"
+              isDirector ? (
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setMenuSucursalOpen(!menuSucursalOpen)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container-low hover:bg-surface-container border border-surface-container-high/60 font-title-md text-body-sm transition-all cursor-pointer shadow-xs"
+                    title="Cambiar sucursal activa de trabajo (Acceso Director - Multi-Sede Global)"
+                  >
+                    <Building2 className="w-3.5 h-3.5 text-primary shrink-0" />
+                    <span className="font-bold text-on-surface max-w-[120px] sm:max-w-[180px] truncate">
+                      {sucursalActual.nombre}
+                    </span>
+                    {sucursalActual.es_matriz && (
+                      <span className="hidden sm:inline px-1.5 py-0.2 rounded-full font-label-caps text-[9px] font-bold uppercase bg-primary-container text-on-primary-container">
+                        Matriz
+                      </span>
+                    )}
+                    <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md font-label-caps text-[9px] font-bold uppercase bg-tertiary-fixed/30 text-on-tertiary-fixed-variant border border-tertiary-fixed/40">
+                      Multi-Sede
+                    </span>
+                    <ChevronDown className={`w-3.5 h-3.5 text-on-surface-variant transition-transform ${menuSucursalOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {/* Menú desplegable de Sucursales */}
+                  {menuSucursalOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-30"
+                        onClick={() => setMenuSucursalOpen(false)}
+                      />
+                      <div className="absolute left-0 mt-2 w-72 bg-surface-container-lowest rounded-2xl border border-surface-container-high/70 shadow-xl py-2 z-40 animate-in fade-in zoom-in duration-150">
+                        <div className="px-3.5 py-2 border-b border-surface-container-low flex flex-col gap-0.5">
+                          <span className="font-label-caps text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">
+                            Sucursales Disponibles ({sucursales.length})
+                          </span>
+                          <span className="text-[11px] text-primary font-medium">
+                            Leyenda: Acceso global para alternar sedes libremente
+                          </span>
+                        </div>
+                        <div className="max-h-56 overflow-y-auto py-1">
+                          {sucursales.map((suc) => {
+                            const isSelected = suc.id === sucursalActual.id;
+                            return (
+                              <button
+                                key={suc.id}
+                                type="button"
+                                onClick={() => {
+                                  seleccionarSucursal(suc);
+                                  setMenuSucursalOpen(false);
+                                }}
+                                className={`w-full px-3.5 py-2 text-left flex items-center justify-between hover:bg-surface-container transition-colors cursor-pointer ${
+                                  isSelected ? 'bg-primary-container/20 font-bold text-primary' : 'text-on-surface'
+                                }`}
+                              >
+                                <div className="flex flex-col min-w-0">
+                                  <span className="font-title-md text-body-sm truncate">{suc.nombre}</span>
+                                  <span className="font-label-caps text-[10px] text-on-surface-variant">{suc.codigo}</span>
+                                </div>
+                                {suc.es_matriz && (
+                                  <span className="px-2 py-0.5 rounded-full font-label-caps text-[9px] uppercase font-bold bg-secondary-container text-on-secondary-container">
+                                    Matriz
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container-low border border-surface-container-high/50 font-title-md text-body-sm shadow-xs select-none"
+                  title={`Sucursal fija asignada a tu usuario: ${sucursalActual.nombre}. Solo la dirección general puede alternar entre sucursales.`}
                 >
                   <Building2 className="w-3.5 h-3.5 text-primary shrink-0" />
                   <span className="font-bold text-on-surface max-w-[120px] sm:max-w-[180px] truncate">
@@ -345,54 +408,12 @@ export default function Layout() {
                       Matriz
                     </span>
                   )}
-                  <ChevronDown className={`w-3.5 h-3.5 text-on-surface-variant transition-transform ${menuSucursalOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {/* Menú desplegable de Sucursales */}
-                {menuSucursalOpen && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-30"
-                      onClick={() => setMenuSucursalOpen(false)}
-                    />
-                    <div className="absolute left-0 mt-2 w-64 bg-surface-container-lowest rounded-2xl border border-surface-container-high/70 shadow-xl py-2 z-40 animate-in fade-in zoom-in duration-150">
-                      <div className="px-3.5 py-1.5 border-b border-surface-container-low">
-                        <span className="font-label-caps text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">
-                          Sucursales Disponibles ({sucursales.length})
-                        </span>
-                      </div>
-                      <div className="max-h-56 overflow-y-auto py-1">
-                        {sucursales.map((suc) => {
-                          const isSelected = suc.id === sucursalActual.id;
-                          return (
-                            <button
-                              key={suc.id}
-                              type="button"
-                              onClick={() => {
-                                seleccionarSucursal(suc);
-                                setMenuSucursalOpen(false);
-                              }}
-                              className={`w-full px-3.5 py-2 text-left flex items-center justify-between hover:bg-surface-container transition-colors cursor-pointer ${
-                                isSelected ? 'bg-primary-container/20 font-bold text-primary' : 'text-on-surface'
-                              }`}
-                            >
-                              <div className="flex flex-col min-w-0">
-                                <span className="font-title-md text-body-sm truncate">{suc.nombre}</span>
-                                <span className="font-label-caps text-[10px] text-on-surface-variant">{suc.codigo}</span>
-                              </div>
-                              {suc.es_matriz && (
-                                <span className="px-2 py-0.5 rounded-full font-label-caps text-[9px] uppercase font-bold bg-secondary-container text-on-secondary-container">
-                                  Matriz
-                                </span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md font-label-caps text-[9px] font-bold uppercase bg-surface-container-high text-on-surface-variant border border-surface-container-high">
+                    <Lock className="w-2.5 h-2.5 text-amber-500 shrink-0" />
+                    <span>Sede Fija</span>
+                  </span>
+                </div>
+              )
             )}
           </div>
 
@@ -465,7 +486,7 @@ export default function Layout() {
 
         {/* Banner Persistente de Modo Offline Seguro */}
         {connectivityStatus === 'OFFLINE_LISTO' && (
-          <div className="bg-amber-500 text-white px-6 py-2.5 flex items-center justify-between shadow-sm z-15 text-body-sm font-medium">
+          <div className="bg-amber-500 text-white px-6 py-2.5 flex items-center justify-between shadow-sm z-15 text-body-sm font-medium print:hidden">
             <div className="flex items-center gap-2.5 min-w-0">
               <AlertTriangle className="w-4 h-4 shrink-0 text-amber-100" />
               <span className="truncate">
@@ -498,7 +519,7 @@ export default function Layout() {
 
         {/* Banner Persistente de Modo Offline No Disponible */}
         {connectivityStatus === 'OFFLINE_NO_DISPONIBLE' && (
-          <div className="bg-error text-on-error px-6 py-2.5 flex items-center justify-between shadow-sm z-15 text-body-sm font-medium">
+          <div className="bg-error text-on-error px-6 py-2.5 flex items-center justify-between shadow-sm z-15 text-body-sm font-medium print:hidden">
             <div className="flex items-center gap-2.5 min-w-0">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span className="truncate">
@@ -519,7 +540,7 @@ export default function Layout() {
 
         {/* Indicador Discreto de Sincronización en Progreso */}
         {connectivityStatus === 'ONLINE' && pendingSyncCount > 0 && (
-          <div className="bg-primary text-on-primary px-6 py-1.5 flex items-center justify-between text-body-sm font-medium z-15">
+          <div className="bg-primary text-on-primary px-6 py-1.5 flex items-center justify-between text-body-sm font-medium z-15 print:hidden">
             <div className="flex items-center gap-2 min-w-0">
               <Loader2 className="w-3.5 h-3.5 animate-spin text-primary-fixed shrink-0" />
               <span className="truncate">
@@ -537,25 +558,31 @@ export default function Layout() {
         )}
 
         {/* Contenido de Página */}
-        <main className="flex-1 overflow-hidden relative bg-background">
+        <main className="flex-1 overflow-hidden relative bg-background print:overflow-visible print:h-auto print:block print:bg-white print:p-0">
           <Outlet />
         </main>
       </div>
 
       {/* NOTIFICACIONES EMERGENTES / TOASTS */}
-      <ToastContainer />
+      <div className="print:hidden">
+        <ToastContainer />
+      </div>
 
       {/* MODAL PERFIL DE USUARIO */}
-      <PerfilUsuarioModal
-        isOpen={modalPerfilOpen}
-        onClose={() => setModalPerfilOpen(false)}
-      />
+      <div className="print:hidden">
+        <PerfilUsuarioModal
+          isOpen={modalPerfilOpen}
+          onClose={() => setModalPerfilOpen(false)}
+        />
+      </div>
 
       {/* MODAL MI TURNO / MI ACTIVIDAD */}
-      <MiActividadModal 
-        isOpen={modalActividadOpen} 
-        onClose={() => setModalActividadOpen(false)} 
-      />
+      <div className="print:hidden">
+        <MiActividadModal 
+          isOpen={modalActividadOpen} 
+          onClose={() => setModalActividadOpen(false)} 
+        />
+      </div>
     </div>
   );
 }

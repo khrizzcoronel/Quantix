@@ -23,6 +23,8 @@ interface SucursalState {
   seleccionarPorId: (id: string) => void;
 }
 
+import { useAuthStore } from './authStore';
+
 export const MATRIZ_DEFAULT_ID = "00000000-0000-0000-0000-000000000001";
 
 export const useSucursalStore = create<SucursalState>()(
@@ -40,7 +42,19 @@ export const useSucursalStore = create<SucursalState>()(
           const lista: Sucursal[] = res.data || [];
           set({ sucursales: lista, cargando: false });
 
-          // Si no hay sucursalActual seleccionada o ya no existe en la lista, seleccionar la matriz o la primera
+          const user = useAuthStore.getState().user;
+          const isDirector = user?.rol === 'DIRECTOR';
+
+          // Si el usuario no es Director y tiene sucursal asignada, fijarla estrictamente
+          if (!isDirector && user?.sucursal_id) {
+            const asignada = lista.find((s) => s.id === user.sucursal_id);
+            if (asignada) {
+              set({ sucursalActual: asignada });
+              return;
+            }
+          }
+
+          // Para Director o si no hay asignación fija: mantener la actual si existe o seleccionar la matriz
           const actual = get().sucursalActual;
           if (!actual || !lista.some((s) => s.id === actual.id)) {
             const matriz = lista.find((s) => s.es_matriz) || lista[0] || null;
@@ -52,10 +66,20 @@ export const useSucursalStore = create<SucursalState>()(
       },
 
       seleccionarSucursal: (sucursal: Sucursal) => {
+        const user = useAuthStore.getState().user;
+        const isDirector = user?.rol === 'DIRECTOR';
+        if (!isDirector && user?.sucursal_id) {
+          return;
+        }
         set({ sucursalActual: sucursal });
       },
 
       seleccionarPorId: (id: string) => {
+        const user = useAuthStore.getState().user;
+        const isDirector = user?.rol === 'DIRECTOR';
+        if (!isDirector && user?.sucursal_id) {
+          return;
+        }
         const encontrada = get().sucursales.find((s) => s.id === id);
         if (encontrada) {
           set({ sucursalActual: encontrada });

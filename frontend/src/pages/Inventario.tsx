@@ -107,7 +107,6 @@ export default function Inventario() {
     isBodeguero ? 'lotes' : 'catalogo'
   );
   const [loading, setLoading] = useState(false);
-  const [feedback, setFeedback] = useState<{ tipo: 'success' | 'error'; mensaje: string } | null>(null);
 
   // Estados de datos
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -207,13 +206,11 @@ export default function Inventario() {
   const [errorsCat, setErrorsCat] = useState<Record<string, string | null>>({});
 
   const showToast = useCallback((tipo: 'success' | 'error', mensaje: string) => {
-    setFeedback({ tipo, mensaje });
     mostrarToast({
       titulo: tipo === 'success' ? 'Inventario' : 'Error en Inventario',
       mensaje,
       severidad: tipo === 'success' ? 'SUCCESS' : 'CRITICO',
     });
-    setTimeout(() => setFeedback(null), 4000);
   }, []);
 
   const cargarDatos = useCallback(async () => {
@@ -957,20 +954,6 @@ export default function Inventario() {
 
   return (
     <div className="p-6 md:p-8 h-full overflow-y-auto bg-background text-on-surface font-body-md select-none">
-      {/* Toast Feedback */}
-      {feedback && (
-        <div className={`fixed top-5 right-8 z-50 flex items-center gap-3 px-5 py-3 rounded-2xl shadow-xl border text-body-sm font-semibold transition-all ${
-          feedback.tipo === 'success' 
-            ? 'bg-primary text-on-primary border-primary-container' 
-            : 'bg-error text-on-error border-error-container'
-        }`}>
-          <span className="material-symbols-outlined text-xl">
-            {feedback.tipo === 'success' ? 'check_circle' : 'error'}
-          </span>
-          <span>{feedback.mensaje}</span>
-        </div>
-      )}
-
       {/* Banner de Modo Bodeguero */}
       {isBodeguero && (
         <div className="mb-6 p-4 bg-amber-500/10 border border-amber-300/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-900 shadow-xs">

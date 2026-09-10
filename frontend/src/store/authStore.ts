@@ -9,6 +9,8 @@ export interface User {
   rol: string;
   avatar?: string | null;
   telefono?: string | null;
+  sucursal_id?: string | null;
+  sucursal_nombre?: string | null;
 }
 
 interface AuthState {

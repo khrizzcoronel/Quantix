@@ -9,6 +9,7 @@ class ClienteCreate(BaseModel):
     telefono: str = Field(..., description="Teléfono celular (Usado como ID rápido en caja)")
     nombre: str = Field(..., max_length=255)
     email: Optional[EmailStr] = None
+    sucursal_id: Optional[UUID] = None
 
 class ClienteUpdate(BaseModel):
     cedula: Optional[str] = Field(None, max_length=30)
@@ -17,9 +18,12 @@ class ClienteUpdate(BaseModel):
     email: Optional[EmailStr] = None
     puntos_acumulados: Optional[int] = Field(None, ge=0)
     activo: Optional[bool] = None
+    sucursal_id: Optional[UUID] = None
 
 class ClienteResponse(BaseModel):
     id: UUID
+    sucursal_id: Optional[UUID] = None
+    sucursal_nombre: Optional[str] = None
     cedula: Optional[str] = None
     telefono: str
     nombre: str
@@ -31,6 +35,7 @@ class ClienteResponse(BaseModel):
 
 class ValidarCuponRequest(BaseModel):
     codigo: str = Field(..., description="Código alfanumérico del cupón")
+    sucursal_id: Optional[UUID] = Field(None, description="Sucursal donde se intenta validar")
 
 class ValidarCuponResponse(BaseModel):
     valido: bool
@@ -41,6 +46,7 @@ class ValidarCuponResponse(BaseModel):
 
 class CuponCreate(BaseModel):
     cliente_id: UUID
+    sucursal_id: Optional[UUID] = None
     codigo: str = Field(..., max_length=50)
     tipo: str = Field(default="MANUAL", description="CUMPLEANIOS, REACTIVACION, COMBO, MANUAL")
     descuento_tipo: str = Field(default="PORCENTAJE", description="PORCENTAJE, MONTO_FIJO")
@@ -52,6 +58,8 @@ class CuponResponse(BaseModel):
     id: UUID
     cliente_id: UUID
     cliente_nombre: Optional[str] = None
+    sucursal_id: Optional[UUID] = None
+    sucursal_nombre: Optional[str] = None
     codigo: str
     tipo: str
     descuento_tipo: str

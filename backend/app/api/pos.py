@@ -20,7 +20,7 @@ from app.models.ventas import (
     DescuentoTipo, EstadoVenta
 )
 from app.models.usuarios import Usuario, AuditoriaEvento, SesionCaja, EstadoSesionCaja
-from app.api.deps import get_current_user, RoleChecker
+from app.api.deps import get_current_user, RoleChecker, enforce_sucursal_scope
 from app.api.ws import notif_manager
 from app.schemas.promociones import ItemCarritoEvaluar
 from app.services.promociones_engine import evaluar_promociones_carrito
@@ -63,12 +63,13 @@ async def buscar_producto(
     if not producto:
         raise HTTPException(status_code=404, detail="Producto no encontrado o inactivo")
         
+    sucursal_efectiva = enforce_sucursal_scope(current_user, sucursal_id)
     stock_query = select(func.sum(LoteInventario.cantidad_disponible)).where(
         LoteInventario.producto_id == producto.id,
         LoteInventario.estado == 'ACTIVO'
     )
-    if sucursal_id:
-        stock_query = stock_query.where(LoteInventario.sucursal_id == sucursal_id)
+    if sucursal_efectiva:
+        stock_query = stock_query.where(LoteInventario.sucursal_id == sucursal_efectiva)
 
     stock_result = await db.execute(stock_query)
     stock_total = stock_result.scalar() or 0
@@ -470,10 +471,11 @@ async def listar_ventas(
         .outerjoin(DetalleVenta, DetalleVenta.venta_id == Venta.id)
     )
     
+    sucursal_efectiva = enforce_sucursal_scope(current_user, sucursal_id)
     if sesion_caja_id:
         query = query.where(Venta.sesion_caja_id == sesion_caja_id)
-    if sucursal_id:
-        query = query.where(Venta.sucursal_id == sucursal_id)
+    if sucursal_efectiva:
+        query = query.where(Venta.sucursal_id == sucursal_efectiva)
         
     query = (
         query

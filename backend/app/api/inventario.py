@@ -10,7 +10,7 @@ from decimal import Decimal
 import math
 
 from app.db.oltp import get_db
-from app.api.deps import RoleChecker, get_current_user
+from app.api.deps import RoleChecker, get_current_user, enforce_sucursal_scope
 from app.models.usuarios import Usuario, AuditoriaEvento
 from app.models.inventario import (
     Categoria, Proveedor, Producto, LoteInventario, 
@@ -213,9 +213,10 @@ async def listar_productos(
         case((LoteInventario.estado == EstadoLote.ACTIVO, LoteInventario.id), else_=None)
     ).label("lotes_activos_count")
 
+    sucursal_efectiva = enforce_sucursal_scope(current_user, sucursal_id)
     lote_join = (LoteInventario.producto_id == Producto.id)
-    if sucursal_id:
-        lote_join = and_(lote_join, LoteInventario.sucursal_id == sucursal_id)
+    if sucursal_efectiva:
+        lote_join = and_(lote_join, LoteInventario.sucursal_id == sucursal_efectiva)
 
     query = (
         select(
@@ -458,6 +459,7 @@ async def listar_lotes(
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
+    sucursal_efectiva = enforce_sucursal_scope(current_user, sucursal_id)
     query = (
         select(LoteInventario, Producto.nombre.label("producto_nombre"), Producto.sku.label("producto_sku"))
         .join(Producto, LoteInventario.producto_id == Producto.id)
@@ -466,8 +468,8 @@ async def listar_lotes(
         query = query.where(LoteInventario.producto_id == producto_id)
     if estado:
         query = query.where(LoteInventario.estado == estado)
-    if sucursal_id:
-        query = query.where(LoteInventario.sucursal_id == sucursal_id)
+    if sucursal_efectiva:
+        query = query.where(LoteInventario.sucursal_id == sucursal_efectiva)
 
     query = query.order_by(LoteInventario.fecha_vencimiento.asc().nullslast(), LoteInventario.fecha_ingreso.desc())
     result = await db.execute(query)
@@ -507,7 +509,9 @@ async def registrar_ingreso_directo(
     if not producto:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
     
-    sucursal_id_lote = req.sucursal_id or getattr(current_user, 'sucursal_id', None) or UUID("00000000-0000-0000-0000-000000000001")
+    sucursal_id_lote = enforce_sucursal_scope(current_user, req.sucursal_id)
+    if not sucursal_id_lote:
+        sucursal_id_lote = getattr(current_user, 'sucursal_id', None) or UUID("00000000-0000-0000-0000-000000000001")
 
     nuevo_lote = LoteInventario(
         producto_id=req.producto_id,
@@ -566,6 +570,14 @@ async def modificar_lote(
     lote = await db.get(LoteInventario, lote_id)
     if not lote:
         raise HTTPException(status_code=404, detail="Lote no encontrado")
+
+    rol_str = current_user.rol.value if hasattr(current_user.rol, 'value') else str(current_user.rol)
+    if rol_str != "DIRECTOR" and current_user.sucursal_id:
+        if lote.sucursal_id and lote.sucursal_id != current_user.sucursal_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Acceso denegado: No tienes autorización para modificar lotes de otra sucursal"
+            )
     
     if req.codigo_lote is not None:
         lote.codigo_lote = req.codigo_lote
@@ -606,6 +618,14 @@ async def dar_de_baja_lote(
     lote = await db.get(LoteInventario, lote_id)
     if not lote:
         raise HTTPException(status_code=404, detail="Lote no encontrado")
+
+    rol_str = current_user.rol.value if hasattr(current_user.rol, 'value') else str(current_user.rol)
+    if rol_str != "DIRECTOR" and current_user.sucursal_id:
+        if lote.sucursal_id and lote.sucursal_id != current_user.sucursal_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Acceso denegado: No tienes autorización para dar de baja lotes de otra sucursal"
+            )
     
     cant_baja = req.cantidad_baja if req.cantidad_baja is not None else lote.cantidad_disponible
     if cant_baja <= 0:
@@ -781,6 +801,7 @@ async def sugerencias_reorden_compra(
     productos = res_prod.all()
 
     # 2. Stock consolidado activo por producto
+    sucursal_efectiva = enforce_sucursal_scope(current_user, sucursal_id)
     query_stock = (
         select(
             LoteInventario.producto_id,
@@ -788,8 +809,8 @@ async def sugerencias_reorden_compra(
         )
         .where(LoteInventario.estado == EstadoLote.ACTIVO)
     )
-    if sucursal_id:
-        query_stock = query_stock.where(LoteInventario.sucursal_id == sucursal_id)
+    if sucursal_efectiva:
+        query_stock = query_stock.where(LoteInventario.sucursal_id == sucursal_efectiva)
     query_stock = query_stock.group_by(LoteInventario.producto_id)
 
     res_stock = await db.execute(query_stock)
@@ -805,8 +826,8 @@ async def sugerencias_reorden_compra(
         .join(Venta, DetalleVenta.venta_id == Venta.id)
         .where(Venta.estado == EstadoVenta.COMPLETADA, Venta.fecha_hora >= hace_30_dias)
     )
-    if sucursal_id:
-        query_ventas = query_ventas.where(Venta.sucursal_id == sucursal_id)
+    if sucursal_efectiva:
+        query_ventas = query_ventas.where(Venta.sucursal_id == sucursal_efectiva)
     query_ventas = query_ventas.group_by(DetalleVenta.producto_id)
 
     res_ventas = await db.execute(query_ventas)
@@ -1108,6 +1129,7 @@ async def recibir_orden(
             
             vencimiento = item.fecha_vencimiento or req_data.fecha_vencimiento_general or (date.today() + timedelta(days=180))
 
+            sucursal_recepcion = current_user.sucursal_id or UUID("00000000-0000-0000-0000-000000000001")
             nuevo_lote = LoteInventario(
                 producto_id=item.producto_id,
                 orden_compra_id=orden.id,
@@ -1116,12 +1138,14 @@ async def recibir_orden(
                 cantidad_disponible=cant_ahora,
                 costo_unitario=costo,
                 fecha_vencimiento=vencimiento,
-                estado=EstadoLote.ACTIVO
+                estado=EstadoLote.ACTIVO,
+                sucursal_id=sucursal_recepcion
             )
             db.add(nuevo_lote)
             lotes_creados.append(nuevo_lote)
     else:
         # Recepción total del saldo pendiente de cada ítem
+        sucursal_recepcion = current_user.sucursal_id or UUID("00000000-0000-0000-0000-000000000001")
         for det in orden.detalles:
             pendiente = max(Decimal("0.00"), det.cantidad_solicitada - (det.cantidad_recibida or Decimal("0.00")))
             if pendiente <= Decimal("0.00"):
@@ -1138,7 +1162,8 @@ async def recibir_orden(
                 cantidad_disponible=pendiente,
                 costo_unitario=det.costo_unitario_pactado,
                 fecha_vencimiento=vencimiento,
-                estado=EstadoLote.ACTIVO
+                estado=EstadoLote.ACTIVO,
+                sucursal_id=sucursal_recepcion
             )
             db.add(nuevo_lote)
             lotes_creados.append(nuevo_lote)
@@ -1191,6 +1216,7 @@ async def alertas_caducidad(
     current_user: Usuario = Depends(bodega_roles)
 ):
     fecha_limite = date.today() + timedelta(days=dias_alerta)
+    sucursal_efectiva = enforce_sucursal_scope(current_user, sucursal_id)
     
     query = (
         select(LoteInventario, Producto.nombre.label("producto_nombre"), Producto.sku.label("producto_sku"))
@@ -1201,8 +1227,8 @@ async def alertas_caducidad(
             LoteInventario.cantidad_disponible > 0
         )
     )
-    if sucursal_id:
-        query = query.where(LoteInventario.sucursal_id == sucursal_id)
+    if sucursal_efectiva:
+        query = query.where(LoteInventario.sucursal_id == sucursal_efectiva)
         
     query = query.order_by(LoteInventario.fecha_vencimiento.asc())
     

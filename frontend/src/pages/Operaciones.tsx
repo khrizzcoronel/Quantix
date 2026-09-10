@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  RefreshCw, CheckCircle2, AlertCircle, 
+  RefreshCw, CheckCircle2, 
   Layers, HardDrive, Cpu, 
   Clock, Zap, FileText, Eye, X,
   ShieldCheck, ArrowRight, Database, Download,
@@ -90,7 +90,6 @@ export default function Operaciones() {
   const [loadingHistorial, setLoadingHistorial] = useState(false);
   const [ejecutando, setEjecutando] = useState(false);
   const [nuevoIntervalo, setNuevoIntervalo] = useState<string>('5');
-  const [feedback, setFeedback] = useState<{ tipo: 'success' | 'error'; mensaje: string } | null>(null);
   const [resultadoReciente, setResultadoReciente] = useState<any>(null);
   const [detalleLog, setDetalleLog] = useState<RegistroETL | null>(null);
 
@@ -105,13 +104,11 @@ export default function Operaciones() {
   const [guardandoResolucion, setGuardandoResolucion] = useState(false);
 
   const showToast = (tipo: 'success' | 'error', mensaje: string) => {
-    setFeedback({ tipo, mensaje });
     mostrarToast({
       titulo: tipo === 'success' ? 'Operaciones & ETL' : 'Error en Operaciones',
       mensaje,
       severidad: tipo === 'success' ? 'SUCCESS' : 'CRITICO',
     });
-    setTimeout(() => setFeedback(null), 5000);
   };
 
   const cargarTodo = async () => {
@@ -290,18 +287,6 @@ export default function Operaciones() {
     <div className="h-full overflow-y-auto bg-background text-on-surface p-6 md:p-8 select-none">
       <div className="w-full space-y-6 animate-in fade-in duration-300">
       
-      {/* Feedback Toast */}
-      {feedback && (
-        <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl border text-body-sm font-bold ${
-          feedback.tipo === 'success' 
-            ? 'bg-primary-fixed/30 text-on-primary-fixed-variant border-primary-fixed' 
-            : 'bg-error-container text-on-error-container border-error'
-        }`}>
-          {feedback.tipo === 'success' ? <CheckCircle2 className="w-5 h-5 text-primary" /> : <AlertCircle className="w-5 h-5 text-error" />}
-          <span>{feedback.mensaje}</span>
-        </div>
-      )}
-
       {/* Header General */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-surface-container-high/60 pb-5">
         <div className="flex items-center gap-3">

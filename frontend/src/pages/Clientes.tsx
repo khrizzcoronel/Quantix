@@ -3,15 +3,19 @@ import {
   Users, UserPlus, Search, Award, 
   Tag, CheckCircle2, Eye, Edit3, 
   Trash2, X, Plus, RefreshCw, ShoppingBag, Ban,
-  Sparkles, Download
+  Sparkles, Download, Building2, Lock, ChevronDown
 } from 'lucide-react';
 import api from '../services/api';
 import { exportToCSV, formatDate, formatBoolean } from '../utils/exportUtils';
 import { mostrarToast } from '../hooks/useWebSocket';
 import { validateCedulaRuc, validateRequired, validatePhone, validateEmail, validatePositiveNumber } from '../utils/validation';
+import { useSucursalStore } from '../store/sucursalStore';
+import { useAuthStore } from '../store/authStore';
 
 interface Cliente {
   id: string;
+  sucursal_id?: string | null;
+  sucursal_nombre?: string | null;
   cedula?: string | null;
   telefono: string;
   nombre: string;
@@ -25,6 +29,8 @@ interface Cupon {
   id: string;
   cliente_id: string;
   cliente_nombre?: string;
+  sucursal_id?: string | null;
+  sucursal_nombre?: string | null;
   codigo: string;
   tipo: string;
   descuento_tipo: string;
@@ -70,6 +76,31 @@ interface CatalogoItem {
 }
 
 export default function Clientes() {
+  const user = useAuthStore((state) => state.user);
+  const isDirector = user?.rol === 'DIRECTOR';
+  const { sucursales, sucursalActual, cargarSucursales, seleccionarPorId } = useSucursalStore();
+
+  // Multi-sede selector: Director can view ALL or filter by branch; Supervisor is locked
+  const [sucursalFiltroId, setSucursalFiltroId] = useState<string>(() => sucursalActual?.id || 'ALL');
+
+  useEffect(() => {
+    void cargarSucursales();
+  }, [cargarSucursales]);
+
+  // Sincronizar sucursal seleccionada con la activa global del header
+  useEffect(() => {
+    if (sucursalActual) {
+      setSucursalFiltroId(sucursalActual.id);
+    }
+  }, [sucursalActual?.id]);
+
+  const handleCambiarSucursal = (nuevaId: string) => {
+    setSucursalFiltroId(nuevaId);
+    if (nuevaId !== 'ALL' && seleccionarPorId) {
+      seleccionarPorId(nuevaId);
+    }
+  };
+
   const [activeTab, setActiveTab] = useState<'CLIENTES' | 'CUPONES' | 'PROMOCIONES'>('CLIENTES');
   const [loading, setLoading] = useState(false);
 
@@ -107,6 +138,7 @@ export default function Clientes() {
   // Modales de CRUD Cliente
   const [showModalCrearCliente, setShowModalCrearCliente] = useState(false);
   const [clienteAEditar, setClienteAEditar] = useState<Cliente | null>(null);
+  const [formClienteSucursalId, setFormClienteSucursalId] = useState<string>('');
   const [formCliente, setFormCliente] = useState({
     cedula: '',
     nombre: '',
@@ -116,6 +148,7 @@ export default function Clientes() {
 
   // Modales de CRUD Cupón
   const [showModalCrearCupon, setShowModalCrearCupon] = useState(false);
+  const [formCuponSucursalId, setFormCuponSucursalId] = useState<string>('');
   const [formCupon, setFormCupon] = useState({
     cliente_id: '',
     codigo: '',
@@ -179,16 +212,12 @@ export default function Clientes() {
     return Object.keys(errs).length === 0;
   };
 
-  const [notificacion, setNotificacion] = useState<string | null>(null);
-
   const mostrarAviso = (msg: string, severidad: 'SUCCESS' | 'CRITICO' | 'WARNING' | 'INFO' = 'SUCCESS') => {
-    setNotificacion(msg);
     mostrarToast({
       titulo: severidad === 'CRITICO' ? 'Error en Clientes / CRM' : 'Clientes & CRM',
       mensaje: msg,
       severidad,
     });
-    setTimeout(() => setNotificacion(null), 3500);
   };
 
   const cargarClientes = useCallback(async (query = '') => {
@@ -197,6 +226,14 @@ export default function Clientes() {
       const params = new URLSearchParams();
       if (soloActivos) params.append('activo_only', 'true');
       if (query.trim()) params.append('q', query.trim());
+
+      const sucParam = isDirector
+        ? (sucursalFiltroId === 'ALL' ? undefined : sucursalFiltroId)
+        : (sucursalActual?.id || user?.sucursal_id || undefined);
+      if (sucParam) {
+        params.append('sucursal_id', sucParam);
+      }
+
       const res = await api.get(`/crm/clientes?${params.toString()}`);
       setClientes(res.data);
     } catch {
@@ -205,17 +242,25 @@ export default function Clientes() {
     } finally {
       setLoading(false);
     }
-  }, [soloActivos]);
+  }, [soloActivos, isDirector, sucursalFiltroId, sucursalActual?.id, user?.sucursal_id]);
 
-  const cargarCupones = async () => {
+  const cargarCupones = useCallback(async () => {
     try {
-      const res = await api.get('/crm/cupones');
+      const params = new URLSearchParams();
+      const sucParam = isDirector
+        ? (sucursalFiltroId === 'ALL' ? undefined : sucursalFiltroId)
+        : (sucursalActual?.id || user?.sucursal_id || undefined);
+      if (sucParam) {
+        params.append('sucursal_id', sucParam);
+      }
+
+      const res = await api.get(`/crm/cupones?${params.toString()}`);
       setCupones(res.data);
     } catch {
       setCupones([]);
       mostrarAviso('No se pudieron cargar los cupones.');
     }
-  };
+  }, [isDirector, sucursalFiltroId, sucursalActual?.id, user?.sucursal_id]);
 
   const cargarPromociones = async () => {
     try {
@@ -252,7 +297,7 @@ export default function Clientes() {
       void cargarPromociones();
       void cargarCatalogos();
     });
-  }, [cargarClientes]);
+  }, [cargarClientes, cargarCupones]);
 
   const handleBuscar = (e: React.FormEvent) => {
     e.preventDefault();
@@ -278,15 +323,21 @@ export default function Clientes() {
     if (!validarFormCliente()) return;
 
     try {
+      const sucursalFinal = isDirector
+        ? (formClienteSucursalId || (sucursalFiltroId !== 'ALL' ? sucursalFiltroId : (sucursalActual?.id || null)))
+        : (sucursalActual?.id || user?.sucursal_id || null);
+
       await api.post('/crm/clientes', {
         cedula: formCliente.cedula.trim() || null,
         nombre: formCliente.nombre.trim(),
         telefono: formCliente.telefono.trim(),
         email: formCliente.email.trim() || null,
+        sucursal_id: sucursalFinal,
       });
       mostrarAviso('¡Cliente registrado exitosamente!');
       setShowModalCrearCliente(false);
       setFormCliente({ cedula: '', nombre: '', telefono: '', email: '' });
+      setFormClienteSucursalId('');
       setErrorsCliente({});
       cargarClientes();
     } catch (err: any) {
@@ -364,8 +415,13 @@ export default function Clientes() {
     if (!validarFormCupon()) return;
 
     try {
+      const sucursalFinal = isDirector
+        ? (formCuponSucursalId || (sucursalFiltroId !== 'ALL' ? sucursalFiltroId : (sucursalActual?.id || null)))
+        : (sucursalActual?.id || user?.sucursal_id || null);
+
       await api.post('/crm/cupones', {
         cliente_id: formCupon.cliente_id,
+        sucursal_id: sucursalFinal,
         codigo: formCupon.codigo,
         tipo: formCupon.tipo,
         descuento_tipo: formCupon.descuento_tipo,
@@ -384,6 +440,7 @@ export default function Clientes() {
         valido_desde: '',
         valido_hasta: '',
       });
+      setFormCuponSucursalId('');
       setErrorsCupon({});
       cargarCupones();
     } catch (err: any) {
@@ -466,6 +523,18 @@ export default function Clientes() {
             <span className="px-3 py-1 bg-primary-fixed/30 text-on-primary-fixed-variant rounded-full font-label-caps text-[10px] font-bold uppercase tracking-wider">
               Nivel Operativo • Piso & Fidelización
             </span>
+            {sucursalFiltroId !== 'ALL' && sucursales.find(s => s.id === sucursalFiltroId) && (
+              <span className="px-3 py-1 bg-secondary-fixed/40 text-on-secondary-fixed-variant rounded-full font-label-caps text-[10px] font-bold flex items-center gap-1">
+                <Building2 className="w-3 h-3" />
+                {sucursales.find(s => s.id === sucursalFiltroId)?.nombre}
+              </span>
+            )}
+            {sucursalFiltroId === 'ALL' && (
+              <span className="px-3 py-1 bg-tertiary-fixed/40 text-on-tertiary-fixed-variant rounded-full font-label-caps text-[10px] font-bold flex items-center gap-1">
+                <Building2 className="w-3 h-3" />
+                Consolidado Multi-Sede
+              </span>
+            )}
           </div>
           <h2 className="font-headline-xl text-2xl md:text-3xl font-bold text-on-surface tracking-tight mt-2">
             Clientes, Fidelización & Promociones
@@ -476,6 +545,37 @@ export default function Clientes() {
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Selector de Sucursal Multi-Sede */}
+          <div className="flex items-center gap-2 mr-1">
+            {isDirector ? (
+              <div className="relative">
+                <select
+                  value={sucursalFiltroId}
+                  onChange={(e) => handleCambiarSucursal(e.target.value)}
+                  className="pl-8 pr-8 py-2 rounded-full bg-surface-container-lowest text-on-surface font-title-md text-xs font-semibold border border-surface-container-high appearance-none cursor-pointer focus:outline-primary shadow-xs hover:bg-surface-container"
+                  title="Filtrar clientes y cupones por sucursal"
+                >
+                  <option value="ALL">Todas las Sucursales (Consolidado)</option>
+                  {sucursales.map((suc) => (
+                    <option key={suc.id} value={suc.id}>
+                      {suc.nombre} {suc.es_matriz ? '(Matriz)' : ''}
+                    </option>
+                  ))}
+                </select>
+                <Building2 className="w-3.5 h-3.5 text-primary absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <ChevronDown className="w-3.5 h-3.5 text-outline absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+            ) : (
+              <div 
+                className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-secondary-fixed/50 border border-secondary-fixed-dim text-on-secondary-fixed-variant shadow-xs text-xs font-bold"
+                title="Acceso restringido a sucursal asignada"
+              >
+                <Lock className="w-3.5 h-3.5 text-secondary" />
+                <span>{sucursalActual?.nombre || 'Mi Sucursal Asignada'}</span>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={() => {
               cargarClientes();
@@ -498,6 +598,7 @@ export default function Clientes() {
                   columns: [
                     { key: 'nombre', header: 'Nombre Cliente' },
                     { key: 'telefono', header: 'Teléfono' },
+                    { key: 'sucursal_nombre', header: 'Sucursal', formatter: (v) => v || 'Central / Matriz' },
                     { key: 'email', header: 'Correo Electrónico', formatter: (v) => v || 'N/A' },
                     { key: 'puntos_acumulados', header: 'Puntos Acumulados' },
                     { key: 'activo', header: 'Activo', formatter: (v) => formatBoolean(v) },
@@ -510,6 +611,7 @@ export default function Clientes() {
                   data: cupones,
                   columns: [
                     { key: 'codigo', header: 'Código Cupón' },
+                    { key: 'sucursal_nombre', header: 'Sucursal Emisión', formatter: (v) => v || 'Todas las Sedes' },
                     { key: 'tipo', header: 'Tipo Cupón' },
                     { key: 'descuento_tipo', header: 'Tipo Descuento' },
                     { key: 'descuento_valor', header: 'Valor Descuento' },
@@ -583,13 +685,6 @@ export default function Clientes() {
           )}
         </div>
       </div>
-
-      {notificacion && (
-        <div className="bg-primary-fixed/30 border border-primary-fixed text-on-primary-fixed-variant text-body-sm p-4 rounded-2xl mb-6 flex items-center gap-2.5 shadow-sm animate-in fade-in">
-          <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
-          <span className="font-bold">{notificacion}</span>
-        </div>
-      )}
 
       {/* KPI Cards CRM */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
@@ -724,6 +819,7 @@ export default function Clientes() {
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/20 text-xs font-semibold text-gray-500 uppercase">
                 <th className="py-3.5 px-4">Nombre Completo</th>
+                <th className="py-3.5 px-4">Sucursal</th>
                 <th className="py-3.5 px-4">Teléfono (ID)</th>
                 <th className="py-3.5 px-4">Email</th>
                 <th className="py-3.5 px-4 text-center">Puntos Acumulados</th>
@@ -734,7 +830,7 @@ export default function Clientes() {
             <tbody className="divide-y divide-gray-100 text-xs">
               {clientes.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-gray-400">
+                  <td colSpan={7} className="text-center py-8 text-gray-400">
                     No se encontraron clientes registrados con los filtros aplicados
                   </td>
                 </tr>
@@ -752,6 +848,12 @@ export default function Clientes() {
                           Cédula: {c.cedula}
                         </div>
                       )}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-700">
+                        <Building2 className="w-3 h-3 text-quantix-600" />
+                        <span>{c.sucursal_nombre || 'Matriz Centro'}</span>
+                      </span>
                     </td>
                     <td className="py-3.5 px-4 font-mono text-gray-700 font-semibold">
                       {c.telefono}
@@ -829,6 +931,7 @@ export default function Clientes() {
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/20 text-xs font-semibold text-gray-500 uppercase">
                 <th className="py-3.5 px-4">Código Promocional</th>
+                <th className="py-3.5 px-4">Sucursal Emisión</th>
                 <th className="py-3.5 px-4">Cliente Beneficiario</th>
                 <th className="py-3.5 px-4 text-center">Tipo de Cupón</th>
                 <th className="py-3.5 px-4 text-center">Descuento</th>
@@ -840,7 +943,7 @@ export default function Clientes() {
             <tbody className="divide-y divide-gray-100 text-xs">
               {cupones.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-8 text-gray-400">No hay cupones emitidos</td>
+                  <td colSpan={8} className="text-center py-8 text-gray-400">No hay cupones emitidos</td>
                 </tr>
               ) : (
                 cupones.map((cp) => (
@@ -851,6 +954,12 @@ export default function Clientes() {
                   >
                     <td className="py-3.5 px-4 font-mono font-bold text-quantix-600 text-sm">
                       {cp.codigo}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-700">
+                        <Building2 className="w-3 h-3 text-quantix-600" />
+                        <span>{cp.sucursal_nombre || 'Todas las Sedes'}</span>
+                      </span>
                     </td>
                     <td className="py-3.5 px-4 font-medium text-gray-800">
                       {cp.cliente_nombre || 'Cliente Asignado'}
@@ -1045,7 +1154,14 @@ export default function Clientes() {
                   <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Monedero de Lealtad:</span>
                   <p className="font-headline-md text-title-md font-black text-primary">{detalleCliente.puntos_acumulados} puntos</p>
                 </div>
-                <div className="col-span-2">
+                <div>
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Sucursal Asignada:</span>
+                  <p className="font-title-md text-body-sm font-semibold text-on-surface flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-primary" />
+                    <span>{detalleCliente.sucursal_nombre || 'Matriz Centro'}</span>
+                  </p>
+                </div>
+                <div>
                   <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Estado de Cuenta:</span>
                   <span className={`inline-block px-2.5 py-0.5 rounded-full font-label-caps text-[10px] font-bold uppercase ${
                     detalleCliente.activo ? 'bg-primary-fixed/30 text-on-primary-fixed-variant' : 'bg-surface-container-highest text-on-surface-variant'
@@ -1152,8 +1268,19 @@ export default function Clientes() {
                   <p className="font-title-md text-body-sm font-bold text-on-surface">{detalleCupon.cliente_nombre || 'N/A'}</p>
                 </div>
                 <div>
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Sucursal Emisión:</span>
+                  <p className="font-title-md text-body-sm font-bold text-on-surface flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-primary" />
+                    <span>{detalleCupon.sucursal_nombre || 'Todas las Sedes'}</span>
+                  </p>
+                </div>
+                <div>
                   <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Tipo:</span>
                   <p className="font-title-md text-body-sm font-bold text-on-surface">{detalleCupon.tipo}</p>
+                </div>
+                <div>
+                  <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Estado:</span>
+                  <p className="font-mono text-body-sm text-on-surface font-semibold">{detalleCupon.estado}</p>
                 </div>
                 <div>
                   <span className="font-label-caps text-[10px] text-outline font-bold uppercase block mb-1">Válido Desde:</span>
@@ -1314,6 +1441,30 @@ export default function Clientes() {
                   </div>
                 )}
               </div>
+
+              {isDirector && (
+                <div>
+                  <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                    Sucursal Asignada
+                  </label>
+                  <select
+                    value={formClienteSucursalId}
+                    onChange={(e) => setFormClienteSucursalId(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-2xl font-title-md text-body-sm text-on-surface bg-surface-container-low border border-surface-container-high/40 focus:outline-none cursor-pointer"
+                  >
+                    <option value="">
+                      {sucursalFiltroId !== 'ALL' 
+                        ? `${sucursales.find(s => s.id === sucursalFiltroId)?.nombre || 'Sucursal Seleccionada'} (Por Defecto)`
+                        : `${sucursalActual?.nombre || 'Matriz Centro'} (Por Defecto)`}
+                    </option>
+                    {sucursales.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.nombre} {s.es_matriz ? '(Matriz)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="pt-3 border-t border-surface-container-low flex gap-2 justify-end">
                 <button
@@ -1594,6 +1745,30 @@ export default function Clientes() {
                   </div>
                 )}
               </div>
+
+              {isDirector && (
+                <div>
+                  <label className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider font-bold block mb-1.5">
+                    Sucursal de Emisión
+                  </label>
+                  <select
+                    value={formCuponSucursalId}
+                    onChange={(e) => setFormCuponSucursalId(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-2xl font-title-md text-body-sm text-on-surface bg-surface-container-low border border-surface-container-high/40 focus:outline-none cursor-pointer"
+                  >
+                    <option value="">
+                      {sucursalFiltroId !== 'ALL' 
+                        ? `${sucursales.find(s => s.id === sucursalFiltroId)?.nombre || 'Sucursal Seleccionada'} (Por Defecto)`
+                        : `${sucursalActual?.nombre || 'Matriz Centro'} (Por Defecto)`}
+                    </option>
+                    {sucursales.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.nombre} {s.es_matriz ? '(Matriz)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="pt-3 border-t border-surface-container-low flex gap-2 justify-end">
                 <button

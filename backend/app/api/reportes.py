@@ -935,23 +935,28 @@ async def generar_reporte(
             else:
                 # Detalle individual fila por fila
                 cols_select = [
+                    "f.detalle_id AS id",
                     "f.detalle_id",
                     "f.venta_id",
-                    "CAST(f.fecha_id AS VARCHAR) AS fecha",
+                    "CAST(f.sucursal_id AS VARCHAR) AS sucursal_id",
+                    "CAST(f.fecha_hora AS VARCHAR) AS fecha",
                     "EXTRACT(HOUR FROM f.fecha_hora) AS hora",
-                    "v_raw.folio_ticket",
+                    "COALESCE(v_raw.folio_ticket, 'TKT-' || SUBSTRING(CAST(f.venta_id AS VARCHAR), 1, 8)) AS folio_ticket",
                     "s.codigo AS sucursal_codigo",
-                    "s.nombre AS sucursal_nombre",
-                    "u.nombre AS cajero_nombre",
-                    "c.nombre AS cliente_nombre",
+                    "COALESCE(s.nombre, 'Sucursal ' || s.codigo) AS sucursal_nombre",
+                    "COALESCE(u.nombre, 'Cajero General') AS cajero_nombre",
+                    "COALESCE(c.nombre, 'Consumidor Final') AS cliente_nombre",
                     "p.sku AS producto_sku",
-                    "p.nombre AS producto_nombre",
-                    "p.categoria_nombre",
-                    "f.cantidad",
-                    "f.precio_unitario",
-                    "f.costo_unitario",
-                    "f.subtotal",
-                    "f.margen_ganancia",
+                    "COALESCE(p.nombre, 'Producto General') AS producto_nombre",
+                    "COALESCE(p.categoria_nombre, 'General') AS categoria_nombre",
+                    "CAST(f.cantidad AS DOUBLE) AS cantidad",
+                    "CAST(f.precio_unitario AS DOUBLE) AS precio_unitario",
+                    "CAST(f.costo_unitario AS DOUBLE) AS costo_unitario",
+                    "CAST(f.subtotal AS DOUBLE) AS subtotal",
+                    "CAST(COALESCE(f.total_descuento, 0.0) AS DOUBLE) AS descuento",
+                    "CAST(COALESCE(f.total_impuestos, 0.0) AS DOUBLE) AS impuestos",
+                    "CAST(COALESCE(f.total_pagar, f.subtotal) AS DOUBLE) AS total",
+                    "CAST(COALESCE(f.margen_ganancia, 0.0) AS DOUBLE) AS margen_ganancia",
                     "ROUND(COALESCE(f.margen_ganancia / NULLIF(f.subtotal, 0) * 100, 0), 2) AS margen_pct",
                     "COALESCE(pg.metodo_pago, 'EFECTIVO') AS metodo_pago",
                     "f.estado"
@@ -959,10 +964,10 @@ async def generar_reporte(
                 group_by = ""
                 order_default = "f.fecha_hora DESC"
                 header_cols = [
-                    "fecha", "hora", "folio_ticket", "sucursal_codigo", "sucursal_nombre",
+                    "fecha", "hora", "folio_ticket", "sucursal_id", "sucursal_codigo", "sucursal_nombre",
                     "cajero_nombre", "cliente_nombre", "producto_sku", "producto_nombre",
                     "categoria_nombre", "cantidad", "precio_unitario", "costo_unitario",
-                    "subtotal", "margen_ganancia", "margen_pct", "metodo_pago", "estado"
+                    "subtotal", "descuento", "impuestos", "total", "margen_ganancia", "margen_pct", "metodo_pago", "estado"
                 ]
 
             # Si el usuario solicitó columnas específicas y es detalle, respetar la selección
@@ -1036,7 +1041,7 @@ async def generar_reporte(
                     elif isinstance(v, (datetime, date)):
                         cleaned_row[k] = v.isoformat()
                     elif isinstance(v, float) and (np.isnan(v) or np.isinf(v)):
-                        cleaned_row[k] = 0.0
+                        cleaned_row[k] = 0.0 if k in ("subtotal", "total", "cantidad", "precio_unitario", "costo_unitario", "margen_ganancia", "margen_pct", "descuento", "impuestos", "hora") else ""
                     elif isinstance(v, (np.floating,)):
                         cleaned_row[k] = round(float(v), 2)
                     elif isinstance(v, (np.integer,)):

@@ -9,6 +9,8 @@ class UserAuthResponse(BaseModel):
     rol: str
     avatar: Optional[str] = None
     telefono: Optional[str] = None
+    sucursal_id: Optional[UUID] = None
+    sucursal_nombre: Optional[str] = None
 
 class Token(BaseModel):
     access_token: str

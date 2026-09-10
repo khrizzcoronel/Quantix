@@ -17,10 +17,21 @@ import ArqueoCiegoModal from '../components/ArqueoCiegoModal';
 import TicketModal, { type TicketData } from '../components/TicketModal';
 import MovimientoCajaModal from '../components/MovimientoCajaModal';
 import CorteXModal from '../components/CorteXModal';
-import VentaFlashGrid, { type ProductoCatalogo } from '../components/VentaFlashGrid';
 import SimuladorPagoModal from '../components/SimuladorPagoModal';
 import api from '../services/api';
 import { mostrarToast } from '../hooks/useWebSocket';
+
+export interface ProductoCatalogo {
+  producto_id: string;
+  sku: string;
+  nombre: string;
+  precio_venta: number;
+  codigo_barras?: string;
+  stock_total?: number;
+  categoria_nombre?: string;
+  requiere_pesaje?: boolean;
+  imagen?: string | null;
+}
 
 interface VentaTicket {
   id: string;
@@ -95,9 +106,6 @@ export default function POS() {
   const [showArqueoModal, setShowArqueoModal] = useState(false);
   const [saleSuccess, setSaleSuccess] = useState<string | null>(null);
   const [operationError, setOperationError] = useState<string | null>(null);
-
-  // Modo Venta Flash Táctil
-  const [modoVentaFlash, setModoVentaFlash] = useState(false);
 
   // Búsquedas Recientes
   const [busquedasRecientes, setBusquedasRecientes] = useState<string[]>(() => {
@@ -497,7 +505,8 @@ export default function POS() {
         cedula: registroCedula.trim(),
         nombre: registroNombre.trim(),
         telefono: registroCelular.trim(),
-        email: registroCorreo.trim() || null
+        email: registroCorreo.trim() || null,
+        sucursal_id: sucursalActual?.id || null
       });
 
       const nuevo = res.data;
@@ -538,7 +547,10 @@ export default function POS() {
       return;
     }
     try {
-      const res = await api.post('/crm/cupones/validar', { codigo: codigoCupon });
+      const res = await api.post('/crm/cupones/validar', { 
+        codigo: codigoCupon,
+        sucursal_id: sucursalActual?.id || null 
+      });
       if (res.data.valido) {
         const desc = res.data.tipo_descuento === 'PORCENTAJE' 
           ? (total * Number(res.data.valor_descuento)) / 100
@@ -921,109 +933,148 @@ export default function POS() {
       {/* Panel Izquierdo: Buscador, Catálogo y Terminal Ágil */}
       <div className="flex-1 flex flex-col p-4 sm:p-5 overflow-hidden">
         
-        {/* Barra de Estado de Sesión de Caja & Gamificación Meta del Turno */}
-        <div className="bg-surface-container-lowest p-pad-card-sm rounded-2xl shadow-xs border border-surface-container-high/60 mb-3 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-primary-fixed/25 text-on-primary-fixed-variant rounded-full">
-              <span className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse" />
-              <span className="font-label-caps text-label-caps uppercase tracking-wider font-bold">
-                {sesionActiva?.terminal_id || 'CAJA-01'}
-              </span>
+        {/* Barra de Estado de Sesión de Caja & Gamificación Meta del Turno (Dos Filas con Leyendas Completas) */}
+        <div className="bg-surface-container-lowest p-3 sm:p-3.5 rounded-2xl shadow-xs border border-surface-container-high/60 mb-3 flex flex-col gap-2.5 w-full">
+          {/* Fila 1: Terminal, Fondo Inicial y Meta del Turno */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_2.5fr] gap-2.5 w-full items-center">
+            {/* 1. Terminal ID */}
+            <div className="col-span-1 flex items-center gap-2.5 px-3 py-2 bg-primary-fixed/20 border border-primary/20 rounded-xl h-[52px] w-full min-w-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse shrink-0" />
+              <div className="flex flex-col min-w-0">
+                <span className="text-[10px] font-bold text-on-primary-fixed-variant/70 uppercase tracking-wider leading-none mb-1 truncate">
+                  Terminal
+                </span>
+                <span className="font-label-caps text-xs sm:text-[13px] font-bold text-on-primary-fixed-variant truncate">
+                  {sesionActiva?.terminal_id || 'CAJA-01'}
+                </span>
+              </div>
             </div>
-            {sucursalActual && (
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-surface-container-low border border-surface-container-high/60 rounded-full text-xs font-semibold text-on-surface">
-                <span className="material-symbols-outlined text-[16px] text-primary">store</span>
-                <span>{sucursalActual.nombre}</span>
-              </div>
-            )}
-            <span className="font-body-sm text-body-sm text-on-surface-variant hidden sm:inline">
-              Fondo inicial: <strong className="text-on-surface font-mono font-semibold">${Number(sesionActiva?.fondo_inicial || 0).toFixed(2)}</strong>
-            </span>
-            <span className="font-body-sm text-body-sm text-on-surface-variant hidden xl:inline">
-              Lector DS2208: <strong className="text-primary font-semibold">Listo</strong>
-            </span>
-          </div>
 
-          {/* Gamificación: Meta del Turno Neo-Retail */}
-          <div className="flex items-center">
-            {metaCumplida ? (
-              <div className="flex items-center gap-2 px-3.5 py-1.5 bg-primary-fixed/30 border border-primary/20 rounded-full animate-in fade-in shadow-xs">
-                <Trophy className="w-4 h-4 text-amber-500 shrink-0 animate-bounce" />
-                <div className="flex flex-col text-left leading-tight">
-                  <span className="font-label-caps text-[10px] font-bold text-on-primary-fixed-variant uppercase tracking-wider">
-                    ¡Meta Cumplida! ({porcentajeMeta}%)
-                  </span>
-                  <span className="font-label-numeric-md text-body-sm font-bold text-primary font-mono">
-                    ${ventasTurnoTotal.toFixed(2)} / ${metaTurno.toFixed(2)}
-                  </span>
-                </div>
+            {/* 2. Fondo Inicial */}
+            <div className="col-span-1 flex items-center gap-2.5 px-3 py-2 bg-surface-container-low border border-surface-container-high/60 rounded-xl h-[52px] w-full min-w-0">
+              <span className="material-symbols-outlined text-[18px] text-secondary shrink-0">payments</span>
+              <div className="flex flex-col min-w-0">
+                <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider leading-none mb-1 truncate">
+                  Fondo Inicial
+                </span>
+                <span className="text-xs sm:text-[13px] font-mono font-bold text-on-surface truncate">
+                  ${Number(sesionActiva?.fondo_inicial || 0).toFixed(2)}
+                </span>
               </div>
-            ) : (
-              <div className="flex items-center gap-3 px-3.5 py-1.5 bg-surface-container-low rounded-full min-w-[210px] border border-surface-container-high/40">
-                <Target className="w-4 h-4 text-primary shrink-0" />
-                <div className="flex-1 text-left">
-                  <div className="flex justify-between items-center font-label-caps text-[10px] text-on-surface-variant font-bold mb-1 leading-none">
-                    <span>Meta del Turno</span>
-                    <span className="font-mono text-primary font-bold">{porcentajeMeta}%</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-surface-container rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-primary-container rounded-full transition-all duration-500"
-                      style={{ width: `${porcentajeMeta}%` }}
-                    />
+            </div>
+
+            {/* 3. Gamificación: Meta del Turno */}
+            <div className="col-span-1 sm:col-span-2 lg:col-span-1 w-full min-w-0">
+              {metaCumplida ? (
+                <div className="flex items-center gap-3 px-3.5 py-2 bg-primary-fixed/30 border border-primary/20 rounded-xl animate-in fade-in shadow-xs h-[52px] w-full min-w-0">
+                  <Trophy className="w-5 h-5 text-amber-500 shrink-0 animate-bounce" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center leading-none mb-1">
+                      <span className="text-[10px] font-bold text-on-primary-fixed-variant uppercase tracking-wider truncate">
+                        Meta del Turno
+                      </span>
+                      <span className="text-[10px] font-bold text-primary uppercase tracking-wider">
+                        ¡Cumplida al {porcentajeMeta}%!
+                      </span>
+                    </div>
+                    <span className="font-mono text-xs font-bold text-primary truncate block">
+                      ${ventasTurnoTotal.toFixed(2)} / ${metaTurno.toFixed(2)}
+                    </span>
                   </div>
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="flex items-center gap-3 px-3.5 py-2 bg-surface-container-low rounded-xl border border-surface-container-high/60 h-[52px] w-full min-w-0">
+                  <Target className="w-5 h-5 text-primary shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center leading-none mb-1.5">
+                      <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider truncate">
+                        Meta del Turno ({porcentajeMeta}%)
+                      </span>
+                      <span className="font-mono text-[11px] font-bold text-on-surface truncate">
+                        ${ventasTurnoTotal.toFixed(2)} / ${metaTurno.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="w-full h-1.5 bg-surface-container-high/60 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary rounded-full transition-all duration-500"
+                        style={{ width: `${porcentajeMeta}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Acciones de la barra superior */}
-          <div className="flex items-center gap-2">
-            {/* Toggle Modo Venta Flash */}
-            <button
-              onClick={() => setModoVentaFlash(!modoVentaFlash)}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-title-md text-body-sm transition-all shadow-xs ${
-                modoVentaFlash
-                  ? 'bg-primary-container text-on-primary-container font-bold shadow-sm'
-                  : 'bg-surface-container-low hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-semibold'
-              }`}
-            >
-              <Zap className={`w-4 h-4 ${modoVentaFlash ? 'fill-current' : 'text-primary'}`} />
-              <span>{modoVentaFlash ? 'Venta Flash ON' : 'Venta Flash'}</span>
-            </button>
+          {/* Separador fino entre filas */}
+          <div className="h-px bg-surface-container-high/40 w-full" />
 
+          {/* Fila 2: 4 botones de acción con leyendas operativas */}
+          <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-2 w-full items-center">
+            {/* 1. Movimientos de Caja */}
             <button
               onClick={() => setShowMovimientoModal(true)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-surface-container-low hover:bg-surface-container text-on-surface-variant font-title-md text-body-sm font-semibold transition-colors shadow-xs cursor-pointer"
+              className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface-variant hover:text-on-surface border border-surface-container-high/60 text-left transition-colors shadow-xs h-[52px] w-full min-w-0 cursor-pointer"
               title="Movimientos de Caja (Ingresos / Egresos extraordinarios)"
             >
-              <ArrowUpDown className="w-4 h-4 text-primary" />
-              <span className="hidden lg:inline">Movimientos</span>
+              <ArrowUpDown className="w-5 h-5 text-primary shrink-0" />
+              <div className="flex flex-col min-w-0">
+                <span className="text-[10px] font-bold text-on-surface-variant/70 uppercase tracking-wider leading-none mb-1 truncate">
+                  Ingreso / Egreso
+                </span>
+                <span className="text-xs sm:text-[13px] font-bold text-on-surface leading-none truncate">
+                  Movimientos
+                </span>
+              </div>
             </button>
 
+            {/* 2. Corte X */}
             <button
               onClick={() => setShowCorteXModal(true)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-surface-container-low hover:bg-surface-container text-on-surface-variant font-title-md text-body-sm font-semibold transition-colors shadow-xs cursor-pointer"
+              className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface-variant hover:text-on-surface border border-surface-container-high/60 text-left transition-colors shadow-xs h-[52px] w-full min-w-0 cursor-pointer"
               title="Corte X (Arqueo Parcial en Tiempo Real)"
             >
-              <FileSpreadsheet className="w-4 h-4 text-secondary" />
-              <span className="hidden md:inline">Corte X</span>
+              <FileSpreadsheet className="w-5 h-5 text-secondary shrink-0" />
+              <div className="flex flex-col min-w-0">
+                <span className="text-[10px] font-bold text-on-surface-variant/70 uppercase tracking-wider leading-none mb-1 truncate">
+                  Arqueo Parcial
+                </span>
+                <span className="text-xs sm:text-[13px] font-bold text-on-surface leading-none truncate">
+                  Corte X
+                </span>
+              </div>
             </button>
 
+            {/* 3. Tickets Recientes */}
             <button
               onClick={verTicketsRecientes}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-surface-container-low hover:bg-surface-container text-on-surface-variant font-title-md text-body-sm font-semibold transition-colors shadow-xs cursor-pointer"
+              className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface-variant hover:text-on-surface border border-surface-container-high/60 text-left transition-colors shadow-xs h-[52px] w-full min-w-0 cursor-pointer"
             >
-              <Receipt className="w-4 h-4 text-secondary" />
-              <span className="hidden md:inline">Tickets</span>
+              <Receipt className="w-5 h-5 text-secondary shrink-0" />
+              <div className="flex flex-col min-w-0">
+                <span className="text-[10px] font-bold text-on-surface-variant/70 uppercase tracking-wider leading-none mb-1 truncate">
+                  Historial Turno
+                </span>
+                <span className="text-xs sm:text-[13px] font-bold text-on-surface leading-none truncate">
+                  Tickets
+                </span>
+              </div>
             </button>
 
+            {/* 4. Arqueo / Cierre */}
             <button
               onClick={() => setShowArqueoModal(true)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-error-container/30 hover:bg-error-container text-error font-title-md text-body-sm font-semibold transition-colors cursor-pointer"
+              className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-error-container/25 hover:bg-error-container/40 text-error border border-error/20 text-left transition-colors shadow-xs h-[52px] w-full min-w-0 cursor-pointer"
             >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden md:inline">Arqueo</span>
+              <LogOut className="w-5 h-5 shrink-0" />
+              <div className="flex flex-col min-w-0">
+                <span className="text-[10px] font-bold text-error/70 uppercase tracking-wider leading-none mb-1 truncate">
+                  Cierre de Caja
+                </span>
+                <span className="text-xs sm:text-[13px] font-bold text-error leading-none truncate">
+                  Arqueo
+                </span>
+              </div>
             </button>
           </div>
         </div>
@@ -1046,22 +1097,8 @@ export default function POS() {
           </div>
         )}
 
-        {/* MODO VENTA FLASH (Si está activo) */}
-        {modoVentaFlash ? (
-          <VentaFlashGrid
-            products={products}
-            onSelectProduct={(p, qty) => {
-              const count = qty || 1;
-              for (let i = 0; i < count; i++) {
-                addItem(p);
-              }
-              registrarBusquedaReciente(p.nombre);
-            }}
-            onClose={() => setModoVentaFlash(false)}
-          />
-        ) : (
-          /* MODO CATÁLOGO ESTÁNDAR CON AUTOCOMPLETADO Y BÚSQUEDAS RECIENTES */
-          <div className="flex-1 flex flex-col overflow-hidden">
+        {/* CATÁLOGO DE PRODUCTOS CON AUTOCOMPLETADO Y BÚSQUEDAS RECIENTES */}
+        <div className="flex-1 flex flex-col overflow-hidden">
             {/* Buscador en Vivo & Autocompletado */}
             <div className="bg-surface-container-lowest p-pad-card-sm sm:p-pad-card-lg rounded-2xl shadow-xs border border-surface-container-high/60 mb-3 flex flex-col gap-2">
               <div className="relative flex items-center">
@@ -1314,8 +1351,7 @@ export default function POS() {
               </span>
             </div>
           </div>
-        )}
-      </div>
+        </div>
 
       {/* Panel Derecho: Ticket en Curso / Carrito de Venta Neo-Retail */}
       <div className="w-[440px] bg-surface-container-lowest border-l border-surface-container-high/70 shadow-xl flex flex-col z-10 p-pad-card-lg">

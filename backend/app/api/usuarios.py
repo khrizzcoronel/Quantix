@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
+from sqlalchemy.orm import selectinload
 from typing import List, Optional
 from uuid import UUID
 
 from app.db.oltp import get_db
-from app.api.deps import RoleChecker, get_current_user
+from app.api.deps import RoleChecker, get_current_user, enforce_sucursal_scope
 from app.core.security import get_password_hash, verify_password
 from app.models.usuarios import Usuario, RolUsuario
 from app.schemas.usuarios import UsuarioCreate, UsuarioUpdate, UsuarioResponse, AvatarUpdate, PerfilUpdate
@@ -15,18 +16,37 @@ router = APIRouter()
 director_only = RoleChecker(["DIRECTOR"])
 director_o_supervisor = RoleChecker(["DIRECTOR", "SUPERVISOR"])
 
+def _to_usuario_response(u: Usuario) -> UsuarioResponse:
+    return UsuarioResponse(
+        id=u.id,
+        nombre=u.nombre,
+        email=u.email,
+        rol=u.rol.value if hasattr(u.rol, 'value') else str(u.rol),
+        activo=u.activo,
+        avatar=u.avatar,
+        telefono=u.telefono,
+        sucursal_id=u.sucursal_id,
+        sucursal_nombre=u.sucursal.nombre if u.sucursal else None,
+        creado_en=u.creado_en
+    )
+
 @router.get("", response_model=List[UsuarioResponse])
 async def listar_usuarios(
     activo_only: bool = Query(False, description="Filtrar solo usuarios activos"),
     rol: Optional[str] = Query(None, description="Filtrar por rol"),
     q: Optional[str] = Query(None, description="Búsqueda por nombre o correo"),
+    sucursal_id: Optional[UUID] = Query(None, description="Filtrar por sucursal"),
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(director_o_supervisor)
 ):
     """
     Lista todos los usuarios operadores del sistema.
+    Si el solicitante es SUPERVISOR, restringe estrictamente a los usuarios de su sucursal.
     """
-    query = select(Usuario)
+    sucursal_efectiva = enforce_sucursal_scope(current_user, sucursal_id)
+    query = select(Usuario).options(selectinload(Usuario.sucursal))
+    if sucursal_efectiva:
+        query = query.where(Usuario.sucursal_id == sucursal_efectiva)
     if activo_only:
         query = query.where(Usuario.activo == True)
     if rol:
@@ -47,32 +67,11 @@ async def listar_usuarios(
     result = await db.execute(query)
     usuarios = result.scalars().all()
     
-    return [
-        UsuarioResponse(
-            id=u.id,
-            nombre=u.nombre,
-            email=u.email,
-            rol=u.rol.value if hasattr(u.rol, 'value') else str(u.rol),
-            activo=u.activo,
-            avatar=u.avatar,
-            telefono=u.telefono,
-            creado_en=u.creado_en
-        )
-        for u in usuarios
-    ]
+    return [_to_usuario_response(u) for u in usuarios]
 
 @router.get("/me", response_model=UsuarioResponse)
 async def obtener_mi_perfil(current_user: Usuario = Depends(get_current_user)):
-    return UsuarioResponse(
-        id=current_user.id,
-        nombre=current_user.nombre,
-        email=current_user.email,
-        rol=current_user.rol.value if hasattr(current_user.rol, 'value') else str(current_user.rol),
-        activo=current_user.activo,
-        avatar=current_user.avatar,
-        telefono=current_user.telefono,
-        creado_en=current_user.creado_en
-    )
+    return _to_usuario_response(current_user)
 
 @router.put("/me", response_model=UsuarioResponse)
 async def actualizar_mi_perfil(
@@ -103,18 +102,11 @@ async def actualizar_mi_perfil(
         current_user.password_hash = get_password_hash(req.password_nuevo)
 
     await db.commit()
-    await db.refresh(current_user)
-
-    return UsuarioResponse(
-        id=current_user.id,
-        nombre=current_user.nombre,
-        email=current_user.email,
-        rol=current_user.rol.value if hasattr(current_user.rol, 'value') else str(current_user.rol),
-        activo=current_user.activo,
-        avatar=current_user.avatar,
-        telefono=current_user.telefono,
-        creado_en=current_user.creado_en
+    result = await db.execute(
+        select(Usuario).options(selectinload(Usuario.sucursal)).where(Usuario.id == current_user.id)
     )
+    current_user = result.scalar_one()
+    return _to_usuario_response(current_user)
 
 @router.get("/{usuario_id}", response_model=UsuarioResponse)
 async def obtener_usuario(
@@ -122,19 +114,21 @@ async def obtener_usuario(
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(director_o_supervisor)
 ):
-    u = await db.get(Usuario, usuario_id)
+    result = await db.execute(
+        select(Usuario).options(selectinload(Usuario.sucursal)).where(Usuario.id == usuario_id)
+    )
+    u = result.scalar_one_or_none()
     if not u:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    return UsuarioResponse(
-        id=u.id,
-        nombre=u.nombre,
-        email=u.email,
-        rol=u.rol.value if hasattr(u.rol, 'value') else str(u.rol),
-        activo=u.activo,
-        avatar=u.avatar,
-        telefono=u.telefono,
-        creado_en=u.creado_en
-    )
+
+    rol_str = current_user.rol.value if hasattr(current_user.rol, 'value') else str(current_user.rol)
+    if rol_str != "DIRECTOR" and current_user.sucursal_id:
+        if u.sucursal_id != current_user.sucursal_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, 
+                detail="Acceso denegado: No tienes autorización para consultar usuarios de otra sucursal"
+            )
+    return _to_usuario_response(u)
 
 @router.post("", response_model=UsuarioResponse, status_code=status.HTTP_201_CREATED)
 async def crear_usuario(
@@ -160,22 +154,17 @@ async def crear_usuario(
         password_hash=get_password_hash(req.password),
         rol=rol_enum,
         activo=True,
-        telefono=req.telefono
+        telefono=req.telefono,
+        sucursal_id=req.sucursal_id if rol_enum != RolUsuario.DIRECTOR else None
     )
     db.add(nuevo_usuario)
     await db.commit()
-    await db.refresh(nuevo_usuario)
-
-    return UsuarioResponse(
-        id=nuevo_usuario.id,
-        nombre=nuevo_usuario.nombre,
-        email=nuevo_usuario.email,
-        rol=nuevo_usuario.rol.value if hasattr(nuevo_usuario.rol, 'value') else str(nuevo_usuario.rol),
-        activo=nuevo_usuario.activo,
-        avatar=nuevo_usuario.avatar,
-        telefono=nuevo_usuario.telefono,
-        creado_en=nuevo_usuario.creado_en
+    
+    result = await db.execute(
+        select(Usuario).options(selectinload(Usuario.sucursal)).where(Usuario.id == nuevo_usuario.id)
     )
+    nuevo_usuario = result.scalar_one()
+    return _to_usuario_response(nuevo_usuario)
 
 @router.put("/{usuario_id}", response_model=UsuarioResponse)
 async def actualizar_usuario(
@@ -187,7 +176,10 @@ async def actualizar_usuario(
     """
     Modifica datos, contraseña o estado de un usuario (Solo Director).
     """
-    u = await db.get(Usuario, usuario_id)
+    result = await db.execute(
+        select(Usuario).options(selectinload(Usuario.sucursal)).where(Usuario.id == usuario_id)
+    )
+    u = result.scalar_one_or_none()
     if not u:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
@@ -211,6 +203,13 @@ async def actualizar_usuario(
         except KeyError:
             raise HTTPException(status_code=400, detail=f"Rol inválido: {req.rol}")
 
+    if "sucursal_id" in req.model_fields_set:
+        u.sucursal_id = req.sucursal_id
+
+    # El director tiene acceso global
+    if u.rol == RolUsuario.DIRECTOR:
+        u.sucursal_id = None
+
     if req.activo is not None:
         u.activo = req.activo
 
@@ -218,18 +217,11 @@ async def actualizar_usuario(
         u.telefono = req.telefono
 
     await db.commit()
-    await db.refresh(u)
-
-    return UsuarioResponse(
-        id=u.id,
-        nombre=u.nombre,
-        email=u.email,
-        rol=u.rol.value if hasattr(u.rol, 'value') else str(u.rol),
-        activo=u.activo,
-        avatar=u.avatar,
-        telefono=u.telefono,
-        creado_en=u.creado_en
+    result = await db.execute(
+        select(Usuario).options(selectinload(Usuario.sucursal)).where(Usuario.id == u.id)
     )
+    u = result.scalar_one()
+    return _to_usuario_response(u)
 
 @router.put("/{usuario_id}/avatar", response_model=UsuarioResponse)
 async def actualizar_avatar_usuario(
@@ -252,24 +244,20 @@ async def actualizar_avatar_usuario(
             detail="No tienes permisos para modificar este avatar"
         )
 
-    u = await db.get(Usuario, usuario_id)
+    result = await db.execute(
+        select(Usuario).options(selectinload(Usuario.sucursal)).where(Usuario.id == usuario_id)
+    )
+    u = result.scalar_one_or_none()
     if not u:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
     u.avatar = req.avatar
     await db.commit()
-    await db.refresh(u)
-
-    return UsuarioResponse(
-        id=u.id,
-        nombre=u.nombre,
-        email=u.email,
-        rol=u.rol.value if hasattr(u.rol, 'value') else str(u.rol),
-        activo=u.activo,
-        avatar=u.avatar,
-        telefono=u.telefono,
-        creado_en=u.creado_en
+    result = await db.execute(
+        select(Usuario).options(selectinload(Usuario.sucursal)).where(Usuario.id == u.id)
     )
+    u = result.scalar_one()
+    return _to_usuario_response(u)
 
 @router.delete("/{usuario_id}", response_model=UsuarioResponse)
 async def baja_logica_usuario(
@@ -283,21 +271,17 @@ async def baja_logica_usuario(
     if current_user.id == usuario_id:
         raise HTTPException(status_code=400, detail="No puedes desactivar tu propio usuario director en sesión activa")
 
-    u = await db.get(Usuario, usuario_id)
+    result = await db.execute(
+        select(Usuario).options(selectinload(Usuario.sucursal)).where(Usuario.id == usuario_id)
+    )
+    u = result.scalar_one_or_none()
     if not u:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
     u.activo = False
     await db.commit()
-    await db.refresh(u)
-
-    return UsuarioResponse(
-        id=u.id,
-        nombre=u.nombre,
-        email=u.email,
-        rol=u.rol.value if hasattr(u.rol, 'value') else str(u.rol),
-        activo=u.activo,
-        avatar=u.avatar,
-        telefono=u.telefono,
-        creado_en=u.creado_en
+    result = await db.execute(
+        select(Usuario).options(selectinload(Usuario.sucursal)).where(Usuario.id == u.id)
     )
+    u = result.scalar_one()
+    return _to_usuario_response(u)

@@ -6,7 +6,7 @@ from scipy import stats
 from typing import List, Optional
 from uuid import UUID
 
-from app.api.deps import RoleChecker, get_current_user
+from app.api.deps import RoleChecker, get_current_user, enforce_sucursal_scope
 from app.models.usuarios import Usuario
 from app.schemas.bi import DashboardEstrategicoResponse, MetricaDiaria, ProyeccionDemanda
 
@@ -52,10 +52,8 @@ async def dashboard_estrategico(
                 predicciones_top_productos=[]
             )
 
-    # Determinar filtro de sucursal si aplica
-    filtro_sucursal_id = sucursal_id
-    if current_user.rol == "SUPERVISOR" and current_user.sucursal_id:
-        filtro_sucursal_id = current_user.sucursal_id
+    # Determinar filtro de sucursal aplicando aislamiento RBAC
+    filtro_sucursal_id = enforce_sucursal_scope(current_user, sucursal_id)
 
     where_sucursal = f" AND f.sucursal_id = '{filtro_sucursal_id}'" if filtro_sucursal_id else ""
     where_sucursal_solo = f" WHERE f.sucursal_id = '{filtro_sucursal_id}'" if filtro_sucursal_id else ""

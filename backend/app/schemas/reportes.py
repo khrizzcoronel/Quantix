@@ -172,7 +172,7 @@ class GenerarReporteRequest(BaseModel):
     orden_campo: Optional[str] = None
     orden_dir: Optional[str] = "desc"
     page: int = Field(1, ge=1)
-    page_size: int = Field(50, ge=1, le=500)
+    page_size: int = Field(50, ge=1, le=5000)
 
 class GenerarReporteResponse(BaseModel):
     columnas: List[str]

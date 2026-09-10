@@ -29,6 +29,7 @@ if (typeof window === 'undefined') {
 }
 
 const { useSucursalStore, MATRIZ_DEFAULT_ID } = await import('../../store/sucursalStore');
+const { useAuthStore } = await import('../../store/authStore');
 type Sucursal = import('../../store/sucursalStore').Sucursal;
 
 describe('Sucursales & Traspasos Inter-Sucursal Store', () => {
@@ -97,4 +98,47 @@ describe('Sucursales & Traspasos Inter-Sucursal Store', () => {
     const parsed = JSON.parse(raw!);
     expect(parsed.state.sucursalActual.codigo).toBe('SUC-NORTE');
   });
+
+  it('bloquea el cambio de sucursal para colaboradores no directores con sucursal asignada', () => {
+    useAuthStore.setState({
+      user: {
+        id: 'user-cajero',
+        nombre: 'Cajero Matriz',
+        email: 'cajero@quantix.local',
+        rol: 'CAJERO',
+        sucursal_id: MATRIZ_DEFAULT_ID,
+        sucursal_nombre: 'Sucursal Matriz',
+      },
+      isAuthenticated: true,
+    });
+
+    const { seleccionarSucursal } = useSucursalStore.getState();
+    seleccionarSucursal(sucursalNorteMock);
+
+    const { sucursalActual } = useSucursalStore.getState();
+    expect(sucursalActual?.id).toBe(MATRIZ_DEFAULT_ID);
+    expect(sucursalActual?.codigo).toBe('MATRIZ');
+  });
+
+  it('permite al Director cambiar libremente de sucursal activa', () => {
+    useAuthStore.setState({
+      user: {
+        id: 'user-director',
+        nombre: 'Director General',
+        email: 'admin@quantix.local',
+        rol: 'DIRECTOR',
+        sucursal_id: null,
+        sucursal_nombre: null,
+      },
+      isAuthenticated: true,
+    });
+
+    const { seleccionarSucursal } = useSucursalStore.getState();
+    seleccionarSucursal(sucursalNorteMock);
+
+    const { sucursalActual } = useSucursalStore.getState();
+    expect(sucursalActual?.id).toBe('00000000-0000-0000-0000-000000000002');
+    expect(sucursalActual?.codigo).toBe('SUC-NORTE');
+  });
 });
+

@@ -8,7 +8,7 @@ from typing import List, Optional
 from decimal import Decimal
 from uuid import UUID
 from app.db.oltp import get_db
-from app.api.deps import get_current_user, RoleChecker
+from app.api.deps import get_current_user, RoleChecker, enforce_sucursal_scope
 from app.models.usuarios import (
     Usuario, SesionCaja, EstadoSesionCaja, ArqueoCaja, AuditoriaEvento,
     TipoMovimientoCaja, MovimientoCaja, RolUsuario
@@ -321,13 +321,14 @@ async def listar_sesiones(
     """
     Lista las sesiones de caja con sus resultados de arqueo y nombre del cajero.
     """
+    sucursal_efectiva = enforce_sucursal_scope(current_user, sucursal_id)
     query = (
         select(SesionCaja, Usuario.nombre.label("usuario_nombre"), ArqueoCaja)
         .join(Usuario, SesionCaja.usuario_id == Usuario.id)
         .outerjoin(ArqueoCaja, ArqueoCaja.sesion_caja_id == SesionCaja.id)
     )
-    if sucursal_id:
-        query = query.where(SesionCaja.sucursal_id == sucursal_id)
+    if sucursal_efectiva:
+        query = query.where(SesionCaja.sucursal_id == sucursal_efectiva)
 
     query = query.order_by(SesionCaja.fecha_apertura.desc())
     result = await db.execute(query)
@@ -362,12 +363,14 @@ async def listar_eventos_auditoria(
     """
     Lista los eventos inmutables de auditoría forense.
     """
+    sucursal_efectiva = enforce_sucursal_scope(current_user, None)
     query = (
         select(AuditoriaEvento, Usuario.nombre.label("usuario_nombre"))
         .join(Usuario, AuditoriaEvento.usuario_id == Usuario.id)
-        .order_by(AuditoriaEvento.fecha_evento.desc())
-        .limit(100)
     )
+    if sucursal_efectiva:
+        query = query.where(Usuario.sucursal_id == sucursal_efectiva)
+    query = query.order_by(AuditoriaEvento.fecha_evento.desc()).limit(100)
     result = await db.execute(query)
     rows = result.all()
 
@@ -407,6 +410,8 @@ async def obtener_corte_z(
     rol_str = current_user.rol.value if hasattr(current_user.rol, 'value') else str(current_user.rol)
     if rol_str not in ['SUPERVISOR', 'DIRECTOR'] and sesion.usuario_id != current_user.id:
         raise HTTPException(status_code=403, detail="No tienes autorización para consultar el Corte Z de esta sesión")
+    if rol_str == 'SUPERVISOR' and current_user.sucursal_id and sesion.sucursal_id != current_user.sucursal_id:
+        raise HTTPException(status_code=403, detail="Acceso denegado: No tienes autorización para consultar el Corte Z de otra sucursal")
 
     cajero = await db.get(Usuario, sesion.usuario_id)
     cajero_nombre = cajero.nombre if cajero else "Cajero No Registrado"
@@ -513,13 +518,14 @@ async def obtener_estadisticas_historicas(
     tasa de precisión de gaveta y KPIs consolidados.
     """
     # 1. Obtener todas las sesiones con sus usuarios y arqueos
+    sucursal_efectiva = enforce_sucursal_scope(current_user, sucursal_id)
     query_sesiones = (
         select(SesionCaja, Usuario, ArqueoCaja)
         .join(Usuario, SesionCaja.usuario_id == Usuario.id)
         .outerjoin(ArqueoCaja, ArqueoCaja.sesion_caja_id == SesionCaja.id)
     )
-    if sucursal_id:
-        query_sesiones = query_sesiones.where(SesionCaja.sucursal_id == sucursal_id)
+    if sucursal_efectiva:
+        query_sesiones = query_sesiones.where(SesionCaja.sucursal_id == sucursal_efectiva)
 
     query_sesiones = query_sesiones.order_by(SesionCaja.fecha_apertura.desc())
     result_ses = await db.execute(query_sesiones)
@@ -534,8 +540,8 @@ async def obtener_estadisticas_historicas(
         )
         .where(Venta.estado.in_(['COMPLETADA', 'PAGADO']))
     )
-    if sucursal_id:
-        query_ventas = query_ventas.where(Venta.sucursal_id == sucursal_id)
+    if sucursal_efectiva:
+        query_ventas = query_ventas.where(Venta.sucursal_id == sucursal_efectiva)
 
     query_ventas = query_ventas.group_by(Venta.sesion_caja_id)
     result_v = await db.execute(query_ventas)
@@ -916,6 +922,8 @@ async def obtener_corte_x(
         rol_str = current_user.rol.value if hasattr(current_user.rol, 'value') else str(current_user.rol)
         if rol_str not in ['SUPERVISOR', 'DIRECTOR'] and target_sesion.usuario_id != current_user.id:
             raise HTTPException(status_code=403, detail="No tienes autorización para consultar el Corte X de esta sesión")
+        if rol_str == 'SUPERVISOR' and current_user.sucursal_id and target_sesion.sucursal_id != current_user.sucursal_id:
+            raise HTTPException(status_code=403, detail="Acceso denegado: No tienes autorización para consultar el Corte X de otra sucursal")
     else:
         sesion_q = await db.execute(
             select(SesionCaja).where(

@@ -27,10 +27,10 @@ async def listar_sucursales(
 async def crear_sucursal(
     req: SucursalCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: Usuario = Depends(RoleChecker(['SUPERVISOR', 'DIRECTOR']))
+    current_user: Usuario = Depends(RoleChecker(['DIRECTOR']))
 ):
     """
-    Registra una nueva sucursal o almacén satélite.
+    Registra una nueva sucursal o almacén satélite (Solo Dirección General).
     """
     codigo_sanit = req.codigo.strip().upper()
     existente = await db.execute(select(Sucursal).where(Sucursal.codigo == codigo_sanit))
@@ -59,7 +59,15 @@ async def actualizar_sucursal(
 ):
     """
     Actualiza datos de una sucursal existente.
+    Supervisores únicamente pueden modificar los datos de su sede asignada.
     """
+    rol_str = current_user.rol.value if hasattr(current_user.rol, 'value') else str(current_user.rol)
+    if rol_str != "DIRECTOR" and current_user.sucursal_id and current_user.sucursal_id != id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acceso denegado: No tienes autorización para modificar la información de otra sucursal"
+        )
+
     sucursal = await db.get(Sucursal, id)
     if not sucursal:
         raise HTTPException(status_code=404, detail="Sucursal no encontrada")

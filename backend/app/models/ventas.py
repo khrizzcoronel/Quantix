@@ -10,6 +10,7 @@ from app.models.base import Base
 
 if TYPE_CHECKING:
     from app.models.inventario import Producto
+    from app.models.sucursal import Sucursal
 
 class TipoCupon(str, Enum):
     CUMPLEANIOS = "CUMPLEANIOS"
@@ -44,6 +45,7 @@ class Cliente(Base):
     __tablename__ = "clientes"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    sucursal_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("sucursal.id"), nullable=True, index=True)
     cedula: Mapped[Optional[str]] = mapped_column(String(30), unique=True, index=True, nullable=True)
     telefono: Mapped[str] = mapped_column(String(20), unique=True, index=True)
     nombre: Mapped[str] = mapped_column(String(100))
@@ -53,14 +55,20 @@ class Cliente(Base):
     activo: Mapped[bool] = mapped_column(Boolean, default=True)
 
     # Relaciones
+    sucursal: Mapped[Optional["Sucursal"]] = relationship("Sucursal", foreign_keys=[sucursal_id])
     cupones: Mapped[List["Cupon"]] = relationship(back_populates="cliente")
     ventas: Mapped[List["Venta"]] = relationship(back_populates="cliente")
+
+    @property
+    def sucursal_nombre(self) -> Optional[str]:
+        return self.sucursal.nombre if self.sucursal else None
 
 class Cupon(Base):
     __tablename__ = "cupones"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     cliente_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("clientes.id"))
+    sucursal_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("sucursal.id"), nullable=True, index=True)
     codigo: Mapped[str] = mapped_column(String(50), unique=True, index=True)
     tipo: Mapped[TipoCupon] = mapped_column(String)
     descuento_tipo: Mapped[DescuentoTipo] = mapped_column(String)
@@ -73,7 +81,12 @@ class Cupon(Base):
 
     # Relaciones
     cliente: Mapped["Cliente"] = relationship(back_populates="cupones")
+    sucursal: Mapped[Optional["Sucursal"]] = relationship("Sucursal", foreign_keys=[sucursal_id])
     venta_canje: Mapped[Optional["Venta"]] = relationship(back_populates="cupones_canjeados", foreign_keys=[venta_canje_id])
+
+    @property
+    def sucursal_nombre(self) -> Optional[str]:
+        return self.sucursal.nombre if self.sucursal else None
 
 class Venta(Base):
     __tablename__ = "ventas"
