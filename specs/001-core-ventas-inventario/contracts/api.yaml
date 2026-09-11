@@ -1,32 +1,38 @@
 openapi: 3.0.3
 info:
-  title: Quantix - API de Ventas e Inventario (Módulo 001)
+  title: Quantix - API de Ventas e Inventario FEFO (Módulo 001)
   version: 1.0.0
-  description: Endpoints operativos para búsqueda en POS, checkout con descarga FEFO y gestión de lotes.
+  description: Endpoints operativos para catálogo en POS, checkout multimodal con descarga FEFO, anulación atómica y trazabilidad de lotes.
 paths:
-  /api/v1/pos/buscar-producto:
+  /api/v1/pos/productos/{sku}:
     get:
-      summary: Buscar producto por código de barras o nombre
+      summary: Buscar producto por código de barras o SKU en la sucursal activa
       parameters:
-        - name: q
-          in: query
+        - name: sku
+          in: path
           required: true
           schema:
             type: string
-          description: Código de barras, SKU o nombre del producto
+          description: Código de barras o SKU exacto
+        - name: sucursal_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
-          description: Lista de productos coincidentes
+          description: Producto encontrado con stock activo en la sede
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ProductoResponse'
+                $ref: '#/components/schemas/ProductoPOSResponse'
+        '404':
+          description: Producto no encontrado
 
   /api/v1/pos/checkout:
     post:
-      summary: Procesar venta con asignación automática FEFO
+      summary: Procesar venta con asignación automática FEFO e idempotencia
       requestBody:
         required: true
         content:
@@ -41,30 +47,120 @@ paths:
               schema:
                 $ref: '#/components/schemas/VentaResponse'
         '400':
-          description: Sesión, cupón o pago inválido
+          description: Sesión de caja cerrada, cupón inválido o datos incorrectos
         '402':
-          description: Pago electrónico rechazado por el simulador
+          description: Pago electrónico rechazado por la pasarela
         '409':
-          description: Conflicto de stock insuficiente
+          description: Stock insuficiente en lotes activos
         '504':
-          description: Tiempo de espera agotado en el simulador de pagos
+          description: Timeout en pasarela de pagos
 
-  /api/v1/inventario/lotes:
+  /api/v1/pos/ventas:
+    get:
+      summary: Listar tickets de venta de la sesión o sucursal
+      parameters:
+        - name: sesion_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: sucursal_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Listado de tickets recientes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VentaResumenResponse'
+
+  /api/v1/pos/ventas/{venta_id}:
+    get:
+      summary: Obtener detalle completo de un ticket con desglose de lotes
+      parameters:
+        - name: venta_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detalle completo de la venta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VentaDetalleCompletoResponse'
+
+  /api/v1/pos/ventas/{venta_id}/anular:
     post:
-      summary: Registrar entrada de lote con fecha de vencimiento
+      summary: Anulación atómica de ticket con reversión de stock a lotes FEFO
+      parameters:
+        - name: venta_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LoteCreateRequest'
+              type: object
+              required: [motivo]
+              properties:
+                motivo:
+                  type: string
       responses:
-        '201':
-          description: Lote registrado exitosamente
+        '200':
+          description: Ticket anulado y existencias restituidas
+        '400':
+          description: Venta ya anulada o fuera de turno
+        '403':
+          description: Requiere autorización de Supervisor
+
+  /api/v1/pos/ventas/{venta_id}/enviar-ticket:
+    post:
+      summary: Envío de ticket digital por correo electrónico
+      parameters:
+        - name: venta_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email_destino]
+              properties:
+                email_destino:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Ticket encolado para despacho asíncrono
 
 components:
   schemas:
-    ProductoResponse:
+    ProductoPOSResponse:
       type: object
       properties:
         id:
@@ -76,14 +172,15 @@ components:
           type: string
         nombre:
           type: string
-        tipo_estrategico:
+        clasificacion_abc:
           type: string
-          enum: [GANCHO, NICHO, REGULAR]
+          enum: [A, B, C]
+        requiere_pesaje:
+          type: boolean
         precio_venta:
           type: number
-          format: double
         stock_total_disponible:
-          type: integer
+          type: number
 
     CheckoutItem:
       type: object
@@ -95,14 +192,30 @@ components:
           type: string
           format: uuid
         cantidad:
-          type: integer
-          minimum: 1
+          type: number
+          description: Puede contener hasta 3 decimales si requiere pesaje
+          minimum: 0.001
+
+    PagoCheckout:
+      type: object
+      required: [metodo_pago, monto]
+      properties:
+        metodo_pago:
+          type: string
+          enum: [EFECTIVO, TARJETA, TRANSFERENCIA, QR, CUPON]
+        monto:
+          type: number
+          exclusiveMinimum: 0
+        referencia_pasarela:
+          type: string
+          nullable: true
 
     CheckoutRequest:
       type: object
       required:
         - sesion_caja_id
         - items
+        - pagos
       properties:
         sesion_caja_id:
           type: string
@@ -119,31 +232,16 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PagoCheckout'
-        metodo_pago:
-          type: string
-          description: Compatibilidad para un pago simple cuando no se envía `pagos`.
         codigo_cupon:
           type: string
+          nullable: true
+        puntos_a_redimir:
+          type: integer
           nullable: true
         idempotency_key:
           type: string
           minLength: 8
           maxLength: 64
-
-    PagoCheckout:
-      type: object
-      required: [metodo_pago, monto]
-      properties:
-        metodo_pago:
-          type: string
-          enum: [EFECTIVO, TARJETA, TRANSFERENCIA, QR, CUPON]
-        monto:
-          type: number
-          exclusiveMinimum: 0
-        referencia_pasarela:
-          type: string
-          nullable: true
-          description: Token de escenario del simulador para pagos electrónicos.
 
     VentaResponse:
       type: object
@@ -153,7 +251,7 @@ components:
           format: uuid
         folio_ticket:
           type: string
-        subtotal:
+        total_bruto:
           type: number
         total_descuento:
           type: number
@@ -166,25 +264,59 @@ components:
         mensaje:
           type: string
 
-    LoteCreateRequest:
+    VentaResumenResponse:
       type: object
-      required:
-        - producto_id
-        - numero_lote
-        - fecha_vencimiento
-        - costo_unitario_compra
-        - cantidad_inicial
       properties:
-        producto_id:
+        id:
           type: string
           format: uuid
-        numero_lote:
+        folio_ticket:
           type: string
-        fecha_vencimiento:
+        fecha_hora:
           type: string
-          format: date
-        costo_unitario_compra:
+          format: date-time
+        total_pagar:
           type: number
-        cantidad_inicial:
-          type: integer
-          minimum: 1
+        estado:
+          type: string
+
+    VentaDetalleCompletoResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        folio_ticket:
+          type: string
+        fecha_hora:
+          type: string
+          format: date-time
+        total_bruto:
+          type: number
+        total_descuento:
+          type: number
+        total_impuestos:
+          type: number
+        total_pagar:
+          type: number
+        estado:
+          type: string
+        lineas:
+          type: array
+          items:
+            type: object
+            properties:
+              producto_nombre:
+                type: string
+              cantidad:
+                type: number
+              precio_unitario:
+                type: number
+              subtotal:
+                type: number
+              lote_codigo:
+                type: string
+        pagos:
+          type: array
+          items:
+            $ref: '#/components/schemas/PagoCheckout'

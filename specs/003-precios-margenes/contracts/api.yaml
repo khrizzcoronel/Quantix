@@ -1,16 +1,76 @@
 openapi: 3.0.3
 info:
-  title: Quantix - API de Precios y Márgenes (Módulo 003)
+  title: Quantix - API de Precios, Márgenes, Proveedores y Órdenes de Compra (Módulo 003)
   version: 1.0.0
-  description: Endpoints para clasificación estratégica de productos, alerta de erosión de margen y visualización de la matriz margen-rotación.
+  description: Endpoints para gestión de proveedores con lead time, emisión y recepción parcial de órdenes de compra, y reporte Pareto ABC.
 
 paths:
-  /api/v1/productos/{id}/clasificacion:
-    patch:
-      summary: Actualizar clasificación estratégica de un producto
-      description: Solo accesible por usuarios con rol Director. Registra el cambio en AUDITORIA_EVENTO.
+  /api/v1/inventario/proveedores:
+    get:
+      summary: Listar proveedores registrados
+      responses:
+        '200':
+          description: Lista de proveedores
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProveedorResponse'
+    post:
+      summary: Registrar nuevo proveedor con lead time pactado
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProveedorCreateRequest'
+      responses:
+        '201':
+          description: Proveedor registrado
+
+  /api/v1/inventario/ordenes-compra:
+    get:
+      summary: Listar órdenes de compra con filtros de estado
       parameters:
-        - name: id
+        - name: estado
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [PENDIENTE, RECIBIDA_PARCIAL, RECIBIDA, CANCELADA]
+        - name: proveedor_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lista de órdenes de compra
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrdenCompraResponse'
+    post:
+      summary: Crear orden de compra multi-línea
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrdenCompraCreateRequest'
+      responses:
+        '201':
+          description: Orden de compra emitida exitosamente
+
+  /api/v1/inventario/ordenes-compra/{orden_id}/recibir:
+    post:
+      summary: Recepción física (total o parcial) de mercancía con ingreso de lotes FEFO
+      parameters:
+        - name: orden_id
           in: path
           required: true
           schema:
@@ -21,58 +81,57 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ClasificacionUpdateRequest'
+              $ref: '#/components/schemas/RecepcionOrdenRequest'
       responses:
         '200':
-          description: Clasificación actualizada exitosamente
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProductoClasificacionResponse'
-        '403':
-          description: Acceso denegado — se requiere rol Director
-        '404':
-          description: Producto no encontrado
+          description: Mercancía recepcionada y lotes incorporados al stock vendible
+        '400':
+          description: Cantidades exceden lo pendiente o fecha de vencimiento pasada
 
-  /api/v1/admin/productos/en-riesgo-margen:
+  /api/v1/reportes/analisis/abc-productos:
     get:
-      summary: Listar productos cuyo costo de reposición supera el margen mínimo configurado
+      summary: Matriz Pareto ABC de productos y rentabilidad acumulada sobre DuckDB
+      parameters:
+        - name: sucursal_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: limite
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 100
       responses:
         '200':
-          description: Lista de productos en riesgo de margen negativo
+          description: Distribución Pareto de ingresos y márgenes
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ProductoEnRiesgoMargenResponse'
-
-  /api/v1/bi/matriz-margen-rotacion:
-    get:
-      summary: Obtener datos para la matriz de 4 cuadrantes margen-rotación
-      description: Devuelve un punto por producto con su margen bruto promedio y velocidad de venta diaria para alimentar el ScatterChart del dashboard EIS.
-      responses:
-        '200':
-          description: Datos de dispersión para la matriz
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/MatrizPuntoResponse'
+                $ref: '#/components/schemas/AbcParetoResponse'
 
 components:
   schemas:
-    ClasificacionUpdateRequest:
+    ProveedorCreateRequest:
       type: object
-      required:
-        - tipo_estrategico
+      required: [nombre, lead_time_dias]
       properties:
-        tipo_estrategico:
+        nombre:
           type: string
-          enum: [GANCHO, NICHO, REGULAR]
+        contacto_nombre:
+          type: string
+        telefono:
+          type: string
+        email:
+          type: string
+          format: email
+        lead_time_dias:
+          type: integer
+          default: 7
 
-    ProductoClasificacionResponse:
+    ProveedorResponse:
       type: object
       properties:
         id:
@@ -80,50 +139,125 @@ components:
           format: uuid
         nombre:
           type: string
-        tipo_estrategico:
+        contacto_nombre:
           type: string
-          enum: [GANCHO, NICHO, REGULAR]
-        actualizado_en:
+        telefono:
           type: string
-          format: date-time
+        email:
+          type: string
+        lead_time_dias:
+          type: integer
+        activo:
+          type: boolean
 
-    ProductoEnRiesgoMargenResponse:
+    OrdenCompraCreateRequest:
+      type: object
+      required: [proveedor_id, items]
+      properties:
+        proveedor_id:
+          type: string
+          format: uuid
+        fecha_entrega_estimada:
+          type: string
+          format: date
+        notas:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+            required: [producto_id, cantidad_solicitada, costo_unitario_pactado]
+            properties:
+              producto_id:
+                type: string
+                format: uuid
+              cantidad_solicitada:
+                type: number
+              costo_unitario_pactado:
+                type: number
+
+    OrdenCompraResponse:
       type: object
       properties:
         id:
+          type: string
+          format: uuid
+        proveedor_nombre:
+          type: string
+        fecha_emision:
+          type: string
+          format: date-time
+        fecha_entrega_estimada:
+          type: string
+          format: date
+        fecha_recepcion:
+          type: string
+          format: date-time
+          nullable: true
+        estado:
+          type: string
+          enum: [PENDIENTE, RECIBIDA_PARCIAL, RECIBIDA, CANCELADA]
+        total_estimado:
+          type: number
+
+    RecepcionOrdenItem:
+      type: object
+      required: [detalle_id, cantidad_a_recibir, fecha_vencimiento]
+      properties:
+        detalle_id:
+          type: string
+          format: uuid
+        cantidad_a_recibir:
+          type: number
+        fecha_vencimiento:
+          type: string
+          format: date
+        codigo_lote_fabricante:
+          type: string
+          nullable: true
+
+    RecepcionOrdenRequest:
+      type: object
+      required: [items, sucursal_id]
+      properties:
+        sucursal_id:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecepcionOrdenItem'
+
+    AbcParetoItem:
+      type: object
+      properties:
+        producto_id:
           type: string
           format: uuid
         sku:
           type: string
         nombre:
           type: string
-        tipo_estrategico:
+        unidades_vendidas:
+          type: number
+        ingresos_totales:
+          type: number
+        margen_bruto_total:
+          type: number
+        margen_pct:
+          type: number
+        pct_acumulado:
+          type: number
+        clase_pareto:
           type: string
-          enum: [GANCHO, NICHO, REGULAR]
-        precio_venta:
-          type: number
-        costo_reposicion:
-          type: number
-        margen_minimo_pct:
-          type: number
-        margen_actual_pct:
-          type: number
-          description: (precio_venta - costo_reposicion) / precio_venta * 100
+          enum: [A, B, C]
 
-    MatrizPuntoResponse:
+    AbcParetoResponse:
       type: object
       properties:
-        producto_id:
-          type: string
-          format: uuid
-        nombre:
-          type: string
-        tipo_estrategico:
-          type: string
-          enum: [GANCHO, NICHO, REGULAR]
-        velocidad_venta_diaria:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AbcParetoItem'
+        total_ingresos:
           type: number
-          description: Unidades vendidas por día (promedio últimos 30 días, excluyendo roturas)
-        margen_bruto_pct:
-          type: number
-          description: Margen bruto promedio de las ventas del periodo

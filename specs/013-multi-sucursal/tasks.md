@@ -1,14 +1,14 @@
-# Checklist de Implementación
+# Checklist de Implementación: 013 - Soporte Multi-Sucursal
 
-- [ ] Crear migración SQL para la tabla `sucursal`.
-- [ ] Crear migración SQL para la tabla `terminal_caja`.
-- [ ] Crear migración SQL para la tabla `inventario_sucursal`.
-- [ ] Modificar tabla `sesion_caja` para referenciar a `terminal_caja`.
-- [ ] Implementar modelo y repositorio para `Sucursal`.
-- [ ] Implementar modelo y repositorio para `TerminalCaja`.
-- [ ] Desarrollar API CRUD para Sucursales (`/api/v1/admin/sucursales`).
-- [ ] Desarrollar API CRUD para Terminales (`/api/v1/admin/terminales`).
-- [ ] Actualizar el middleware de JWT/Auth para inyectar el `sucursal_id` en el contexto.
-- [ ] Refactorizar módulo de inventario para leer/escribir usando `inventario_sucursal`.
-- [ ] Escribir pruebas unitarias e integración para el soporte multi-sucursal.
-- [ ] Actualizar documentación técnica general.
+- [x] Crear migración SQL para la tabla `sucursal` (Alembic 0008).
+- [x] Crear migración SQL para la tabla `terminal_caja`.
+- [x] Asociar clave foránea `sucursal_id` en lotes de inventario.
+- [x] Asociar clave foránea `sucursal_id` en sesiones de caja.
+- [x] Asociar clave foránea `sucursal_id` en usuarios y clientes/cupones (Alembic 0011).
+- [x] Implementar modelo y esquemas Pydantic para `Sucursal` y `TerminalCaja`.
+- [x] Desarrollar API REST para Sucursales (`/api/v1/sucursales/`).
+- [x] Desarrollar API REST para Terminales (`/api/v1/sucursales/{id}/terminales`).
+- [x] Implementar dependencia `enforce_sucursal_scope` con rechazo HTTP 403 Forbidden.
+- [x] Desarrollar store global reactivo `useSucursalStore` en frontend.
+- [x] Implementar selector dinámico en Header con candado para supervisores.
+- [x] Escribir pruebas unitarias y de integración para el aislamiento multi-sucursal.

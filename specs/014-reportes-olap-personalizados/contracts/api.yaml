@@ -1,0 +1,199 @@
+openapi: 3.0.3
+info:
+  title: Quantix - API de Constructor de Reportes OLAP y Plantillas (Módulo 014)
+  version: 1.0.0
+  description: Endpoints para consulta del catálogo de columnas, generación de reportes multidimensionales sobre DuckDB Gold y persistencia relacional de plantillas.
+
+paths:
+  /api/v1/reportes/columnas-disponibles:
+    get:
+      summary: Obtener catálogo de 15 columnas OLAP configurables
+      responses:
+        '200':
+          description: Lista de columnas disponibles con metadatos de tipo y orden
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ColumnaReporte'
+
+  /api/v1/reportes/generar:
+    post:
+      summary: Generar reporte analítico ad-hoc sobre DuckDB Gold con agregaciones y filtros
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerarReporteRequest'
+      responses:
+        '200':
+          description: Resultado tabular paginado con fila fija de totales consolidada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReporteGeneradoResponse'
+
+  /api/v1/reportes/plantillas:
+    get:
+      summary: Listar plantillas de reporte del usuario y plantillas públicas del sistema
+      responses:
+        '200':
+          description: Lista de plantillas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlantillaReporteResponse'
+    post:
+      summary: Guardar nueva plantilla de reporte personalizada en PostgreSQL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlantillaReporteCreateRequest'
+      responses:
+        '201':
+          description: Plantilla guardada exitosamente
+
+  /api/v1/reportes/plantillas/{plantilla_id}:
+    delete:
+      summary: Eliminar plantilla de reporte del usuario
+      parameters:
+        - name: plantilla_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Plantilla eliminada
+
+components:
+  schemas:
+    ColumnaReporte:
+      type: object
+      properties:
+        id:
+          type: string
+        etiqueta:
+          type: string
+        tipo:
+          type: string
+        agregable:
+          type: boolean
+        orden_defecto:
+          type: integer
+
+    GenerarReporteRequest:
+      type: object
+      required: [columnas]
+      properties:
+        columnas:
+          type: array
+          items:
+            type: string
+        agrupacion:
+          type: string
+          enum: [LINEA, DIA, PRODUCTO, CATEGORIA, CAJERO, SUCURSAL, METODO_PAGO]
+          default: LINEA
+        fecha_desde:
+          type: string
+          format: date
+        fecha_hasta:
+          type: string
+          format: date
+        sucursal_id:
+          type: string
+          format: uuid
+        categoria_id:
+          type: string
+          format: uuid
+        cajero_id:
+          type: string
+          format: uuid
+        metodo_pago:
+          type: string
+        limite:
+          type: integer
+          default: 50
+        offset:
+          type: integer
+          default: 0
+
+    FilaTotales:
+      type: object
+      properties:
+        cantidad:
+          type: number
+        subtotal:
+          type: number
+        descuento:
+          type: number
+        impuesto:
+          type: number
+        total:
+          type: number
+        margen:
+          type: number
+
+    ReporteGeneradoResponse:
+      type: object
+      properties:
+        columnas:
+          type: array
+          items:
+            type: string
+        filas:
+          type: array
+          items:
+            type: object
+        total_registros:
+          type: integer
+        totales_consolidados:
+          $ref: '#/components/schemas/FilaTotales'
+
+    PlantillaReporteCreateRequest:
+      type: object
+      required: [nombre, columnas_seleccionadas]
+      properties:
+        nombre:
+          type: string
+        descripcion:
+          type: string
+        columnas_seleccionadas:
+          type: array
+          items:
+            type: string
+        agrupacion_defecto:
+          type: string
+        filtros_defecto:
+          type: object
+        es_publica:
+          type: boolean
+          default: false
+
+    PlantillaReporteResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nombre:
+          type: string
+        descripcion:
+          type: string
+        columnas_seleccionadas:
+          type: array
+          items:
+            type: string
+        agrupacion_defecto:
+          type: string
+        es_publica:
+          type: boolean
+        es_propia:
+          type: boolean

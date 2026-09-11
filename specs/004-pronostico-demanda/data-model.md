@@ -1,49 +1,95 @@
-# Modelo de Datos: 004 - Pronóstico de Demanda y Reposición
+# Modelo de Datos y Algoritmos: 004 - Pronóstico de Demanda y Reaprovisionamiento
 
 **Módulo:** 004-pronostico-demanda  
-**Esquema:** Analítico OLAP (DuckDB) + Parámetros de Configuración (PostgreSQL)
+**Esquema:** Algoritmos Transaccionales (PostgreSQL) + Inferencia Estadística (DuckDB Gold)
 
 ---
 
-## 1. DDL Analítico (OLAP — DuckDB)
+## 1. Algoritmo Operativo de Sugerencias de Reorden (`sugerencias_reorden_compra`)
 
-### FACT_INVENTARIO_DIARIO
+El servicio operativo ejecutado en `GET /api/v1/inventario/ordenes-compra/sugerencias` procesa los datos relacionales de PostgreSQL bajo la siguiente formulación matemática:
 
-```sql
-CREATE TABLE FACT_INVENTARIO_DIARIO (
-    id                          INTEGER PRIMARY KEY,
-    fecha                       DATE    NOT NULL,
-    producto_sk                 INTEGER NOT NULL,           -- FK a DIM_PRODUCTO
-    producto_id                 UUID    NOT NULL,           -- FK hacia OLTP
-    stock_disponible_inicio     INTEGER NOT NULL DEFAULT 0, -- Stock al inicio del día
-    unidades_vendidas           INTEGER NOT NULL DEFAULT 0, -- Total unidades vendidas en el día
-    unidades_recibidas          INTEGER NOT NULL DEFAULT 0, -- Entradas de lote en el día
-    stock_disponible_fin        INTEGER NOT NULL DEFAULT 0, -- Stock al cierre del día
-    cantidad_rotura_stock       INTEGER NOT NULL DEFAULT 0,
-    -- 0 = sin rotura; > 0 = horas o unidades faltantes (marca el día para excluirlo del promedio de velocidad)
-    velocidad_venta_diaria      NUMERIC(10, 4),             -- Calculada en el ETL, excluyendo días con rotura
-    dias_inventario_proyectados NUMERIC(10, 2),             -- stock_disponible_fin / velocidad_venta_diaria
-    punto_reorden               NUMERIC(10, 4),             -- (velocidad × lead_time) + stock_seguridad
-    lead_time_dias              INTEGER,                    -- Del proveedor preferido del producto
-    factor_seguridad            NUMERIC(5, 2),              -- Snapshot del valor en CONFIGURACION
-    fecha_carga                 TIMESTAMP DEFAULT current_timestamp,
-    UNIQUE (fecha, producto_id)
-);
+```python
+# Parámetros calibrados por clasificación ABC
+STOCK_SEGURIDAD_ABC = {
+    'A': 15.0,  # Alta rotación (Top 80% facturación)
+    'B': 10.0,  # Media rotación (15% facturación)
+    'C': 5.0    # Baja rotación (5% facturación)
+}
 
-CREATE INDEX idx_fact_inv_diario_fecha     ON FACT_INVENTARIO_DIARIO(fecha DESC);
-CREATE INDEX idx_fact_inv_diario_producto  ON FACT_INVENTARIO_DIARIO(producto_id);
+# 1. Velocidad diaria de venta (últimos 30 días)
+velocidad_diaria = total_unidades_vendidas_ultimos_30_dias / 30.0
+
+# 2. Lead time del proveedor habitual
+lead_time = proveedor.lead_time_dias if proveedor else 7
+
+# 3. Punto de reorden dinámico
+punto_reorden = math.ceil((velocidad_diaria * lead_time) + STOCK_SEGURIDAD_ABC.get(producto.clasificacion_abc, 5.0))
+
+# 4. Condición de disparo de reorden
+requiere_compra = stock_actual_sucursal <= punto_reorden
+
+# 5. Cantidad sugerida a ordenar
+cantidad_sugerida = max(math.ceil((punto_reorden * 2) - stock_actual_sucursal), 10)
 ```
 
 ---
 
-## 2. Parámetros de Configuración (OLTP — PostgreSQL)
+## 2. Modelado Analítico en DuckDB Gold
 
-Los siguientes registros deben existir en la tabla `CONFIGURACION` (definida en el módulo 001):
-
+### Inferencia Estadística Z / Student-t (`gold.fact_ventas`)
 ```sql
--- Factor de seguridad para el cálculo de stock de seguridad
--- Fórmula: velocidad_diaria × desviacion_estandar_demanda × factor_seguridad
-INSERT INTO configuracion (clave, valor, descripcion) VALUES
-  ('stock_seguridad_factor',     '1.65', 'Factor Z para nivel de servicio ~95%. Modificable por Director.'),
-  ('inventario_dias_sobrestock', '90',   'Días proyectados a partir de los cuales un producto se considera sobrestock.');
+WITH ventas_diarias AS (
+    SELECT 
+        v.producto_id,
+        p.sku,
+        p.nombre,
+        p.clasificacion_abc,
+        CAST(v.fecha_hora AS DATE) AS fecha,
+        SUM(v.cantidad) AS unidades_dia
+    FROM gold.fact_ventas v
+    JOIN gold.dim_producto p ON v.producto_id = p.producto_id
+    WHERE v.estado = 'COMPLETADA'
+      AND (:sucursal_id IS NULL OR v.sucursal_id = :sucursal_id)
+    GROUP BY v.producto_id, p.sku, p.nombre, p.clasificacion_abc, CAST(v.fecha_hora AS DATE)
+),
+estadisticas_muestra AS (
+    SELECT 
+        producto_id,
+        sku,
+        nombre,
+        clasificacion_abc,
+        COUNT(fecha) AS n_muestras,
+        AVG(unidades_dia) AS media_diaria,
+        STDDEV(unidades_dia) AS desviacion_estandar
+    FROM ventas_diarias
+    GROUP BY producto_id, sku, nombre, clasificacion_abc
+)
+SELECT 
+    producto_id,
+    sku,
+    nombre,
+    n_muestras,
+    media_diaria,
+    COALESCE(desviacion_estandar, 0) AS desviacion_estandar,
+    CASE 
+        WHEN n_muestras >= 30 THEN 'NORMAL_Z'
+        ELSE 'STUDENT_T'
+    END AS distribucion_usada
+FROM estadisticas_muestra;
+```
+
+### Matriz de Estacionalidad Semanal y Horaria ($7 \times 24$)
+```sql
+SELECT 
+    EXTRACT(DOW FROM v.fecha_hora) AS dia_semana, -- 0=Domingo, 1=Lunes, ..., 6=Sábado
+    EXTRACT(HOUR FROM v.fecha_hora) AS hora_dia,
+    COUNT(DISTINCT v.id) AS total_transacciones,
+    SUM(v.total_pagar) AS volumen_ventas,
+    AVG(v.total_pagar) AS ticket_promedio
+FROM gold.fact_ventas v
+WHERE v.estado = 'COMPLETADA'
+  AND (:sucursal_id IS NULL OR v.sucursal_id = :sucursal_id)
+GROUP BY EXTRACT(DOW FROM v.fecha_hora), EXTRACT(HOUR FROM v.fecha_hora)
+ORDER BY dia_semana ASC, hora_dia ASC;
 ```

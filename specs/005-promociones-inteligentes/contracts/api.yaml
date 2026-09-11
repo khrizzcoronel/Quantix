@@ -2,38 +2,30 @@ openapi: 3.0.3
 info:
   title: Quantix - API de Promociones Inteligentes (Módulo 005)
   version: 1.0.0
-  description: Endpoints CRUD para reglas de combo, consulta de reglas activas y verificación de margen de ticket.
+  description: Endpoints para gestión de reglas de combos, volumen y monto mínimo, y motor evaluador en tiempo real para el POS.
 
 paths:
-  /api/v1/admin/promociones/reglas/:
+  /api/v1/promociones/:
     get:
-      summary: Listar todas las reglas de promoción
+      summary: Listar reglas de promoción configuradas
       parameters:
-        - name: activo
+        - name: activo_only
           in: query
           required: false
           schema:
             type: boolean
-          description: Filtrar por estado activo/inactivo
-        - name: vigente
-          in: query
-          required: false
-          schema:
-            type: boolean
-          description: Filtrar por vigencia en la fecha actual
+            default: true
       responses:
         '200':
-          description: Lista de reglas de promoción
+          description: Lista de promociones
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/ReglaPromocionResponse'
-
     post:
       summary: Crear nueva regla de promoción
-      description: Acceso restringido a roles Supervisor y Director.
       requestBody:
         required: true
         content:
@@ -43,19 +35,12 @@ paths:
       responses:
         '201':
           description: Regla creada exitosamente
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ReglaPromocionResponse'
-        '403':
-          description: Acceso denegado — se requiere rol Supervisor o Director
 
-  /api/v1/admin/promociones/reglas/{id}:
-    patch:
-      summary: Actualizar parcialmente una regla de promoción
-      description: Acceso restringido a roles Supervisor y Director.
+  /api/v1/promociones/{regla_id}:
+    put:
+      summary: Actualizar regla de promoción
       parameters:
-        - name: id
+        - name: regla_id
           in: path
           required: true
           schema:
@@ -66,32 +51,39 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReglaPromocionUpdateRequest'
+              $ref: '#/components/schemas/ReglaPromocionCreateRequest'
       responses:
         '200':
-          description: Regla actualizada exitosamente
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ReglaPromocionResponse'
-        '404':
-          description: Regla no encontrada
-
+          description: Regla actualizada
     delete:
-      summary: Eliminar una regla de promoción
-      description: Eliminación lógica (activo = FALSE). Acceso restringido a rol Director.
+      summary: Desactivar regla de promoción (baja lógica)
       parameters:
-        - name: id
+        - name: regla_id
           in: path
           required: true
           schema:
             type: string
             format: uuid
       responses:
-        '204':
-          description: Regla desactivada exitosamente
-        '403':
-          description: Acceso denegado — se requiere rol Director
+        '200':
+          description: Regla desactivada
+
+  /api/v1/promociones/evaluar-carrito:
+    post:
+      summary: Evaluar reglas aplicables al carrito y simular descuentos con protección de margen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvaluarCarritoRequest'
+      responses:
+        '200':
+          description: Resultado de evaluación de descuentos y promociones aplicadas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvaluarCarritoResponse'
 
 components:
   schemas:
@@ -99,51 +91,41 @@ components:
       type: object
       required:
         - nombre
-        - producto_trigger_id
-        - producto_objetivo_id
-        - descuento_valor
+        - tipo_regla
         - descuento_tipo
-        - valido_desde
+        - descuento_valor
       properties:
         nombre:
           type: string
-          example: "Combo Leche + Cereal 15% OFF"
-        producto_trigger_id:
+        tipo_regla:
+          type: string
+          enum: [COMBO, VOLUMEN, MONTO_MINIMO]
+        producto_disparador_id:
           type: string
           format: uuid
-        producto_objetivo_id:
-          type: string
-          format: uuid
-        descuento_valor:
-          type: number
-          example: 15.0
-        descuento_tipo:
-          type: string
-          enum: [PORCENTAJE, MONTO_FIJO]
-        valido_desde:
-          type: string
-          format: date
-        valido_hasta:
-          type: string
-          format: date
           nullable: true
-
-    ReglaPromocionUpdateRequest:
-      type: object
-      properties:
-        nombre:
+        producto_beneficio_id:
           type: string
-        descuento_valor:
+          format: uuid
+          nullable: true
+        categoria_id:
+          type: string
+          format: uuid
+          nullable: true
+        cantidad_minima:
           type: number
+          default: 1.0
+        monto_minimo:
+          type: number
+          default: 0.0
         descuento_tipo:
           type: string
           enum: [PORCENTAJE, MONTO_FIJO]
+        descuento_valor:
+          type: number
         activo:
           type: boolean
-        valido_hasta:
-          type: string
-          format: date
-          nullable: true
+          default: true
 
     ReglaPromocionResponse:
       type: object
@@ -153,30 +135,69 @@ components:
           format: uuid
         nombre:
           type: string
-        producto_trigger_id:
+        tipo_regla:
           type: string
-          format: uuid
-        producto_trigger_nombre:
-          type: string
-        producto_objetivo_id:
-          type: string
-          format: uuid
-        producto_objetivo_nombre:
+        descuento_tipo:
           type: string
         descuento_valor:
           type: number
-        descuento_tipo:
-          type: string
-          enum: [PORCENTAJE, MONTO_FIJO]
+        cantidad_minima:
+          type: number
+        monto_minimo:
+          type: number
         activo:
           type: boolean
-        valido_desde:
-          type: string
-          format: date
-        valido_hasta:
-          type: string
-          format: date
-          nullable: true
         creado_en:
           type: string
           format: date-time
+
+    ItemCarritoParaEvaluar:
+      type: object
+      required: [producto_id, cantidad, precio_unitario]
+      properties:
+        producto_id:
+          type: string
+          format: uuid
+        categoria_id:
+          type: string
+          format: uuid
+          nullable: true
+        cantidad:
+          type: number
+        precio_unitario:
+          type: number
+
+    EvaluarCarritoRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemCarritoParaEvaluar'
+
+    EvaluarCarritoResponse:
+      type: object
+      properties:
+        descuento_total:
+          type: number
+        subtotal_bruto:
+          type: number
+        total_con_descuento:
+          type: number
+        promociones_aplicadas:
+          type: array
+          items:
+            type: object
+            properties:
+              regla_id:
+                type: string
+                format: uuid
+              nombre_regla:
+                type: string
+              tipo_regla:
+                type: string
+              descuento_aplicado:
+                type: number
+        margen_respetado:
+          type: boolean

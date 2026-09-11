@@ -1,37 +1,44 @@
-# Modelo de Datos: Multi-Sucursal
+# Modelo de Datos: 013 - Soporte Multi-Sucursal y Terminales
 
-Este documento define las nuevas tablas necesarias para el sistema OLTP orientadas al soporte de múltiples sucursales y terminales de caja.
+**Módulo:** 013-multi-sucursal  
+**Esquema:** Relacional OLTP (PostgreSQL)
 
-## Nuevas Tablas
+---
 
-### `sucursal`
-Almacena la información de cada una de las sucursales del negocio.
-- `id` (UUID, PK)
-- `nombre` (VARCHAR)
-- `direccion` (VARCHAR)
-- `telefono` (VARCHAR)
-- `estado` (BOOLEAN)
-- `created_at` (TIMESTAMP)
-- `updated_at` (TIMESTAMP)
+## 1. DDL Relacional (OLTP — PostgreSQL)
 
-### `terminal_caja`
-Representa una caja registradora o punto de venta físico dentro de una sucursal.
-- `id` (UUID, PK)
-- `sucursal_id` (UUID, FK a `sucursal.id`)
-- `nombre` (VARCHAR, ej. "Caja 1")
-- `estado` (BOOLEAN)
-- `created_at` (TIMESTAMP)
-- `updated_at` (TIMESTAMP)
+```sql
+-- Tabla de Sucursales (Alembic 0008)
+CREATE TABLE sucursal (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    codigo      VARCHAR(20) NOT NULL UNIQUE,
+    nombre      VARCHAR(150) NOT NULL,
+    direccion   VARCHAR(255),
+    ciudad      VARCHAR(100),
+    telefono    VARCHAR(30),
+    activo      BOOLEAN NOT NULL DEFAULT TRUE,
+    es_matriz   BOOLEAN NOT NULL DEFAULT FALSE,
+    creado_en   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
 
-## Relaciones Modificadas / Nuevas
+CREATE INDEX idx_sucursal_codigo ON sucursal(codigo);
+CREATE INDEX idx_sucursal_activo ON sucursal(activo);
 
-### `sesion_caja`
-La tabla existente de sesiones de caja debe enlazarse ahora a la terminal específica en lugar de ser global.
-- Añadir `terminal_caja_id` (UUID, FK a `terminal_caja.id`).
+-- Registro inmutable de la sede Matriz
+INSERT INTO sucursal (id, codigo, nombre, ciudad, es_matriz, activo)
+VALUES ('00000000-0000-0000-0000-000000000001', 'SUC-001', 'Sucursal Matriz', 'Quito', TRUE, TRUE)
+ON CONFLICT (id) DO NOTHING;
 
-### `inventario_sucursal`
-Para soportar el inventario separado, la entidad de inventario se asocia a la sucursal.
-- `id` (UUID, PK)
-- `sucursal_id` (UUID, FK a `sucursal.id`)
-- `producto_id` (UUID, FK a `producto.id`)
-- `cantidad` (DECIMAL/INT)
+-- Tabla de Terminales de Caja por Sucursal
+CREATE TABLE terminal_caja (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    codigo      VARCHAR(50) NOT NULL,
+    sucursal_id UUID NOT NULL REFERENCES sucursal(id) ON DELETE CASCADE,
+    nombre      VARCHAR(100) NOT NULL,
+    activa      BOOLEAN NOT NULL DEFAULT TRUE,
+    creado_en   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_terminal_sucursal_codigo UNIQUE (sucursal_id, codigo)
+);
+
+CREATE INDEX idx_terminal_caja_sucursal ON terminal_caja(sucursal_id);
+```

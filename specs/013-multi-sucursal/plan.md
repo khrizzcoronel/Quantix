@@ -1,20 +1,23 @@
-# Plan de Implementación: Multi-Sucursal
+# Plan de Implementación: 013 - Soporte Multi-Sucursal
 
 ## Fases del Proyecto
 
 ### Fase 1: Base de Datos y Modelos
-- Creación de las tablas `sucursal` y `terminal_caja`.
-- Modificación de la tabla `sesion_caja` para incluir el `terminal_caja_id`.
-- Modificación del sistema de inventario para soportar `inventario_sucursal` (separar stock por sucursal).
+- [x] Creación de las tablas `sucursal` y `terminal_caja` (Alembic `0008_multi_sucursal.py`).
+- [x] Inserción de la sede matriz predeterminada (`00000000-0000-0000-0000-000000000001`).
+- [x] Asociación de `sucursal_id` en `lote_inventario`, `sesion_caja`, `ventas`, `usuario`, `clientes` y `cupones`.
 
 ### Fase 2: APIs y Controladores
-- Implementar CRUD completo para la entidad Sucursal.
-- Implementar CRUD para la entidad Terminal de Caja.
+- [x] Implementar CRUD completo para la entidad Sucursal en `backend/app/api/sucursales.py`.
+- [x] Implementar gestión de terminales de caja por sucursal.
+- [x] Implementar dependency de seguridad `enforce_sucursal_scope` con rechazo HTTP 403 Forbidden.
 
-### Fase 3: Autenticación y Contexto
-- Modificar el middleware de autenticación para inyectar la sucursal actual en el contexto del usuario (contexto de autenticación).
-- Asegurar que las consultas de ventas e inventario se filtren automáticamente por la sucursal del contexto.
+### Fase 3: Frontend y Sincronización Reactiva
+- [x] Store global persistente `useSucursalStore` (`quantix-sucursal-storage`).
+- [x] Selector interactivo de sucursales en Header para `DIRECTOR` con opción de consolidado.
+- [x] Bloqueo con candado visual fijo para `SUPERVISOR`, `CAJERO` y `BODEGUERO`.
+- [x] Suscripción reactiva en todas las vistas (`POS`, `Inventario`, `Clientes`, `Tactico`, `Analisis`, `Dashboard`).
 
-### Fase 4: Pruebas y Despliegue
-- Pruebas unitarias para los nuevos controladores y servicios.
-- Pruebas de integración asegurando el aislamiento de datos entre sucursales.
+### Fase 4: Pruebas y Verificación
+- [x] Pruebas unitarias de aislamiento y reactividad de tiendas.
+- [x] Validación de rechazo HTTP 403 ante accesos cruzados no autorizados.

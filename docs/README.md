@@ -27,12 +27,13 @@ docs/
 ├── planes/                              # Planes de implementación y continuidad
 │   └── plan_continuacion_antigravity.md # Bitácora y decisiones de arquitectura offline
 │
-├── stitch_retail_ui_design_system/      # 28 módulos de diseño de interfaz (Neo-Retail)
-│   ├── pos_modo_estandar_y_catalogo/
-│   ├── inventario_matriz_maestra_de_lotes_y_trazabilidad_fefo/
-│   ├── supervision_tactica_auditoria_y_override_en_caliente/
-│   ├── dashboard_bi_inferencia_predictiva_y_proyecciones_z_t/
-│   └── ... (28 submódulos)
+├── diseño/                              # 28 módulos de diseño de interfaz (Neo-Retail)
+│   ├── pos_modo_estandar/
+│   ├── inventario_trazabilidad_fefo/
+│   ├── supervision_auditoria_override/
+│   ├── dashboard_inferencia_predictiva/
+│   ├── quantix_neo_retail/
+│   └── ... (28 submódulos en código HTML)
 │
 └── assets/                              # Recursos gráficos y branding
     └── quantix_logo.png                # Logotipo oficial de Quantix

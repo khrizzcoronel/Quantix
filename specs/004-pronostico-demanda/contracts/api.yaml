@@ -1,41 +1,71 @@
 openapi: 3.0.3
 info:
-  title: Quantix - API de Pronóstico de Demanda (Módulo 004)
+  title: Quantix - API de Pronóstico de Demanda y Reorden (Módulo 004)
   version: 1.0.0
-  description: Endpoints para sugerencias de reposición automáticas y detección de sobrestock basados en velocidad de venta diaria y punto de reorden.
+  description: Endpoints para cálculo de sugerencias de compra operativas, inferencia estadística Z/t y estacionalidad.
 
 paths:
-  /api/v1/admin/inventario/sugerencias-reposicion:
+  /api/v1/inventario/ordenes-compra/sugerencias:
     get:
-      summary: Listar productos que requieren reposición
-      description: Devuelve los SKUs cuyo stock disponible total es menor o igual al punto de reorden calculado, ordenados por urgencia (menor ratio stock/punto_reorden primero).
+      summary: Sugerencias automáticas de reorden según velocidad de venta y lead time
+      parameters:
+        - name: sucursal_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
-          description: Lista de sugerencias de reposición
+          description: Lista de artículos en riesgo de rotura de stock
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/SugerenciaReposicionResponse'
+                  $ref: '#/components/schemas/SugerenciaReordenResponse'
 
-  /api/v1/admin/inventario/sobrestock:
+  /api/v1/reportes/analisis/proyecciones:
     get:
-      summary: Listar productos con sobrestock proyectado
-      description: Devuelve productos cuyo dias_inventario_proyectados supera el umbral configurado en la clave inventario_dias_sobrestock de CONFIGURACION (default 90 días).
+      summary: Inferencia estadística de demanda e intervalos de confianza 95% (Z / Student-t)
+      parameters:
+        - name: sucursal_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
-          description: Lista de productos en sobrestock
+          description: Proyecciones estadísticas por producto
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/SobrestockResponse'
+                  $ref: '#/components/schemas/ProyeccionDemandaResponse'
+
+  /api/v1/reportes/analisis/estacionalidad:
+    get:
+      summary: Mapa de calor de estacionalidad por día de la semana y franja horaria (7x24)
+      parameters:
+        - name: sucursal_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Matriz horaria/semanal de afluencia y volumen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstacionalidadResponse'
 
 components:
   schemas:
-    SugerenciaReposicionResponse:
+    SugerenciaReordenResponse:
       type: object
       properties:
         producto_id:
@@ -43,29 +73,28 @@ components:
           format: uuid
         sku:
           type: string
-        nombre:
+        producto_nombre:
           type: string
-        tipo_estrategico:
+        clasificacion_abc:
           type: string
-          enum: [GANCHO, NICHO, REGULAR]
-        stock_disponible_total:
-          type: integer
-        punto_reorden:
-          type: number
-        cantidad_sugerida_compra:
-          type: integer
-          description: punto_reorden - stock_disponible_total (redondeado al múltiplo de empaque del proveedor)
-        velocidad_venta_diaria:
-          type: number
-        lead_time_dias:
-          type: integer
+          enum: [A, B, C]
         proveedor_id:
           type: string
           format: uuid
+          nullable: true
         proveedor_nombre:
           type: string
+          nullable: true
+        stock_actual:
+          type: number
+        punto_reorden:
+          type: number
+        sugerencia_compra:
+          type: number
+        motivo:
+          type: string
 
-    SobrestockResponse:
+    ProyeccionDemandaResponse:
       type: object
       properties:
         producto_id:
@@ -75,13 +104,49 @@ components:
           type: string
         nombre:
           type: string
-        stock_disponible_total:
+        n_muestras:
           type: integer
-        velocidad_venta_diaria:
+        distribucion_usada:
+          type: string
+          enum: [NORMAL_Z, STUDENT_T]
+        demanda_media_diaria:
           type: number
-        dias_inventario_proyectados:
+        desviacion_estandar:
           type: number
-          description: stock_disponible_total / velocidad_venta_diaria
-        umbral_sobrestock_dias:
+        limite_inferior_95:
+          type: number
+        limite_superior_95:
+          type: number
+        stock_preventivo_sugerido:
+          type: number
+        estado_riesgo:
+          type: string
+          enum: [OPTIMO, ALERTA_REPOSICION, RIESGO_QUIEBRE]
+
+    EstacionalidadCelda:
+      type: object
+      properties:
+        dia_semana:
           type: integer
-          description: Valor actual de inventario_dias_sobrestock en CONFIGURACION
+          description: 0=Domingo, 1=Lunes, ..., 6=Sábado
+        dia_nombre:
+          type: string
+        hora:
+          type: integer
+          description: 8 a 22
+        transacciones:
+          type: integer
+        total_ingresos:
+          type: number
+
+    EstacionalidadResponse:
+      type: object
+      properties:
+        celdas:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstacionalidadCelda'
+        pico_dia:
+          type: string
+        pico_hora:
+          type: integer

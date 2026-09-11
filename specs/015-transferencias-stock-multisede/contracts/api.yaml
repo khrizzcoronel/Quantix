@@ -1,0 +1,217 @@
+openapi: 3.0.3
+info:
+  title: Quantix - API de Transferencias de Stock Multi-Sede (Módulo 015)
+  version: 1.0.0
+  description: Endpoints para el ciclo de vida logístico de solicitud, despacho, recepción física y cancelación de traspasos de inventario.
+
+paths:
+  /api/v1/sucursales/transferencias:
+    get:
+      summary: Listar transferencias con filtros de sucursal y estado
+      parameters:
+        - name: sucursal_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: estado
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [SOLICITADA, EN_TRANSITO, RECIBIDA, CANCELADA]
+      responses:
+        '200':
+          description: Lista de transferencias
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TransferenciaResumenResponse'
+    post:
+      summary: Crear solicitud de transferencia inter-sucursal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferenciaCreateRequest'
+      responses:
+        '201':
+          description: Transferencia solicitada exitosamente
+
+  /api/v1/sucursales/transferencias/{transferencia_id}:
+    get:
+      summary: Detalle completo de una transferencia con partidas y lotes
+      parameters:
+        - name: transferencia_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detalle de la transferencia
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferenciaDetalleResponse'
+
+  /api/v1/sucursales/transferencias/{transferencia_id}/despachar:
+    post:
+      summary: Despachar mercancía y descontar stock del lote origen (EN_TRANSITO)
+      parameters:
+        - name: transferencia_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Mercancía despachada y en tránsito
+        '400':
+          description: Estado inválido o stock insuficiente
+
+  /api/v1/sucursales/transferencias/{transferencia_id}/recibir:
+    post:
+      summary: Confirmar recepción física en destino y generar lotes sanitarios TR- (RECIBIDA)
+      parameters:
+        - name: transferencia_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Transferencia recibida y existencias incorporadas en destino
+
+  /api/v1/sucursales/transferencias/{transferencia_id}/cancelar:
+    post:
+      summary: Cancelar transferencia y restituir stock en origen si estaba en tránsito
+      parameters:
+        - name: transferencia_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [motivo]
+              properties:
+                motivo:
+                  type: string
+      responses:
+        '200':
+          description: Transferencia cancelada y stock revertido
+
+components:
+  schemas:
+    ItemTransferenciaCreate:
+      type: object
+      required: [producto_id, lote_origen_id, cantidad]
+      properties:
+        producto_id:
+          type: string
+          format: uuid
+        lote_origen_id:
+          type: string
+          format: uuid
+        cantidad:
+          type: number
+          exclusiveMinimum: 0
+
+    TransferenciaCreateRequest:
+      type: object
+      required: [sucursal_origen_id, sucursal_destino_id, items]
+      properties:
+        sucursal_origen_id:
+          type: string
+          format: uuid
+        sucursal_destino_id:
+          type: string
+          format: uuid
+        notas:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemTransferenciaCreate'
+
+    TransferenciaResumenResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        folio:
+          type: string
+        sucursal_origen_nombre:
+          type: string
+        sucursal_destino_nombre:
+          type: string
+        estado:
+          type: string
+        fecha_solicitud:
+          type: string
+          format: date-time
+        total_items:
+          type: integer
+
+    TransferenciaDetalleResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        folio:
+          type: string
+        sucursal_origen_id:
+          type: string
+          format: uuid
+        sucursal_origen_nombre:
+          type: string
+        sucursal_destino_id:
+          type: string
+          format: uuid
+        sucursal_destino_nombre:
+          type: string
+        estado:
+          type: string
+        fecha_solicitud:
+          type: string
+          format: date-time
+        fecha_despacho:
+          type: string
+          format: date-time
+          nullable: true
+        fecha_recepcion:
+          type: string
+          format: date-time
+          nullable: true
+        notas:
+          type: string
+        partidas:
+          type: array
+          items:
+            type: object
+            properties:
+              producto_nombre:
+                type: string
+              sku:
+                type: string
+              cantidad:
+                type: number
+              lote_origen_codigo:
+                type: string
+              costo_unitario:
+                type: number

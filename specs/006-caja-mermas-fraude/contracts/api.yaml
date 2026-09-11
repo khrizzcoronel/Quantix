@@ -1,211 +1,152 @@
 openapi: 3.0.3
 info:
-  title: Quantix - API de Caja, Mermas y Fraude (Módulo 006)
+  title: Quantix - API de Control de Caja, Arqueos y Auditoría (Módulo 006)
   version: 1.0.0
-  description: Endpoints para apertura de sesión de caja, arqueo ciego y consulta de auditoría forense.
+  description: Endpoints para sesiones de caja, arqueo ciego, movimientos manuales de efectivo, cortes fiscales X y Z, auditoría y métricas de desempeño.
 
 paths:
-  /api/v1/caja/sesiones/abrir:
+  /api/v1/caja/abrir:
     post:
-      summary: Abrir sesión de caja con fondo inicial
+      summary: Apertura de turno de caja e inicio de sesión
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AbrirSesionRequest'
+              type: object
+              required: [terminal_id, monto_inicial_efectivo, sucursal_id]
+              properties:
+                terminal_id:
+                  type: string
+                monto_inicial_efectivo:
+                  type: number
+                  minimum: 0
+                sucursal_id:
+                  type: string
+                  format: uuid
       responses:
         '201':
-          description: Sesión de caja abierta exitosamente
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SesionCajaResponse'
-        '409':
-          description: Ya existe una sesión abierta en esta terminal
+          description: Sesión de caja abierta
 
-  /api/v1/caja/sesiones/{id}/arqueo-ciego:
+  /api/v1/caja/sesion-activa:
+    get:
+      summary: Obtener la sesión activa del usuario autenticado
+      responses:
+        '200':
+          description: Datos de la sesión activa
+        '404':
+          description: No hay sesión abierta
+
+  /api/v1/caja/arqueo-ciego:
     post:
-      summary: Registrar arqueo ciego y cerrar sesión de caja
-      description: El cajero solo ingresa el efectivo contado y los comprobantes de tarjeta. El backend calcula la diferencia contra el total teórico de las ventas de la sesión.
+      summary: Declaración física ciega y cierre de turno de caja
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sesion_id, total_fisico_declarado]
+              properties:
+                sesion_id:
+                  type: string
+                  format: uuid
+                total_fisico_declarado:
+                  type: number
+                desglose_declarado_json:
+                  type: object
+                observaciones:
+                  type: string
+      responses:
+        '200':
+          description: Arqueo procesado con cálculo de descuadre y cierre de turno
+
+  /api/v1/caja/movimientos:
+    get:
+      summary: Listar movimientos extraordinarios de la sesión activa
       parameters:
-        - name: id
+        - name: sesion_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lista de movimientos
+    post:
+      summary: Registrar ingreso o egreso de gaveta justificado
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tipo, monto, concepto]
+              properties:
+                tipo:
+                  type: string
+                  enum: [INGRESO, EGRESO]
+                monto:
+                  type: number
+                  exclusiveMinimum: 0
+                concepto:
+                  type: string
+                sesion_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+      responses:
+        '201':
+          description: Movimiento registrado
+        '400':
+          description: Fondos insuficientes en gaveta para egreso
+
+  /api/v1/caja/corte-x:
+    get:
+      summary: Generar Corte X (arqueo provisional del turno activo sin cierre)
+      parameters:
+        - name: sesion_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Resumen provisional del turno
+
+  /api/v1/caja/sesiones/{sesion_id}/corte-z:
+    get:
+      summary: Generar Corte Z fiscal consolidado de fin de turno
+      parameters:
+        - name: sesion_id
           in: path
           required: true
           schema:
             type: string
             format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ArqueoCiegoRequest'
       responses:
         '200':
-          description: Arqueo registrado y sesión cerrada
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ArqueoCajaResponse'
-        '404':
-          description: Sesión no encontrada
-        '409':
-          description: La sesión ya fue cerrada previamente
+          description: Comprobante fiscal de cierre Z
 
-  /api/v1/admin/caja/auditoria:
+  /api/v1/caja/estadisticas-historicas:
     get:
-      summary: Consultar registro de auditoría forense
-      description: Devuelve eventos de auditoría filtrados por cajero y/o fecha. Paginado con cursor.
+      summary: Métricas de desempeño histórico y precisión de gaveta por cajero
       parameters:
-        - name: cajero_usuario_id
+        - name: sucursal_id
           in: query
           required: false
           schema:
             type: string
             format: uuid
-        - name: tipo_evento
-          in: query
-          required: false
-          schema:
-            type: string
-            enum: [VENTA_COMPLETADA, VENTA_ANULADA, DESCUENTO_APLICADO, APERTURA_SESION, CIERRE_SESION, DISCREPANCIA_ARQUEO, ALERTA_MARGEN, LIQUIDACION_FEFO, ACCESO_RESTRINGIDO]
-        - name: fecha_desde
-          in: query
-          required: false
-          schema:
-            type: string
-            format: date
-        - name: fecha_hasta
-          in: query
-          required: false
-          schema:
-            type: string
-            format: date
-        - name: cursor
-          in: query
-          required: false
-          schema:
-            type: string
       responses:
         '200':
-          description: Lista de eventos de auditoría
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuditoriaPageResponse'
+          description: KPIs de cajeros
 
-components:
-  schemas:
-    AbrirSesionRequest:
-      type: object
-      required:
-        - cajero_usuario_id
-        - terminal_id
-        - fondo_inicial
-      properties:
-        cajero_usuario_id:
-          type: string
-          format: uuid
-        terminal_id:
-          type: string
-          example: "TERMINAL-01"
-        fondo_inicial:
-          type: number
-          example: 500.00
-
-    SesionCajaResponse:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        cajero_usuario_id:
-          type: string
-          format: uuid
-        terminal_id:
-          type: string
-        fondo_inicial:
-          type: number
-        fecha_apertura:
-          type: string
-          format: date-time
-        estado:
-          type: string
-          enum: [ABIERTA, CERRADA, EN_REVISION]
-
-    ArqueoCiegoRequest:
-      type: object
-      required:
-        - efectivo_contado
-      properties:
-        efectivo_contado:
-          type: number
-          description: Total de efectivo físico contado por el cajero
-          example: 1850.00
-        comprobantes_tarjeta:
-          type: number
-          description: Suma de comprobantes de pago con tarjeta
-          default: 0.00
-
-    ArqueoCajaResponse:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        sesion_caja_id:
-          type: string
-          format: uuid
-        efectivo_contado:
-          type: number
-        comprobantes_tarjeta:
-          type: number
-        total_teorico:
-          type: number
-        diferencia:
-          type: number
-          description: Positivo = sobrante, Negativo = faltante
-        requiere_revision:
-          type: boolean
-        registrado_en:
-          type: string
-          format: date-time
-
-    AuditoriaEventoResponse:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        tipo_evento:
-          type: string
-        usuario_id:
-          type: string
-          format: uuid
-        venta_referencia_id:
-          type: string
-          format: uuid
-          nullable: true
-        ip_terminal:
-          type: string
-          nullable: true
-        detalle_json:
-          type: object
-          additionalProperties: true
-        registrado_en:
-          type: string
-          format: date-time
-
-    AuditoriaPageResponse:
-      type: object
-      properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/AuditoriaEventoResponse'
-        next_cursor:
-          type: string
-          nullable: true
-        total:
-          type: integer
+  /api/v1/caja/mi-actividad:
+    get:
+      summary: Resumen diario y actividad del operador en turno
+      responses:
+        '200':
+          description: Datos de actividad del cajero autenticado

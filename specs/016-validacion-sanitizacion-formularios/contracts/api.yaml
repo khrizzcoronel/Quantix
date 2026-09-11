@@ -1,0 +1,71 @@
+openapi: 3.0.3
+info:
+  title: Quantix - Esquemas y Contratos de Validación y Gobernanza de Datos (Módulo 016)
+  version: 1.0.0
+  description: Contratos técnicos de validación algorítmica de formularios en cliente y mapeo de errores de backend (Pydantic / FastAPI).
+
+components:
+  schemas:
+    ResultadoValidacion:
+      type: object
+      properties:
+        esValido:
+          type: boolean
+        error:
+          type: string
+          nullable: true
+
+    ValidacionCedulaRequest:
+      type: object
+      required: [cedula]
+      properties:
+        cedula:
+          type: string
+          example: "1710034065"
+
+    ValidacionEanRequest:
+      type: object
+      required: [codigo]
+      properties:
+        codigo:
+          type: string
+          example: "7501055365440"
+
+    FortalezaPasswordResponse:
+      type: object
+      properties:
+        score:
+          type: integer
+          minimum: 0
+          maximum: 4
+        fuerza:
+          type: string
+          enum: [DEBIL, REGULAR, FUERTE, MUY_FUERTE]
+        cumpleLongitud:
+          type: boolean
+        cumpleMayuscula:
+          type: boolean
+        cumpleNumero:
+          type: boolean
+        cumpleEspecial:
+          type: boolean
+
+    ErrorDetalleFastAPI:
+      type: object
+      properties:
+        loc:
+          type: array
+          items:
+            type: string
+        msg:
+          type: string
+        type:
+          type: string
+
+    ErrorValidacionHTTP422:
+      type: object
+      properties:
+        detail:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorDetalleFastAPI'
